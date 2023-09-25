@@ -3,20 +3,19 @@
 
 #include <SDL.h>
 #include <SDL_opengl.h>
-
 #include <stdlib.h> //rand()
+#include <glm/glm.hpp>
 
 static bool quitting = false;
-static float r = 0.0f;
 static SDL_Window *window = NULL;
 static SDL_GLContext gl_context;
 static SDL_Renderer *renderer = NULL;
 
 void render() {
     SDL_GL_MakeCurrent(window, gl_context);
-    r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-
-    glClearColor(r, 0.4f, 0.1f, 1.0f);
+    glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
+    clearColor.r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT);
 
     SDL_GL_SwapWindow(window);
