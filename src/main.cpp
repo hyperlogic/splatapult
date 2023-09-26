@@ -14,7 +14,7 @@ static SDL_Window *window = NULL;
 static SDL_GLContext gl_context;
 static SDL_Renderer *renderer = NULL;
 
-void render()
+void Render()
 {
     SDL_GL_MakeCurrent(window, gl_context);
     glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
@@ -25,7 +25,7 @@ void render()
     SDL_GL_SwapWindow(window);
 }
 
-int SDLCALL watch(void *userdata, SDL_Event* event)
+int SDLCALL Watch(void *userdata, SDL_Event* event)
 {
     if (event->type == SDL_APP_WILLENTERBACKGROUND)
     {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 
-    SDL_AddEventWatch(watch, NULL);
+    SDL_AddEventWatch(Watch, NULL);
 
     std::unique_ptr<PointCloud> pointCloud(new PointCloud());
     if (!pointCloud->ImportPly("../../data/input.ply"))
@@ -74,17 +74,27 @@ int main(int argc, char *argv[])
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            if (event.type == SDL_QUIT)
+            switch (event.type)
             {
+            case SDL_QUIT:
                 quitting = true;
+                break;
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+                // ESC to quit
+                if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+                {
+                    quitting = true;
+                }
+                break;
             }
         }
 
-        render();
+        Render();
         SDL_Delay(2);
     }
 
-    SDL_DelEventWatch(watch, NULL);
+    SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
