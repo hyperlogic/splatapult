@@ -19,11 +19,15 @@ include_directories(${SDL2_INCLUDE_DIRS})
 find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+include_directories("src")
+add_executable(${PROJECT_NAME} src/main.cpp src/pointcloud.cpp)
+
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 if(WIN32)
     # Comment this out to see SDL_Log output for debugging
     # set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
+    
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_LIBRARIES} SDL2::SDL2 SDL2::SDL2main)

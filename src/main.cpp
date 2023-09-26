@@ -1,10 +1,13 @@
 //SDL2 flashing random color example
 //Should work on iOS/Android/Mac/Windows/Linux
 
+#include <glm/glm.hpp>
+#include <memory>
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <stdlib.h> //rand()
-#include <glm/glm.hpp>
+
+#include "pointcloud.h"
 
 static bool quitting = false;
 static SDL_Window *window = NULL;
@@ -21,7 +24,6 @@ void render()
 
     SDL_GL_SwapWindow(window);
 }
-
 
 int SDLCALL watch(void *userdata, SDL_Event* event)
 {
@@ -41,18 +43,31 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    window = SDL_CreateWindow("sdl2stub", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512, SDL_WINDOW_OPENGL);
 
     gl_context = SDL_GL_CreateContext(window);
+
+    SDL_Log("Welcome! from 3dgstoy");
 
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (!renderer)
     {
         SDL_Log("Failed to SDL Renderer: %s", SDL_GetError());
-		return -1;
+		return 2;
 	}
 
     SDL_AddEventWatch(watch, NULL);
+
+    std::unique_ptr<PointCloud> pointCloud(new PointCloud());
+    if (!pointCloud->ImportPly("../../data/input.ply"))
+    {
+        SDL_Log("Error loading PointCloud!");
+        return 3;
+    }
+    else
+    {
+        SDL_Log("Success!");
+    }
 
     while (!quitting)
     {
