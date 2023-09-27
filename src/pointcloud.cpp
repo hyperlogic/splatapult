@@ -6,6 +6,8 @@
 #include <sstream>
 #include <string>
 
+#include "util.h"
+
 bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {
     std::string line;
@@ -18,7 +20,7 @@ PointCloud::PointCloud()
 
 bool PointCloud::ImportPly(const std::string& plyFilename)
 {
-    std::ifstream plyFile(plyFilename, std::ios::binary);
+    std::ifstream plyFile(GetRootPath() + plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
         std::cerr << "failed to open " << plyFilename << std::endl;
@@ -43,10 +45,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     std::istringstream iss(line);
     std::string token1, token2;
     int numPoints;
-    if ((iss >> token1 >> token2 >> numPoints) && (token1 == "element") && (token2 == "vertex")) {
-        std::cout << "numPoints = " << numPoints << std::endl;
-    }
-    else
+    if (!((iss >> token1 >> token2 >> numPoints) && (token1 == "element") && (token2 == "vertex")))
     {
         std::cerr << "Invalid ply file" << std::endl;
         return false;
@@ -81,21 +80,6 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         {
             std::cerr << "Error reading point[" << i << "]" << std::endl;
             return false;
-        }
-    }
-
-    int count = 0;
-    for (auto&& p : pointVec)
-    {
-        std::cout << "position = " << p.position[0] << ", " << p.position[1] << ", " << p.position[2] << std::endl;
-        std::cout << "normal = " << p.normal[0] << ", " << p.normal[1] << ", " << p.normal[2] << std::endl;
-        std::cout << "color = " << (int)p.color[0] << ", " << (int)p.color[1] << ", " << (int)p.color[2] << std::endl;
-        std::cout << std::endl;
-
-        count++;
-        if (count == 100)
-        {
-            break;
         }
     }
 

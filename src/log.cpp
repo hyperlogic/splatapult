@@ -11,6 +11,7 @@ int Log::printf(const char *fmt, ...)
     va_end(args);
 
     fwrite(buffer, rc, 1, stdout);
+    fflush(stdout);
 
     return rc;
 }
@@ -24,6 +25,7 @@ int Log::printf_ansi(AnsiColor color, const char *fmt, ...)
     va_end(args);
 
     fwrite(buffer, rc, 1, stdout);
+    fflush(stdout);
 
     return rc;
 }

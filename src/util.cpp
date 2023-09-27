@@ -249,7 +249,7 @@ glm::vec3 RandomColor()
     return glm::vec3(glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f));
 }
 
-static const std::string ROOT_PATH("../");
+static const std::string ROOT_PATH("../../");
 const std::string& GetRootPath()
 {
     return ROOT_PATH;
