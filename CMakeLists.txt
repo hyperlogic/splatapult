@@ -36,6 +36,7 @@ add_executable(${PROJECT_NAME}
     src/program.cpp
     src/texture.cpp
     src/util.cpp
+    src/vertexbuffer.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
