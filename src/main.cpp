@@ -36,26 +36,26 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
 
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
+    glm::mat4 modelViewMat(1.0f); // identity
     glm::mat4 projMat = glm::ortho(0.0f, (float)width, 0.0f, (float)height, -10.0f, 10.0f);
 
     pointProg->Apply();
-    pointProg->SetUniform("modelViewProjMat", projMat);
+    pointProg->SetUniform("modelViewMat", modelViewMat);
+    pointProg->SetUniform("projMat", projMat);
     pointProg->SetUniform("color", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    pointProg->SetUniform("size", 10.0f);
 
     // use texture unit 0 for colorTexture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, pointTex->texture);
     pointProg->SetUniform("colorTex", 0);
 
-    glm::vec2 xyLowerLeft(0.0f, (height - width) / 2.0f);
-    glm::vec2 xyUpperRight((float)width, (height + width) / 2.0f);
-    glm::vec2 uvLowerLeft(0.0f, 0.0f);
-    glm::vec2 uvUpperRight(1.0f, 1.0f);
-
-    glm::vec3 position[] = {glm::vec3(xyLowerLeft, 0.0f), glm::vec3(xyUpperRight.x, xyLowerLeft.y, 0.0f),
-                            glm::vec3(xyUpperRight, 0.0f), glm::vec3(xyLowerLeft.x, xyUpperRight.y, 0.0f)};
+    glm::vec3 center(width / 2.0f, height / 2.0f, 0.0f);
+    glm::vec3 position[] = {center, center, center, center};
     pointProg->SetAttrib("position", position);
 
+    glm::vec2 uvLowerLeft(0.0f, 0.0f);
+    glm::vec2 uvUpperRight(1.0f, 1.0f);
     glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
                        uvUpperRight, glm::vec2(uvLowerLeft.x, uvUpperRight.y)};
     pointProg->SetAttrib("uv", uvs);
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 512, 512, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 768, SDL_WINDOW_OPENGL);
 
     gl_context = SDL_GL_CreateContext(window);
 

@@ -1,5 +1,5 @@
 //
-// No lighting at all, solid color
+// fullbright textured particle
 //
 
 uniform vec4 color;
