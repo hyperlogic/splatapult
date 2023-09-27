@@ -27,7 +27,9 @@ find_package(PNG REQUIRED)
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
+    src/flycam.cpp
     src/image.cpp
+    src/joystick.cpp
     src/log.cpp
     src/main.cpp
     src/pointcloud.cpp

@@ -11,7 +11,9 @@
 #include <SDL_opengl.h>
 #include <stdlib.h> //rand()
 
+#include "flycam.h"
 #include "image.h"
+#include "joystick.h"
 #include "log.h"
 #include "pointcloud.h"
 #include "program.h"
@@ -37,7 +39,7 @@ std::unique_ptr<PointCloud> LoadPointCloud()
     // make an example pointVec, that contain three lines one for each axis.
     //
     std::vector<PointCloud::Point>& pointVec = pointCloud->GetPointVec();
-    const float AXIS_LENGTH = 500.0f;
+    const float AXIS_LENGTH = 1.0f;
     const int NUM_POINTS = 10;
     const float DELTA = (AXIS_LENGTH / (float)NUM_POINTS);
     pointVec.resize(NUM_POINTS * 3);
@@ -78,7 +80,7 @@ std::unique_ptr<PointCloud> LoadPointCloud()
     return pointCloud;
 }
 
-void Render(const Program* pointProg, const Texture* pointTex, const PointCloud* pointCloud)
+void Render(const Program* pointProg, const Texture* pointTex, const PointCloud* pointCloud, const glm::mat4& cameraMat)
 {
     SDL_GL_MakeCurrent(window, gl_context);
 
@@ -92,15 +94,22 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // enable writes to depth buffer
+    glEnable(GL_DEPTH_TEST);
+
+    // enable alpha test
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.01f);
+
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
-    glm::mat4 modelViewMat(1.0f); // identity
-    glm::mat4 projMat = glm::ortho(0.0f, (float)width, 0.0f, (float)height, -10.0f, 10.0f);
+    glm::mat4 modelViewMat = glm::inverse(cameraMat);
+    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
     pointProg->Apply();
     pointProg->SetUniform("modelViewMat", modelViewMat);
     pointProg->SetUniform("projMat", projMat);
-    pointProg->SetUniform("pointSize", 10.0f);
+    pointProg->SetUniform("pointSize", 0.1f);
 
     // use texture unit 0 for colorTexture
     glActiveTexture(GL_TEXTURE0);
@@ -153,7 +162,6 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     */
 
     /*
-
     uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
     glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
     */
@@ -187,7 +195,7 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 
 int main(int argc, char *argv[])
 {
-    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)
     {
         Log::printf("Failed to initialize SDL: %s\n", SDL_GetError());
         return 1;
@@ -203,6 +211,8 @@ int main(int argc, char *argv[])
         Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
 		return 1;
 	}
+
+    JOYSTICK_Init();
 
     GLenum err = glewInit();
     if (GLEW_OK != err)
@@ -236,8 +246,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 10.0f, 2.0f);
+    SDL_JoystickEventState(SDL_ENABLE);
+
+    uint32_t lastTicks = SDL_GetTicks();
     while (!quitting)
     {
+        // update dt
+        uint32_t ticks = SDL_GetTicks();
+        float dt = (ticks - lastTicks) / 1000.0f;
+        lastTicks = ticks;
+
+        JOYSTICK_ClearFlags();
+
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -254,13 +275,28 @@ int main(int argc, char *argv[])
                     quitting = true;
                 }
                 break;
+            case SDL_JOYAXISMOTION:
+				JOYSTICK_UpdateMotion(&event.jaxis);
+				break;
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYBUTTONUP:
+				JOYSTICK_UpdateButton(&event.jbutton);
+				break;
             }
         }
 
-        Render(pointProg.get(), pointTex.get(), pointCloud.get());
+        Joystick* joystick = JOYSTICK_GetJoystick();
+        if (joystick)
+        {
+            flyCam.SetInput(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
+                            glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]));
+            flyCam.Process(dt);
+        }
+        Render(pointProg.get(), pointTex.get(), pointCloud.get(), flyCam.GetCameraMat());
         SDL_Delay(2);
     }
 
+    JOYSTICK_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
