@@ -23,6 +23,12 @@ static SDL_Renderer *renderer = NULL;
 void Render(const Program* pointProg, const Texture* pointTex, const PointCloud* pointCloud)
 {
     SDL_GL_MakeCurrent(window, gl_context);
+
+    // pre-multiplied alpha blending
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
     glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
     clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
@@ -36,17 +42,23 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     pointProg->SetUniform("modelViewProjMat", projMat);
     pointProg->SetUniform("color", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
+    // use texture unit 0 for colorTexture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, pointTex->texture);
+    pointProg->SetUniform("colorTex", 0);
+
     glm::vec2 xyLowerLeft(0.0f, (height - width) / 2.0f);
     glm::vec2 xyUpperRight((float)width, (height + width) / 2.0f);
-
-    xyLowerLeft += 25.0f;
-    xyUpperRight -= 25.0f;
-
     glm::vec2 uvLowerLeft(0.0f, 0.0f);
     glm::vec2 uvUpperRight(1.0f, 1.0f);
+
     glm::vec3 position[] = {glm::vec3(xyLowerLeft, 0.0f), glm::vec3(xyUpperRight.x, xyLowerLeft.y, 0.0f),
                             glm::vec3(xyUpperRight, 0.0f), glm::vec3(xyLowerLeft.x, xyUpperRight.y, 0.0f)};
     pointProg->SetAttrib("position", position);
+
+    glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
+                       uvUpperRight, glm::vec2(uvLowerLeft.x, uvUpperRight.y)};
+    pointProg->SetAttrib("uv", uvs);
 
     const size_t NUM_INDICES = 6;
     uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
