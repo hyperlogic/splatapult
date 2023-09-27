@@ -27,14 +27,13 @@ static SDL_Renderer *renderer = NULL;
 std::unique_ptr<PointCloud> LoadPointCloud()
 {
     std::unique_ptr<PointCloud> pointCloud(new PointCloud());
-    /*
     if (!pointCloud->ImportPly("data/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -76,6 +75,7 @@ std::unique_ptr<PointCloud> LoadPointCloud()
         p.color[1] = 0;
         p.color[2] = 255;
     }
+    */
 
     return pointCloud;
 }
@@ -109,7 +109,7 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     pointProg->Apply();
     pointProg->SetUniform("modelViewMat", modelViewMat);
     pointProg->SetUniform("projMat", projMat);
-    pointProg->SetUniform("pointSize", 0.1f);
+    pointProg->SetUniform("pointSize", 0.025f);
 
     // use texture unit 0 for colorTexture
     glActiveTexture(GL_TEXTURE0);
@@ -165,11 +165,11 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
     glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
     */
-    std::vector<uint16_t> indexVec;
+    std::vector<uint32_t> indexVec;
     const size_t NUM_INDICES = 6;
     indexVec.reserve(pointCloud->GetPointVec().size() * NUM_INDICES);
-    assert(pointCloud->GetPointVec().size() * 6 <= std::numeric_limits<uint16_t>::max());
-    for (uint16_t i = 0; i < (uint16_t)pointCloud->GetPointVec().size(); i++)
+    assert(pointCloud->GetPointVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
+    for (uint32_t i = 0; i < (uint32_t)pointCloud->GetPointVec().size(); i++)
     {
         indexVec.push_back(i * NUM_CORNERS + 0);
         indexVec.push_back(i * NUM_CORNERS + 1);
@@ -178,7 +178,7 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
         indexVec.push_back(i * NUM_CORNERS + 2);
         indexVec.push_back(i * NUM_CORNERS + 3);
     }
-    glDrawElements(GL_TRIANGLES, (GLsizei)(NUM_INDICES * pointCloud->GetPointVec().size()), GL_UNSIGNED_SHORT, indexVec.data());
+    glDrawElements(GL_TRIANGLES, (GLsizei)(NUM_INDICES * pointCloud->GetPointVec().size()), GL_UNSIGNED_INT, indexVec.data());
 
     SDL_GL_SwapWindow(window);
 }
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
             flyCam.Process(dt);
         }
         Render(pointProg.get(), pointTex.get(), pointCloud.get(), flyCam.GetCameraMat());
-        SDL_Delay(2);
+        //SDL_Delay(2);
     }
 
     JOYSTICK_Shutdown();
