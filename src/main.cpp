@@ -255,13 +255,25 @@ int main(int argc, char *argv[])
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 10.0f, 2.0f);
     SDL_JoystickEventState(SDL_ENABLE);
 
+    uint32_t frameCount = 1;
+    uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
     while (!quitting)
     {
         // update dt
         uint32_t ticks = SDL_GetTicks();
+
+        const int FPS_FRAMES = 100;
+        if ((frameCount % FPS_FRAMES) == 0)
+        {
+            float delta = (ticks - frameTicks) / 1000.0f;
+            float fps = (float)FPS_FRAMES / delta;
+            frameTicks = ticks;
+            Log::printf("fps = %.2f\n", fps);
+        }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
+
 
         JOYSTICK_ClearFlags();
 
@@ -299,6 +311,8 @@ int main(int argc, char *argv[])
             flyCam.Process(dt);
         }
         Render(pointProg.get(), pointTex.get(), pointCloud.get(), pointCloudVAO, flyCam.GetCameraMat());
+
+        frameCount++;
     }
 
     JOYSTICK_Shutdown();
