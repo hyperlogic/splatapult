@@ -25,14 +25,12 @@ BufferObject::~BufferObject()
 
 void BufferObject::Bind() const
 {
-	//AJT
-	//glBindBuffer(target, obj);
+	glBindBuffer(target, obj);
 }
 
 void BufferObject::Unbind() const
 {
-	//AJT
-	//glBindBuffer(target, 0);
+	glBindBuffer(target, 0);
 }
 
 // AJT: REMOVE
@@ -49,7 +47,9 @@ void BufferObject::BufferStorage(int target, size_t numBytes, void* data, int fl
 void BufferObject::Store(const std::vector<float>& data)
 {
 	Bind();
-    BufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), GL_STATIC_DRAW);
+	GL_ERROR_CHECK("before BufferObject::Store<float>");
+    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), 0);
+	GL_ERROR_CHECK("BufferObject::Store<float>");
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
@@ -58,7 +58,9 @@ void BufferObject::Store(const std::vector<float>& data)
 void BufferObject::Store(const std::vector<glm::vec2>& data)
 {
 	Bind();
-    BufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), GL_STATIC_DRAW);
+	GL_ERROR_CHECK("before BufferObject::Store<vec2>");
+    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), 0);
+	GL_ERROR_CHECK("BufferObject::Store<vec2>");
 	Unbind();
 	elementSize = 2;
 	numElements = (int)data.size();
@@ -67,7 +69,9 @@ void BufferObject::Store(const std::vector<glm::vec2>& data)
 void BufferObject::Store(const std::vector<glm::vec3>& data)
 {
 	Bind();
-    BufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), GL_STATIC_DRAW);
+	GL_ERROR_CHECK("before BufferObject::Store<vec3>");
+    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), 0);
+	GL_ERROR_CHECK("BufferObject::Store<vec3>");
 	Unbind();
 	elementSize = 3;
 	numElements = (int)data.size();
@@ -76,7 +80,9 @@ void BufferObject::Store(const std::vector<glm::vec3>& data)
 void BufferObject::Store(const std::vector<glm::vec4>& data)
 {
 	Bind();
-    BufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), GL_STATIC_DRAW);
+	GL_ERROR_CHECK("before BufferObject::Store<vec4>");
+    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), 0);
+	GL_ERROR_CHECK("BufferObject::Store<vec4>");
 	Unbind();
 	elementSize = 4;
 	numElements = (int)data.size();
@@ -85,7 +91,9 @@ void BufferObject::Store(const std::vector<glm::vec4>& data)
 void BufferObject::Store(const std::vector<uint32_t>& data)
 {
 	Bind();
-    BufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), GL_STATIC_DRAW);
+	GL_ERROR_CHECK("before BufferObject::Store<uint32>");
+    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), 0);
+	GL_ERROR_CHECK("BufferObject::Store<uint32>");
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
@@ -101,34 +109,28 @@ void BufferObject::Check(const uint8_t* data)
 
 VertexArrayObject::VertexArrayObject()
 {
-	//AJT
-	//glGenVertexArrays(1, &obj);
+	glGenVertexArrays(1, &obj);
 }
 
 VertexArrayObject::~VertexArrayObject()
 {
-	//AJT
-	//glDeleteVertexArrays(1, &obj);
+	glDeleteVertexArrays(1, &obj);
 }
 
 void VertexArrayObject::Bind() const
 {
-	//AJT
-	//glBindVertexArray(obj);
+	glBindVertexArray(obj);
 }
 
 void VertexArrayObject::Unbind() const
 {
-	//AJT
-	//glBindVertexArray(0);
+	glBindVertexArray(0);
 }
 
 void VertexArrayObject::SetAttribBuffer(int loc, std::shared_ptr<BufferObject> attribBuffer)
 {
 	assert(attribBuffer->target == GL_ARRAY_BUFFER);
 
-	//AJT
-	/*
 	Bind();
 	attribBuffer->Bind();
 	glVertexAttribPointer(loc, attribBuffer->elementSize, GL_FLOAT, GL_FALSE, 0, nullptr);
@@ -136,10 +138,11 @@ void VertexArrayObject::SetAttribBuffer(int loc, std::shared_ptr<BufferObject> a
 	attribBuffer->Unbind();
 	attribBufferVec.push_back(attribBuffer);
 	Unbind();
-	*/
 
+	/*
 	locVec.push_back(loc);
 	attribBufferVec.push_back(attribBuffer);
+	*/
 }
 
 void VertexArrayObject::SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn)
@@ -147,29 +150,38 @@ void VertexArrayObject::SetElementBuffer(std::shared_ptr<BufferObject> elementBu
 	assert(elementBufferIn->target == GL_ELEMENT_ARRAY_BUFFER);
 	elementBuffer = elementBufferIn;
 
-	//AJT
-	/*
 	Bind();
 	elementBufferIn->Bind();
 	Unbind();
-	*/
 }
 
 void VertexArrayObject::Draw() const
 {
-	//AJT
-	/*
 	Bind();
 	glDrawElements(GL_TRIANGLES, elementBuffer->numElements, GL_UNSIGNED_INT, nullptr);
 	Unbind();
+
+	//AJT
+	/*
+	for (size_t i = 0; i < locVec.size(); i++)
+	{
+		attribBufferVec[i]->Bind();
+		glVertexAttribPointer(locVec[i], attribBufferVec[i]->elementSize, GL_FLOAT, GL_FALSE, 0, nullptr);
+		glEnableVertexAttribArray(locVec[i]);
+	}
+	elementBuffer->Bind();
+	glDrawElements(GL_TRIANGLES, elementBuffer->numElements, GL_UNSIGNED_INT, nullptr);
 	*/
 
+	//AJT
+	/*
 	for (size_t i = 0; i < locVec.size(); i++)
 	{
 		glVertexAttribPointer(locVec[i], attribBufferVec[i]->elementSize, GL_FLOAT, GL_FALSE, 0, (void*)attribBufferVec[i]->dataVec.data());
 		glEnableVertexAttribArray(locVec[i]);
 	}
 	glDrawElements(GL_TRIANGLES, elementBuffer->numElements, GL_UNSIGNED_INT, (void*)elementBuffer->dataVec.data());
+	*/
 }
 
 void VertexArrayObject::CheckArrays(const std::vector<glm::vec3>& posVec,

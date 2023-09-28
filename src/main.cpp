@@ -94,14 +94,13 @@ std::unique_ptr<PointCloud> LoadPointCloud()
 {
     std::unique_ptr<PointCloud> pointCloud(new PointCloud());
 
-    /*
     if (!pointCloud->ImportPly("data/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -143,6 +142,7 @@ std::unique_ptr<PointCloud> LoadPointCloud()
         p.color[1] = 0;
         p.color[2] = 255;
     }
+    */
 
     return pointCloud;
 }
@@ -490,8 +490,8 @@ int main(int argc, char *argv[])
             flyCam.Process(dt);
         }
 
+        // AJT
         //OldRender2(pointProg.get(), pointTex.get(), pointCloud.get(), flyCam.GetCameraMat());
-
         //pointCloudVAO->CheckArrays(s_positionVec, s_uvVec, s_colorVec, s_indexVec);
 
         Render(pointProg.get(), pointTex.get(), pointCloud.get(), pointCloudVAO, flyCam.GetCameraMat());
