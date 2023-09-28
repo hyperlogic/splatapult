@@ -23,6 +23,12 @@ public:
 	void Store(const std::vector<glm::vec4>& data);
 	void Store(const std::vector<uint32_t>& data);
 
+	// AJT: TEMP HELPER FOR DEBUGGG
+	void BufferStorage(int target, size_t numBytes, void* data, int flags);
+
+	// AJT: TEMP FOR DEBUGGIGN
+	void Check(const uint8_t* data);
+
 protected:
 	int target;
     uint32_t obj;
@@ -45,6 +51,12 @@ public:
 	void SetAttribBuffer(int loc, std::shared_ptr<BufferObject> attribBufferIn);
 	void SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn);
 	void Draw() const;
+
+	// AJT: FUCKING DEBUG
+	void CheckArrays(const std::vector<glm::vec3>& posVec,
+					 const std::vector<glm::vec2>& uvVec,
+					 const std::vector<glm::vec4>& colorVec,
+					 const std::vector<uint32_t> indexVec);
 
 protected:
 	uint32_t obj;
