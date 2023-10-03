@@ -1,6 +1,7 @@
 //SDL2 flashing random color example
 //Should work on iOS/Android/Mac/Windows/Linux
 
+#include <algorithm>
 #include <cassert>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
@@ -25,15 +26,17 @@ static SDL_Window *window = NULL;
 static SDL_GLContext gl_context;
 static SDL_Renderer *renderer = NULL;
 
-std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(const PointCloud* pointCloud, const Program* pointProg)
+//#define SORT_POINTS
+
+std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> pointProg)
 {
     SDL_GL_MakeCurrent(window, gl_context);
-    std::shared_ptr<VertexArrayObject> pointCloudVAO = std::make_shared<VertexArrayObject>();
+    auto pointCloudVAO = std::make_shared<VertexArrayObject>();
 
-    std::shared_ptr<BufferObject> positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    std::shared_ptr<BufferObject> uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    std::shared_ptr<BufferObject> colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    std::shared_ptr<BufferObject> indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER);
+    auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
+    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
+    auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
+    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER);
 
     glm::vec2 uvLowerLeft(0.0f, 0.0f);
     glm::vec2 uvUpperRight(1.0f, 1.0f);
@@ -78,7 +81,11 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(const PointCloud* pointClo
         indexVec.push_back(i * NUM_CORNERS + 2);
         indexVec.push_back(i * NUM_CORNERS + 3);
     }
+#ifdef SORT_POINTS
+    indexEBO->Store(indexVec, true);
+#else
     indexEBO->Store(indexVec);
+#endif
 
     pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionVBO);
     pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("uv"), uvVBO);
@@ -88,9 +95,10 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(const PointCloud* pointClo
     return pointCloudVAO;
 }
 
-std::unique_ptr<PointCloud> LoadPointCloud()
+std::shared_ptr<PointCloud> LoadPointCloud()
 {
-    std::unique_ptr<PointCloud> pointCloud(new PointCloud());
+    auto pointCloud = std::make_shared<PointCloud>();
+
     if (!pointCloud->ImportPly("data/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
@@ -144,7 +152,7 @@ std::unique_ptr<PointCloud> LoadPointCloud()
     return pointCloud;
 }
 
-void Render(const Program* pointProg, const Texture* pointTex, const PointCloud* pointCloud,
+void Render(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex, std::shared_ptr<const PointCloud> pointCloud,
             std::shared_ptr<VertexArrayObject> pointCloudVAO, const glm::mat4& cameraMat)
 {
     SDL_GL_MakeCurrent(window, gl_context);
@@ -155,7 +163,7 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
-    clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -180,6 +188,49 @@ void Render(const Program* pointProg, const Texture* pointTex, const PointCloud*
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, pointTex->texture);
     pointProg->SetUniform("colorTex", 0);
+
+#ifdef SORT_POINTS
+    // AJT: dont need to build this everyframe
+    std::vector<glm::vec4> posVec;
+    const size_t numPoints = pointCloud->GetPointVec().size();
+    posVec.reserve(numPoints);
+    // transform and copy points into view space.
+    for (size_t i = 0; i < numPoints; i++)
+    {
+        posVec.push_back(modelViewMat * glm::vec4(pointCloud->GetPointVec()[i].position[0],
+                                                  pointCloud->GetPointVec()[i].position[1],
+                                                  pointCloud->GetPointVec()[i].position[2], 1.0f));
+    }
+    // sort indices by z.
+    std::vector<uint32_t> indexVec;
+    indexVec.reserve(numPoints);
+    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+    {
+        indexVec.push_back(i);
+    }
+    std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+    {
+        return posVec[a].z < posVec[b].z;
+    });
+    // expand out indexVec for rendering
+    const int NUM_CORNERS = 4;
+    std::vector<uint32_t> newIndexVec;
+    newIndexVec.reserve(numPoints * 4);
+    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+    {
+        const int ii = indexVec[i];
+        newIndexVec.push_back(ii * NUM_CORNERS + 0);
+        newIndexVec.push_back(ii * NUM_CORNERS + 1);
+        newIndexVec.push_back(ii * NUM_CORNERS + 2);
+        newIndexVec.push_back(ii * NUM_CORNERS + 0);
+        newIndexVec.push_back(ii * NUM_CORNERS + 2);
+        newIndexVec.push_back(ii * NUM_CORNERS + 3);
+    }
+
+    // store newIndexVec into elementBuffer
+    auto elementBuffer = pointCloudVAO->GetElementBuffer();
+    elementBuffer->Update(newIndexVec);
+#endif
 
     pointCloudVAO->Draw();
 
@@ -226,8 +277,7 @@ int main(int argc, char *argv[])
 
     SDL_AddEventWatch(Watch, NULL);
 
-    std::unique_ptr<PointCloud> pointCloud(new PointCloud());
-    pointCloud = LoadPointCloud();
+    auto pointCloud = LoadPointCloud();
     if (!pointCloud)
     {
         Log::printf("Error loading PointCloud\n");
@@ -241,8 +291,8 @@ int main(int argc, char *argv[])
         return 1;
     }
     Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
-    std::unique_ptr<Texture> pointTex(new Texture(pointImg, texParams));
-    std::unique_ptr<Program> pointProg(new Program());
+    auto pointTex = std::make_shared<Texture>(pointImg, texParams);
+    auto pointProg = std::make_shared<Program>();
     if (!pointProg->Load("shader/point_vert.glsl", "shader/point_frag.glsl"))
     {
         Log::printf("Error loading point shader!\n");
@@ -250,9 +300,11 @@ int main(int argc, char *argv[])
     }
 
     // build static VertexArrayObject from the pointCloud
-    std::shared_ptr<VertexArrayObject> pointCloudVAO = BuildPointCloudVAO(pointCloud.get(), pointProg.get());
+    auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
 
-    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), 10.0f, 2.0f);
+    const float MOVE_SPEED = 2.5f;
+    const float ROT_SPEED = 0.25f;
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
     uint32_t frameCount = 1;
@@ -310,7 +362,7 @@ int main(int argc, char *argv[])
                             glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]));
             flyCam.Process(dt);
         }
-        Render(pointProg.get(), pointTex.get(), pointCloud.get(), pointCloudVAO, flyCam.GetCameraMat());
+        Render(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
 
         frameCount++;
     }

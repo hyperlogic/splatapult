@@ -17,11 +17,17 @@ public:
 
 	void Bind() const;
 	void Unbind() const;
-	void Store(const std::vector<float>& data);
-	void Store(const std::vector<glm::vec2>& data);
-	void Store(const std::vector<glm::vec3>& data);
-	void Store(const std::vector<glm::vec4>& data);
-	void Store(const std::vector<uint32_t>& data);
+	void Store(const std::vector<float>& data, bool isDynamic = false);
+	void Store(const std::vector<glm::vec2>& data, bool isDynamic = false);
+	void Store(const std::vector<glm::vec3>& data, bool isDynamic = false);
+	void Store(const std::vector<glm::vec4>& data, bool isDynamic = false);
+	void Store(const std::vector<uint32_t>& data, bool isDynamic = false);
+
+	void Update(const std::vector<float>& data);
+	void Update(const std::vector<glm::vec2>& data);
+	void Update(const std::vector<glm::vec3>& data);
+	void Update(const std::vector<glm::vec4>& data);
+	void Update(const std::vector<uint32_t>& data);
 
 protected:
 	int target;
@@ -41,6 +47,7 @@ public:
 
 	void SetAttribBuffer(int loc, std::shared_ptr<BufferObject> attribBufferIn);
 	void SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn);
+	std::shared_ptr<BufferObject> GetElementBuffer() const { return elementBuffer; }
 	void Draw() const;
 
 protected:

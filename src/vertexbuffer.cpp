@@ -33,49 +33,84 @@ void BufferObject::Unbind() const
 	glBindBuffer(target, 0);
 }
 
-void BufferObject::Store(const std::vector<float>& data)
+void BufferObject::Store(const std::vector<float>& data, bool isDynamic)
 {
 	Bind();
-    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), 0);
+    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
 }
 
-void BufferObject::Store(const std::vector<glm::vec2>& data)
+void BufferObject::Store(const std::vector<glm::vec2>& data, bool isDynamic)
 {
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), 0);
+    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
 	Unbind();
 	elementSize = 2;
 	numElements = (int)data.size();
 }
 
-void BufferObject::Store(const std::vector<glm::vec3>& data)
+void BufferObject::Store(const std::vector<glm::vec3>& data, bool isDynamic)
 {
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), 0);
+    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
 	Unbind();
 	elementSize = 3;
 	numElements = (int)data.size();
 }
 
-void BufferObject::Store(const std::vector<glm::vec4>& data)
+void BufferObject::Store(const std::vector<glm::vec4>& data, bool isDynamic)
 {
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), 0);
+    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
 	Unbind();
 	elementSize = 4;
 	numElements = (int)data.size();
 }
 
-void BufferObject::Store(const std::vector<uint32_t>& data)
+void BufferObject::Store(const std::vector<uint32_t>& data, bool isDynamic)
 {
 	Bind();
-    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), 0);
+    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
+}
+
+void BufferObject::Update(const std::vector<float>& data)
+{
+	Bind();
+    glBufferSubData(target, 0, sizeof(float) * data.size(), (void*)data.data());
+	Unbind();
+}
+
+void BufferObject::Update(const std::vector<glm::vec2>& data)
+{
+	Bind();
+    glBufferSubData(target, 0, sizeof(glm::vec2) * data.size(), (void*)data.data());
+	Unbind();
+}
+
+void BufferObject::Update(const std::vector<glm::vec3>& data)
+{
+	Bind();
+    glBufferSubData(target, 0, sizeof(glm::vec3) * data.size(), (void*)data.data());
+	Unbind();
+}
+
+void BufferObject::Update(const std::vector<glm::vec4>& data)
+{
+	Bind();
+    glBufferSubData(target, 0, sizeof(glm::vec4) * data.size(), (void*)data.data());
+	Unbind();
+}
+
+void BufferObject::Update(const std::vector<uint32_t>& data)
+{
+	Bind();
+    glBufferSubData(target, 0, sizeof(uint32_t) * data.size(), (void*)data.data());
+	Unbind();
 }
 
 
