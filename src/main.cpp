@@ -94,13 +94,14 @@ std::shared_ptr<PointCloud> LoadPointCloud()
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
+    /*
     if (!pointCloud->ImportPly("data/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
+    */
 
-    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -142,13 +143,11 @@ std::shared_ptr<PointCloud> LoadPointCloud()
         p.color[1] = 0;
         p.color[2] = 255;
     }
-    */
 
     return pointCloud;
 }
 
-void Render(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex, std::shared_ptr<const PointCloud> pointCloud,
-            std::shared_ptr<VertexArrayObject> pointCloudVAO, const glm::mat4& cameraMat)
+void Clear()
 {
     SDL_GL_MakeCurrent(window, gl_context);
 
@@ -168,6 +167,12 @@ void Render(std::shared_ptr<const Program> pointProg, const std::shared_ptr<cons
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
+}
+
+void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex,
+                      std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<VertexArrayObject> pointCloudVAO,
+                      const glm::mat4& cameraMat)
+{
 
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
@@ -228,8 +233,55 @@ void Render(std::shared_ptr<const Program> pointProg, const std::shared_ptr<cons
 #endif
 
     pointCloudVAO->Draw();
+}
 
-    SDL_GL_SwapWindow(window);
+std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const Program> splatProg)
+{
+    SDL_GL_MakeCurrent(window, gl_context);
+    auto splatVAO = std::make_shared<VertexArrayObject>();
+
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    const float ASPECT_RATIO = (float)width / (float)height;
+
+    // setup a rect in front of the camera.
+    // these points are hardcoded in view space.
+    std::vector<glm::vec3> viewPosVec;
+    viewPosVec.reserve(4);
+    const float DEPTH = -2.2f;
+    viewPosVec.push_back(glm::vec3(0.5f, -0.5f, DEPTH));
+    viewPosVec.push_back(glm::vec3(0.5f, 0.5f, DEPTH));
+    viewPosVec.push_back(glm::vec3(-0.5f, 0.5f, DEPTH));
+    viewPosVec.push_back(glm::vec3(-0.5f, -0.5f, DEPTH));
+
+    /*
+    std::vector<glm::vec3> colorVec;
+    colorVec.reserve(4);
+    colorVec.push_back(glm::vec4(1.0f, 1.0f, 1.0f
+    */
+
+    auto viewPosVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, viewPosVec);
+
+    std::vector<uint32_t> indexVec = {0, 1, 2, 0, 2, 3};
+    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
+
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("viewPos"), viewPosVBO);
+    splatVAO->SetElementBuffer(indexEBO);
+
+    return splatVAO;
+}
+
+void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
+{
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    //glm::mat4 modelViewMat = glm::inverse(cameraMat);
+    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+
+    splatProg->Bind();
+    splatProg->SetUniform("projMat", projMat);
+
+    splatVAO->Draw();
 }
 
 int SDLCALL Watch(void *userdata, SDL_Event* event)
@@ -290,12 +342,20 @@ int main(int argc, char *argv[])
     auto pointProg = std::make_shared<Program>();
     if (!pointProg->Load("shader/point_vert.glsl", "shader/point_frag.glsl"))
     {
-        Log::printf("Error loading point shader!\n");
+        Log::printf("Error loading point shaders!\n");
         return 1;
     }
 
     // build static VertexArrayObject from the pointCloud
     auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
+
+    auto splatProg = std::make_shared<Program>();
+    if (!splatProg->Load("shader/splat_vert.glsl", "shader/splat_frag.glsl"))
+    {
+        Log::printf("Error loading splat shaders!\n");
+        return 1;
+    }
+    auto splatVAO = BuildSplatVAO(splatProg);
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
@@ -357,9 +417,14 @@ int main(int argc, char *argv[])
                             glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]));
             flyCam.Process(dt);
         }
-        Render(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
 
+        Clear();
+        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
+        RenderSplat(splatProg, splatVAO, flyCam.GetCameraMat());
         frameCount++;
+
+        SDL_GL_SwapWindow(window);
+
     }
 
     JOYSTICK_Shutdown();
