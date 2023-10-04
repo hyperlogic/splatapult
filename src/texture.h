@@ -33,7 +33,7 @@ struct Texture
     Texture(const Image& image, const Params& params);
     ~Texture();
 
-    void Apply(int unit) const;
+    void Bind(int unit) const;
 
     uint32_t texture;
     bool hasAlphaChannel;

@@ -174,7 +174,7 @@ void Render(std::shared_ptr<const Program> pointProg, const std::shared_ptr<cons
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
-    pointProg->Apply();
+    pointProg->Bind();
     pointProg->SetUniform("modelViewMat", modelViewMat);
     pointProg->SetUniform("projMat", projMat);
     pointProg->SetUniform("pointSize", 0.02f);

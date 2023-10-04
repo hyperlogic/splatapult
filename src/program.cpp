@@ -157,7 +157,7 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
     }
 }
 
-void Program::Apply() const
+void Program::Bind() const
 {
     glUseProgram(program);
 }

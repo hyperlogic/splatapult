@@ -10,7 +10,7 @@ struct Program
     Program();
     ~Program();
     bool Load(const std::string& vertFilename, const std::string& fragFilename);
-    void Apply() const;
+    void Bind() const;
 
     int GetUniformLoc(const std::string& name) const;
     int GetAttribLoc(const std::string& name) const;
