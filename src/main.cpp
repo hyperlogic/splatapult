@@ -33,11 +33,6 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const Poin
     SDL_GL_MakeCurrent(window, gl_context);
     auto pointCloudVAO = std::make_shared<VertexArrayObject>();
 
-    auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER);
-    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER);
-
     glm::vec2 uvLowerLeft(0.0f, 0.0f);
     glm::vec2 uvUpperRight(1.0f, 1.0f);
 
@@ -64,9 +59,9 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const Poin
         colorVec.push_back(color);
         colorVec.push_back(color);
     }
-    positionVBO->Store(positionVec);
-    uvVBO->Store(uvVec);
-    colorVBO->Store(colorVec);
+    auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
+    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
+    auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
 
     std::vector<uint32_t> indexVec;
     const size_t NUM_INDICES = 6;
@@ -82,9 +77,9 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const Poin
         indexVec.push_back(i * NUM_CORNERS + 3);
     }
 #ifdef SORT_POINTS
-    indexEBO->Store(indexVec, true);
+    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true);
 #else
-    indexEBO->Store(indexVec);
+    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
 #endif
 
     pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionVBO);
@@ -303,7 +298,7 @@ int main(int argc, char *argv[])
     auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
 
     const float MOVE_SPEED = 2.5f;
-    const float ROT_SPEED = 0.25f;
+    const float ROT_SPEED = 1.0f;
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 

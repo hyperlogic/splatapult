@@ -12,16 +12,16 @@ class BufferObject
 {
 	friend class VertexArrayObject;
 public:
-    BufferObject(int targetIn);
+    BufferObject(int targetIn, const std::vector<float>& data, bool isDynamic = false);
+	BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic = false);
+	BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic = false);
+	BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic = false);
+	BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic = false);
+	BufferObject(const BufferObject& orig) = delete;
     ~BufferObject();
 
 	void Bind() const;
 	void Unbind() const;
-	void Store(const std::vector<float>& data, bool isDynamic = false);
-	void Store(const std::vector<glm::vec2>& data, bool isDynamic = false);
-	void Store(const std::vector<glm::vec3>& data, bool isDynamic = false);
-	void Store(const std::vector<glm::vec4>& data, bool isDynamic = false);
-	void Store(const std::vector<uint32_t>& data, bool isDynamic = false);
 
 	void Update(const std::vector<float>& data);
 	void Update(const std::vector<glm::vec2>& data);

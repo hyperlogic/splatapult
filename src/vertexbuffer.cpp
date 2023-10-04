@@ -8,14 +8,69 @@
 
 #include "util.h"
 
-BufferObject::BufferObject(int targetIn)
+BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
 	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
-	elementSize = 0;
-	numElements = 0;
+	Bind();
+    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	Unbind();
+	elementSize = 1;
+	numElements = (int)data.size();
+}
+
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic)
+{
+	// limit the types for safety... these are the only one I actually use.
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	target = targetIn;
+    glGenBuffers(1, &obj);
+	Bind();
+    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	Unbind();
+	elementSize = 2;
+	numElements = (int)data.size();
+}
+
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic)
+{
+	// limit the types for safety... these are the only one I actually use.
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	target = targetIn;
+    glGenBuffers(1, &obj);
+	Bind();
+    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	Unbind();
+	elementSize = 3;
+	numElements = (int)data.size();
+}
+
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic)
+{
+	// limit the types for safety... these are the only one I actually use.
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	target = targetIn;
+    glGenBuffers(1, &obj);
+	Bind();
+    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	Unbind();
+	elementSize = 4;
+	numElements = (int)data.size();
+}
+
+BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic)
+{
+	// limit the types for safety... these are the only one I actually use.
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	target = targetIn;
+    glGenBuffers(1, &obj);
+	Bind();
+    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	Unbind();
+	elementSize = 1;
+	numElements = (int)data.size();
 }
 
 BufferObject::~BufferObject()
@@ -31,51 +86,6 @@ void BufferObject::Bind() const
 void BufferObject::Unbind() const
 {
 	glBindBuffer(target, 0);
-}
-
-void BufferObject::Store(const std::vector<float>& data, bool isDynamic)
-{
-	Bind();
-    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
-	Unbind();
-	elementSize = 1;
-	numElements = (int)data.size();
-}
-
-void BufferObject::Store(const std::vector<glm::vec2>& data, bool isDynamic)
-{
-	Bind();
-    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
-	Unbind();
-	elementSize = 2;
-	numElements = (int)data.size();
-}
-
-void BufferObject::Store(const std::vector<glm::vec3>& data, bool isDynamic)
-{
-	Bind();
-    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
-	Unbind();
-	elementSize = 3;
-	numElements = (int)data.size();
-}
-
-void BufferObject::Store(const std::vector<glm::vec4>& data, bool isDynamic)
-{
-	Bind();
-    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
-	Unbind();
-	elementSize = 4;
-	numElements = (int)data.size();
-}
-
-void BufferObject::Store(const std::vector<uint32_t>& data, bool isDynamic)
-{
-	Bind();
-    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
-	Unbind();
-	elementSize = 1;
-	numElements = (int)data.size();
 }
 
 void BufferObject::Update(const std::vector<float>& data)
