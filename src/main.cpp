@@ -271,15 +271,70 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const Program> 
     return splatVAO;
 }
 
+struct SplatInfo
+{
+    SplatInfo(float kIn, const glm::vec2& pIn, const glm::mat4& rhoInvMatIn) : k(kIn), p(pIn), rhoInvMat(rhoInvMatIn) {}
+    float k;
+    glm::vec2 p;
+    glm::mat2 rhoInvMat;
+};
+
+// Algorithm from Zwicker et. al 2001 "EWS Volume Splatting"
+// u = center of Splat in obj coords
+// V = varience matrix of spalt in object coords
+SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& screenMat)
+{
+    // compute camera coords, t
+    glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
+
+    // compute Jacobian J
+    float l = glm::length(glm::vec3(t));
+    glm::mat3 J(glm::vec3(1.0f / t.z, 0.0f, t.x * l),
+                glm::vec3(0.0f, 1.0f / t.z, t.y / l),
+                glm::vec3(-t.x / (t.z * t.z), -t.y / (t.z * t.z), t.z / l));
+
+    // compute the variance matrix V_prime
+    glm::mat3 W(viewMat);
+    glm::mat3 JW = J * W;
+    glm::mat3 V_prime = JW * V * glm::transpose(JW);
+
+    // project t to screen coords, x
+    glm::vec4 x = screenMat * t;
+
+    // Perspective divide
+    x.x /= x.w;
+    x.y /= x.w;
+    x.z /= x.w;
+    x.w = 1.0f;
+
+    // setup the resampling filter rho[k]
+    // AJT: TODO SKIP low-pass filter, part, I DON"T KNOW WHAT the variance should be on that.
+    glm::mat2 Rho = glm::mat2(V_prime);
+    float k1 = 1.0f / (glm::determinant(glm::inverse(J)) * glm::determinant(glm::inverse(W)));
+    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_prime)));
+
+    return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(Rho));
+}
+
 void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
 {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
-    //glm::mat4 modelViewMat = glm::inverse(cameraMat);
+    glm::mat4 viewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+    glm::mat4 viewportMat = glm::ortho(0.0f, 0.0f, (float)width, (float)height);
+
+    glm::vec3 u(0.0f, 0.0f, 0.0f);
+    glm::mat3 V(1.0f);
+    SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, viewportMat * projMat);
 
     splatProg->Bind();
     splatProg->SetUniform("projMat", projMat);
+
+    // AJT: TODO These should be attribs.
+    splatProg->SetUniform("k", splatInfo.k);
+    splatProg->SetUniform("p", splatInfo.p);
+    splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
 
     splatVAO->Draw();
 }
