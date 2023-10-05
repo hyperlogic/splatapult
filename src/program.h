@@ -25,7 +25,7 @@ struct Program
         }
         else
         {
-            std::cerr << "could not find uniform " << name << " for program " << name << std::endl;
+            std::cerr << "could not find uniform " << name << " for program " << debugName << std::endl;
         }
     }
 
@@ -46,7 +46,7 @@ struct Program
         }
         else
         {
-            std::cerr << "could not find attrib " << name << " for program " << name << std::endl;
+            std::cerr << "could not find attrib " << name << " for program " << debugName << std::endl;
         }
     }
 

@@ -4,6 +4,9 @@
 //
 
 uniform mat4 projMat;
+uniform float k;
+uniform vec2 p;
+uniform mat2 rhoInvMat;
 
 attribute vec3 viewPos;
 

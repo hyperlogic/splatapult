@@ -249,6 +249,45 @@ glm::vec3 RandomColor()
     return glm::vec3(glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f));
 }
 
+void PrintMat(const glm::mat4& m4, const std::string& name)
+{
+    Log::printf("%s =\n", name.c_str());
+    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][0], m4[0][1], m4[0][2], m4[0][3]);
+    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[1][0], m4[1][1], m4[1][2], m4[1][3]);
+    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[2][0], m4[2][1], m4[2][2], m4[2][3]);
+    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[3][0], m4[3][1], m4[3][2], m4[3][3]);
+}
+
+void PrintMat(const glm::mat3& m3, const std::string& name)
+{
+    Log::printf("%s =\n", name.c_str());
+    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[0][0], m3[0][1], m3[0][2]);
+    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[1][0], m3[1][1], m3[1][2]);
+    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[2][0], m3[2][1], m3[2][2]);
+}
+
+void PrintMat(const glm::mat2& m2, const std::string& name)
+{
+    Log::printf("%s =\n", name.c_str());
+    Log::printf("   | %10.5f, %10.5f |\n", m2[0][0], m2[0][1]);
+    Log::printf("   | %10.5f, %10.5f |\n", m2[1][0], m2[1][1]);
+}
+
+void PrintVec(const glm::vec4& v4, const std::string& name)
+{
+    Log::printf("%s = ( %.5f, %.5f, %.5f, %.5f )\n", name.c_str(), v4.x, v4.y, v4.z, v4.w);
+}
+
+void PrintVec(const glm::vec3& v3, const std::string& name)
+{
+    Log::printf("%s = ( %.5f, %.5f, %.5f )\n", name.c_str(), v3.x, v3.y, v3.z);
+}
+
+void PrintVec(const glm::vec2& v2, const std::string& name)
+{
+    Log::printf("%s = ( %.5f, %.5f )\n", name.c_str(), v2.x, v2.y);
+}
+
 static const std::string ROOT_PATH("../../");
 const std::string& GetRootPath()
 {

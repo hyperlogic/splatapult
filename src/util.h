@@ -44,6 +44,13 @@ glm::vec3 XformPoint(const glm::mat4& m, const glm::vec3& p);
 
 glm::vec3 RandomColor();
 
+void PrintMat(const glm::mat4& m4, const std::string& name);
+void PrintMat(const glm::mat3& m3, const std::string& name);
+void PrintMat(const glm::mat2& m2, const std::string& name);
+void PrintVec(const glm::vec4& v4, const std::string& name);
+void PrintVec(const glm::vec3& v3, const std::string& name);
+void PrintVec(const glm::vec2& v2, const std::string& name);
+
 const std::string& GetRootPath();
 
 #endif

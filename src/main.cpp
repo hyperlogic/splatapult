@@ -19,6 +19,7 @@
 #include "pointcloud.h"
 #include "program.h"
 #include "texture.h"
+#include "util.h"
 #include "vertexbuffer.h"
 
 static bool quitting = false;
@@ -279,17 +280,27 @@ struct SplatInfo
     glm::mat2 rhoInvMat;
 };
 
+float Gaussian2D(const glm::vec2& d, glm::mat2& V)
+{
+    float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V)));
+    float e = glm::dot(d, glm::inverse(V) * d);
+    return k * expf(-0.5f * e);
+}
+
 // Algorithm from Zwicker et. al 2001 "EWS Volume Splatting"
 // u = center of Splat in obj coords
 // V = varience matrix of spalt in object coords
-SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& screenMat)
+SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
 {
     // compute camera coords, t
     glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
 
+    // HACK: flip z (assume looking down z axis) not -z
+    t.z = -t.z;
+
     // compute Jacobian J
     float l = glm::length(glm::vec3(t));
-    glm::mat3 J(glm::vec3(1.0f / t.z, 0.0f, t.x * l),
+    glm::mat3 J(glm::vec3(1.0f / t.z, 0.0f, t.x / l),
                 glm::vec3(0.0f, 1.0f / t.z, t.y / l),
                 glm::vec3(-t.x / (t.z * t.z), -t.y / (t.z * t.z), t.z / l));
 
@@ -299,21 +310,38 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
 
     // project t to screen coords, x
-    glm::vec4 x = screenMat * t;
-
-    // Perspective divide
-    x.x /= x.w;
-    x.y /= x.w;
-    x.z /= x.w;
-    x.w = 1.0f;
+    glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
 
     // setup the resampling filter rho[k]
     // AJT: TODO SKIP low-pass filter, part, I DON"T KNOW WHAT the variance should be on that.
-    glm::mat2 Rho = glm::mat2(V_prime);
-    float k1 = 1.0f / (glm::determinant(glm::inverse(J)) * glm::determinant(glm::inverse(W)));
-    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_prime)));
+    glm::mat2 V_hat_prime = glm::mat2(V_prime);
+    float k1 = 1.0f / (glm::determinant(glm::inverse(J) * glm::inverse(W)));
+    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
-    return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(Rho));
+    // AJT: REMOVE, compute G at center of screen. viewport.z
+    PrintVec(glm::vec2(k1, k2), "k1, k2");
+    PrintMat(V_hat_prime, "V_hat_prime");
+    PrintVec(u, "u");
+    PrintVec(t, "t");
+    PrintVec(x, "x");
+
+    PrintMat(V, "V");
+    PrintMat(W, "W");
+    PrintMat(glm::inverse(W), "inv W");
+    PrintMat(J, "J");
+    PrintMat(glm::inverse(J), "inv J");
+    PrintMat(V_prime, "V_prime");
+    PrintMat(V_hat_prime, "V_hat_prime");
+
+    glm::vec2 p(viewport.z / 2.0f, viewport.w / 2.0f);
+    float g = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
+    p += glm::vec2(1.0f, 1.0f);
+    float g_offset = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
+
+    Log::printf("g(center) = %.5f\n", g);
+    Log::printf("g(center + offset) = %.5f\n", g_offset);
+
+    return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(V_hat_prime));
 }
 
 void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
@@ -322,19 +350,28 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 viewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
-    glm::mat4 viewportMat = glm::ortho(0.0f, 0.0f, (float)width, (float)height);
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
     glm::mat3 V(1.0f);
-    SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, viewportMat * projMat);
+
+    glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
+    SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
 
     splatProg->Bind();
     splatProg->SetUniform("projMat", projMat);
 
     // AJT: TODO These should be attribs.
-    splatProg->SetUniform("k", splatInfo.k);
-    splatProg->SetUniform("p", splatInfo.p);
-    splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
+    //splatProg->SetUniform("k", splatInfo.k);
+    //splatProg->SetUniform("p", splatInfo.p);
+    //splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
+
+    // AJT: HACK MANUALY SET 2D guassian parameters
+    glm::mat2 V2(0.01f);
+    //float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V2)));
+    float k = 0.5f;
+    splatProg->SetUniform("k", k);
+    splatProg->SetUniform("p", glm::vec2((float)width / 2.0f, (float)height / 2.0f));
+    splatProg->SetUniform("rhoInvMat", glm::inverse(V2));
 
     splatVAO->Draw();
 }
