@@ -27,6 +27,9 @@ static SDL_Window *window = NULL;
 static SDL_GLContext gl_context;
 static SDL_Renderer *renderer = NULL;
 
+const float Z_NEAR = 0.1f;
+const float Z_FAR = 1000.0f;
+
 //#define SORT_POINTS
 
 std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> pointProg)
@@ -178,7 +181,7 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, Z_NEAR, Z_FAR);
 
     pointProg->Bind();
     pointProg->SetUniform("modelViewMat", modelViewMat);
@@ -288,6 +291,7 @@ float Gaussian2D(const glm::vec2& d, glm::mat2& V)
 }
 
 // Algorithm from Zwicker et. al 2001 "EWS Volume Splatting"
+// and "EWS Splatting"
 // u = center of Splat in obj coords
 // V = varience matrix of spalt in object coords
 SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
@@ -304,37 +308,63 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
                 glm::vec3(0.0f, 1.0f / t.z, t.y / l),
                 glm::vec3(-t.x / (t.z * t.z), -t.y / (t.z * t.z), t.z / l));
 
+    // compute 3D NDC to viewport transform (don't need translation part)
+    const float WIDTH = viewport.z;
+    const float HEIGHT = viewport.w;
+    glm::mat3 S(glm::vec3(WIDTH / 2.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, HEIGHT / 2.0f, 0.0f),
+                glm::vec3(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f));
+
     // compute the variance matrix V_prime
     glm::mat3 W(viewMat);
-    glm::mat3 JW = J * W;
-    glm::mat3 V_prime = JW * V * glm::transpose(JW);
+    glm::mat3 SJW = S * J * W;
+    glm::mat3 V_prime = SJW * V * glm::transpose(SJW);
 
     // project t to screen coords, x
-    glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
+    //glm::vec3 x = glm::projectNO(u, viewMat, projMat, viewport);
+
+    // AJT: TODO REMOVE DEBUGGING.s.s.
+    glm::mat4 viewportMat(glm::vec4(WIDTH / 2.0f, 0.0f, 0.0f, 0.0f),
+                          glm::vec4(0.0f, HEIGHT / 2.0f, 0.0f, 0.0f),
+                          glm::vec4(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f, 0.0f),
+                          glm::vec4(WIDTH / 2.0f, HEIGHT / 2.0f, (Z_FAR + Z_NEAR) / 2.0f, 1.0f));
+    //glm::mat4 fullMat = viewportMat * projMat * viewMat;
+    //glm::vec4 xx4 = fullMat * glm::vec4(u, 1.0f);
+    //glm::vec3 xx(xx4.x / xx4.w, xx4.y / xx4.w, xx4.z / xx4.w);
+
+    glm::mat4 clipMat = projMat * viewMat;
+    glm::vec4 cc4 = clipMat * glm::vec4(u, 1.0f);
+    glm::vec3 ndc(cc4.x / cc4.w, cc4.y / cc4.w, cc4.z / cc4.w);
+    glm::vec4 x = viewportMat * glm::vec4(ndc, 1.0f);
+
+    // AJT: TODO REMOVE dump coordiantes
+    PrintVec(u, "u");
+    PrintVec(t, "t");
+    PrintVec(x, "x");
 
     // setup the resampling filter rho[k]
     // AJT: TODO SKIP low-pass filter, part, I DON"T KNOW WHAT the variance should be on that.
     glm::mat2 V_hat_prime = glm::mat2(V_prime);
-    float k1 = 1.0f / (glm::determinant(glm::inverse(J) * glm::inverse(W)));
+    float k1 = 1.0f / (glm::determinant(glm::inverse(SJW)));
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
     // AJT: REMOVE, compute G at center of screen. viewport.z
     PrintVec(glm::vec2(k1, k2), "k1, k2");
+    Log::printf("k = %.5f\n", k1 * k2);
     PrintMat(V_hat_prime, "V_hat_prime");
-    PrintVec(u, "u");
-    PrintVec(t, "t");
-    PrintVec(x, "x");
 
     PrintMat(V, "V");
     PrintMat(W, "W");
     PrintMat(glm::inverse(W), "inv W");
     PrintMat(J, "J");
     PrintMat(glm::inverse(J), "inv J");
+    PrintMat(S, "S");
+    PrintMat(glm::inverse(S), "inv S");
     PrintMat(V_prime, "V_prime");
     PrintMat(V_hat_prime, "V_hat_prime");
     PrintMat(glm::inverse(V_hat_prime), "inv V_hat_prime");
 
-    glm::vec2 p(viewport.z / 2.0f, viewport.w / 2.0f);
+    glm::vec2 p(WIDTH / 2.0f, HEIGHT / 2.0f);
     float g = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
     p += glm::vec2(1.0f, 1.0f);
     float g_offset = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
@@ -350,7 +380,7 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 viewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, Z_NEAR, Z_FAR);
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
     glm::mat3 V(1.0f);
@@ -362,21 +392,26 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     splatProg->SetUniform("projMat", projMat);
 
     // AJT: TODO These should be attribs.
-    //splatProg->SetUniform("k", splatInfo.k);
+    splatProg->SetUniform("k", splatInfo.k);
     splatProg->SetUniform("p", splatInfo.p);
-    //splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
+    splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
 
+    /*
     // AJT: HACK MANUALY SET 2D guassian parameters
     float sigma = 100.0f;
-    glm::mat2 V2(glm::vec2(1.0f / (sigma * sigma), 0.0f),
-                 glm::vec2(0.0f, 1.0f / (sigma * sigma)));
+    glm::mat2 V2(glm::vec2(0.5f / (sigma * sigma), 0.0f),
+                 glm::vec2(0.0f, 4.0f / (sigma * sigma)));
+    float theta = glm::pi<float>() / 4.0f;
+    glm::mat2 R(glm::vec2(cosf(theta), sinf(theta)),
+                glm::vec2(-sinf(theta), cosf(theta)));
 
     PrintMat(V2, "V2");
     //float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V2)));
     float k = 1.0f;
     splatProg->SetUniform("k", k);
     //splatProg->SetUniform("p", glm::vec2((float)width / 2.0f, (float)height / 2.0f));
-    splatProg->SetUniform("rhoInvMat", V2);
+    splatProg->SetUniform("rhoInvMat", R * V2 * glm::transpose(R));
+    */
 
 
     splatVAO->Draw();
