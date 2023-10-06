@@ -34,6 +34,8 @@ struct Program
     void SetUniform(int loc, const glm::vec2& value) const;
     void SetUniform(int loc, const glm::vec3& value) const;
     void SetUniform(int loc, const glm::vec4& value) const;
+    void SetUniform(int loc, const glm::mat2& value) const;
+    void SetUniform(int loc, const glm::mat3& value) const;
     void SetUniform(int loc, const glm::mat4& value) const;
 
     template <typename T>

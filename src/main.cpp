@@ -332,6 +332,7 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     PrintMat(glm::inverse(J), "inv J");
     PrintMat(V_prime, "V_prime");
     PrintMat(V_hat_prime, "V_hat_prime");
+    PrintMat(glm::inverse(V_hat_prime), "inv V_hat_prime");
 
     glm::vec2 p(viewport.z / 2.0f, viewport.w / 2.0f);
     float g = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
@@ -362,16 +363,21 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
 
     // AJT: TODO These should be attribs.
     //splatProg->SetUniform("k", splatInfo.k);
-    //splatProg->SetUniform("p", splatInfo.p);
+    splatProg->SetUniform("p", splatInfo.p);
     //splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
 
     // AJT: HACK MANUALY SET 2D guassian parameters
-    glm::mat2 V2(0.01f);
+    float sigma = 100.0f;
+    glm::mat2 V2(glm::vec2(1.0f / (sigma * sigma), 0.0f),
+                 glm::vec2(0.0f, 1.0f / (sigma * sigma)));
+
+    PrintMat(V2, "V2");
     //float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V2)));
-    float k = 0.5f;
+    float k = 1.0f;
     splatProg->SetUniform("k", k);
-    splatProg->SetUniform("p", glm::vec2((float)width / 2.0f, (float)height / 2.0f));
-    splatProg->SetUniform("rhoInvMat", glm::inverse(V2));
+    //splatProg->SetUniform("p", glm::vec2((float)width / 2.0f, (float)height / 2.0f));
+    splatProg->SetUniform("rhoInvMat", V2);
+
 
     splatVAO->Draw();
 }

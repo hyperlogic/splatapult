@@ -213,6 +213,16 @@ void Program::SetUniform(int loc, const glm::vec4& value) const
     glUniform4fv(loc, 1, (float*)&value);
 }
 
+void Program::SetUniform(int loc, const glm::mat2& value) const
+{
+    glUniformMatrix2fv(loc, 1, GL_FALSE, (float*)&value);
+}
+
+void Program::SetUniform(int loc, const glm::mat3& value) const
+{
+    glUniformMatrix3fv(loc, 1, GL_FALSE, (float*)&value);
+}
+
 void Program::SetUniform(int loc, const glm::mat4& value) const
 {
     glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)&value);
