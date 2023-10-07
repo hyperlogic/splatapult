@@ -296,7 +296,7 @@ float Gaussian2D(const glm::vec2& d, glm::mat2& V)
 // viewMat = object to view transform
 // projMat = view to clip coords
 // viewport = (0, 0, W, H)
-SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
+SplatInfo ComputeSplatInfoOld(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
 {
     const float WIDTH = viewport.z;
     const float HEIGHT = viewport.w;
@@ -394,6 +394,53 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
 
     Log::printf("g(center) = %.5f\n", g);
     Log::printf("g(center + offset) = %.5f\n", g_offset);
+
+    return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(V_hat_prime));
+}
+
+SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
+{
+    const float WIDTH = viewport.z;
+    const float HEIGHT = viewport.w;
+
+    // compute camera coords, t
+    glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
+
+    // jacobian of projMat transform
+    glm::vec3 s(projMat[0][0],  projMat[1][1], projMat[2][2]);
+    float oz = projMat[2][3]; // z offset
+    float pz = projMat[3][2]; // perspective division scale factor
+    glm::mat3 J = glm::mat3(glm::vec3(s.x / (pz * t.z), 0.0f, -(s.x * t.x) / (pz * t.z * t.z)),
+                            glm::vec3(0.0f, s.y / (pz * t.z) , -(s.y * t.y) / (pz * t.z * t.z)),
+                            glm::vec3(0.0f, 0.0f, (s.z * (pz * t.z)) - ((oz + s.z * t.z) / (pz * t.z * t.z))));
+    J = glm::transpose(J);
+
+    // compute 3D NDC to viewport transform (don't need translation part)
+    glm::mat3 S(glm::vec3(WIDTH / 2.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, HEIGHT / 2.0f, 0.0f),
+                glm::vec3(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f));
+
+    // compute the variance matrix V_prime
+    glm::mat3 W(viewMat);
+    glm::mat3 JW = J * W;
+    glm::mat3 V_prime = JW * V * glm::transpose(JW);
+
+    // AJT: TODO SKIP low-pass filter, part, I DON"T KNOW WHAT the variance should be on that.
+    glm::mat2 V_hat_prime = glm::mat2(V_prime);
+    float k1 = 1.0f / (glm::determinant(glm::inverse(JW)));
+    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
+
+    glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
+
+    // DEBUGGING
+    PrintMat(viewMat, "viewMat");
+    PrintMat(W, "W");
+    PrintMat(J, "J");
+    PrintMat(S, "S");
+    PrintMat(V, "V");
+    PrintMat(V_prime, "V_prime");
+    Log::printf("k1 = %.5f, k2 = %.5f, (k1*k2) = %.5f\n", k1, k2, k1 * k2);
+    //Log::Printf(V_hat_prime, "inv(V_prime)");
 
     return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(V_hat_prime));
 }
