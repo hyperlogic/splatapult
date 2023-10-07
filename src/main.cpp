@@ -1,5 +1,4 @@
-//SDL2 flashing random color example
-//Should work on iOS/Android/Mac/Windows/Linux
+// 3d gaussian splat renderer
 
 #include <algorithm>
 #include <cassert>
@@ -294,29 +293,53 @@ float Gaussian2D(const glm::vec2& d, glm::mat2& V)
 // and "EWS Splatting"
 // u = center of Splat in obj coords
 // V = varience matrix of spalt in object coords
+// viewMat = object to view transform
+// projMat = view to clip coords
+// viewport = (0, 0, W, H)
 SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
 {
+    const float WIDTH = viewport.z;
+    const float HEIGHT = viewport.w;
+
+    // combine the scale factor from projMat into W
+    const float tanFOV = tanf(glm::radians(45.0f) / 2.0f);
+    const float SZ = -(Z_FAR + Z_NEAR) / (Z_FAR - Z_NEAR);
+    glm::mat4 aspectMat(glm::vec4(tanFOV * HEIGHT / WIDTH, 0.0f, 0.0f, 0.0f),
+                        glm::vec4(0.0, tanFOV, 0.0f, 0.0f),
+                        glm::vec4(0.0, 0.0f, SZ, 0.0f),
+                        glm::vec4(0.0, 0.0f, 0.0f, 1.0f));
+    glm::mat4 W4 = aspectMat * viewMat;
+
     // compute camera coords, t
-    glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
+    glm::vec4 t = W4 * glm::vec4(u, 1.0f);
+
+    // compute Jacobian J
+    float l = glm::length(glm::vec3(t));
 
     // HACK: flip z (assume looking down z axis) not -z
     t.z = -t.z;
 
-    // compute Jacobian J
-    float l = glm::length(glm::vec3(t));
+    PrintMat(projMat, "projMat");
+
     glm::mat3 J(glm::vec3(1.0f / t.z, 0.0f, t.x / l),
                 glm::vec3(0.0f, 1.0f / t.z, t.y / l),
                 glm::vec3(-t.x / (t.z * t.z), -t.y / (t.z * t.z), t.z / l));
 
+    /*
+    float tzSq = t.z * t.z;
+    float D = (2.0f * Z_FAR * Z_NEAR) / (Z_FAR - Z_NEAR);
+    glm::mat3 J(glm::vec3(1.0f / -t.z, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f / -t.z, 0.0f),
+                glm::vec3(t.x / tzSq, t.y / tzSq, D / tzSq));
+    */
+
     // compute 3D NDC to viewport transform (don't need translation part)
-    const float WIDTH = viewport.z;
-    const float HEIGHT = viewport.w;
     glm::mat3 S(glm::vec3(WIDTH / 2.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, HEIGHT / 2.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f));
 
     // compute the variance matrix V_prime
-    glm::mat3 W(viewMat);
+    glm::mat3 W(W4);
     glm::mat3 SJW = S * J * W;
     glm::mat3 V_prime = SJW * V * glm::transpose(SJW);
 
@@ -435,7 +458,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 768, SDL_WINDOW_OPENGL);
+    const int32_t WIDTH = 1024;
+    const int32_t HEIGHT = 768;
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
 
     gl_context = SDL_GL_CreateContext(window);
 
@@ -563,6 +588,7 @@ int main(int argc, char *argv[])
     JOYSTICK_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(gl_context);
+
     SDL_DestroyWindow(window);
     SDL_Quit();
 
