@@ -410,8 +410,9 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     // compute Jacobian of perpsective transform
     float tzSq = t.z * t.z;
     float tLen = sqrtf(t.x * t.z + t.y * t.y + t.z * t.z);
-    glm::mat3 J(glm::vec3(1.0f / t.z, 0, -t.x / tzSq),
-                glm::vec3(0.0f, 1.0f / t.z, -t.y / tzSq),
+    float fovTerm = 1.0f / tanf(glm::radians(45.0f) / 2.0f);
+    glm::mat3 J(glm::vec3(fovTerm / t.z, 0, -t.x / tzSq),
+                glm::vec3(0.0f, fovTerm / t.z, -t.y / tzSq),
                 glm::vec3(t.x / tLen, t.y / tLen, t.z / tLen));
     glm::mat3 JW = J * W;
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
@@ -420,7 +421,7 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
     glm::vec3 x3 = J * glm::vec3(viewMat * glm::vec4(u, 1.0f));
-    glm::vec2 x2(x3.x / x3.z, x3.y / x3.z);
+    glm::vec2 x2(-x3.x / x3.z, -x3.y / x3.z);
 
     return SplatInfo(-k1 * k2, x2, glm::inverse(V_hat_prime));
 }
