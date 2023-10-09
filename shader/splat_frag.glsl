@@ -9,9 +9,17 @@ uniform mat2 rhoInvMat;
 
 varying vec4 frag_color;
 
+vec2 toNDC(vec2 p)
+{
+    float w = 1024.0;
+    float h = 768.0;
+    return vec2((p.x * (2.0 / h)) - (w / h), (p.y * (2.0 / h)) - 1.0);
+}
+
 void main()
 {
-    vec2 d = gl_FragCoord.xy - p;
+    vec2 x = toNDC(gl_FragCoord.xy);
+    vec2 d = x - p;
     float g = k * exp(-0.5f * dot(d, rhoInvMat * d));
 
     // premultiplied alpha blending
