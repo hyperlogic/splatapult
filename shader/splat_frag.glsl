@@ -18,8 +18,8 @@ vec2 toNDC(vec2 p)
 
 void main()
 {
-    vec2 x = toNDC(gl_FragCoord.xy);
-    //vec2 x = gl_FragCoord.xy;
+    //vec2 x = toNDC(gl_FragCoord.xy);
+    vec2 x = gl_FragCoord.xy;
     vec2 d = x - p;
     float g = k * exp(-0.5f * dot(d, rhoInvMat * d));
 

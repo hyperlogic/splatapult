@@ -300,30 +300,28 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
 
     // compute Jacobian of perpsective transform
     float tzSq = t.z * t.z;
-    float tLen = sqrtf(t.x * t.z + t.y * t.y + t.z * t.z);
-    float aspect = WIDTH / HEIGHT;
     float f = 1.0f / tanf(FOVY / 2.0f);
-    float sx = f / aspect;
-    float sy = f;
-    float oz = (2.0f * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR);
 
-#define SPLAT_IN_NDC
+//#define SPLAT_IN_NDC
 
 #ifdef SPLAT_IN_NDC
-    float lr = oz / tzSq;
-    glm::mat3 J(glm::vec3(-(sx / t.z), 0, (sx * t.x) / tzSq),
-                glm::vec3(0.0f, -(sy / t.z), (sy * t.y) / tzSq),
-                glm::vec3(0.0f, 0.0f, lr));
+    float jsx = -(f * HEIGHT) / (WIDTH * t.z);
+    float jsy = -f / t.z;
+    float jtx = (f * t.x * HEIGHT) / (WIDTH * tzSq);
+    float jty = (f * t.y) / tzSq;
+    float jtz = -(2.0f * Z_FAR * Z_NEAR) / ((Z_FAR - Z_NEAR) * tzSq);
+    glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
+                glm::vec3(0.0f, jsy, jty),
+                glm::vec3(0.0f, 0.0f, jtz));
     J = glm::transpose(J);
 #else
-    float jsx = -(sx * WIDTH) / (2.0f * t.z);
-    float jsy = -(sy * HEIGHT) / (2.0f * t.z);
-    float jtx = (sx * t.x * WIDTH) / (2.0f * tzSq);
-    float jty = (sy * t.y * HEIGHT) / (2.0f * tzSq);
-    float iii = (Z_FAR - Z_NEAR) / 2.0f;
-    float jtz = (iii * oz) / tzSq;
-    glm::mat3 J(glm::vec3(jsx, 0.0f, jty),
-                glm::vec3(0.0f, jsy, jtx),
+    float jsx = -(f * HEIGHT) / (2.0f * t.z);
+    float jsy = -(f * HEIGHT) / (2.0f * t.z);
+    float jtx = (f * HEIGHT * t.x) / (2.0f * tzSq);
+    float jty = (f * HEIGHT * t.y) / (2.0f * tzSq);
+    float jtz = -(Z_FAR * Z_NEAR) / tzSq;
+    glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
+                glm::vec3(0.0f, jsy, jty),
                 glm::vec3(0.0f, 0.0f, jtz));
     J = glm::transpose(J);
 #endif
