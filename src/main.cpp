@@ -363,9 +363,9 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
-    glm::mat3 V(glm::vec3(1.0f, 0.0f, 0.0),
-                glm::vec3(0.0f, 1.0f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat3 V(glm::vec3(10.0f, 0.0f, 0.0),
+                glm::vec3(0.0f, 0.0001f, 0.0f),
+                glm::vec3(0.0f, 0.0f, 0.0001f));
 
     glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
     SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
