@@ -345,7 +345,7 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     // transform the center of the guassian u into NDC coords.
 #ifdef SPLAT_IN_NDC
     glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
-    glm::vec2 x2(x.x / x.z, x.y / x.z);
+    glm::vec2 x2(x.x / x.w, x.y / x.w);
 #else
     glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
     glm::vec2 x2(x);
