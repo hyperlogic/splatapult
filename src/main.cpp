@@ -252,11 +252,12 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const Program> 
     // these points are hardcoded in view space.
     std::vector<glm::vec3> viewPosVec;
     viewPosVec.reserve(4);
-    const float DEPTH = -2.2f;
-    viewPosVec.push_back(glm::vec3(0.5f, -0.5f, DEPTH));
-    viewPosVec.push_back(glm::vec3(0.5f, 0.5f, DEPTH));
-    viewPosVec.push_back(glm::vec3(-0.5f, 0.5f, DEPTH));
-    viewPosVec.push_back(glm::vec3(-0.5f, -0.5f, DEPTH));
+    const float DEPTH = -20.2f;
+    const float SIZE = 10.5f;
+    viewPosVec.push_back(glm::vec3(SIZE, -SIZE, DEPTH));
+    viewPosVec.push_back(glm::vec3(SIZE, SIZE, DEPTH));
+    viewPosVec.push_back(glm::vec3(-SIZE, SIZE, DEPTH));
+    viewPosVec.push_back(glm::vec3(-SIZE, -SIZE, DEPTH));
 
     /*
     std::vector<glm::vec3> colorVec;
@@ -415,9 +416,12 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float f = 1.0f / tanf(FOVY / 2.0f);
     float sx = f / aspect;
     float sy = f;
-    glm::mat3 J(glm::vec3(sx / t.z, 0, -(sx * t.x) / tzSq),
-                glm::vec3(0.0f, f / t.z, -(sy * t.y) / tzSq),
-                glm::vec3(t.x / tLen, t.y / tLen, t.z / tLen));
+    float sz = (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR);
+    float oz = (2.0f * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR);
+    float lr = -(sz * t.z) + (oz + sz * t.z) / tzSq;
+    glm::mat3 J(glm::vec3(-(sx / t.z), 0, (sx * t.x) / tzSq),
+                glm::vec3(0.0f, -(sy / t.z), (sy * t.y) / tzSq),
+                glm::vec3(0.0f, 0.0f, lr));
     glm::mat3 JW = J * W;
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
     glm::mat2 V_hat_prime(V_prime);
@@ -438,8 +442,10 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     glm::mat4 viewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-    glm::vec3 u(0.0f, 0.0f, 0.0f);
-    glm::mat3 V(1.0f);
+    glm::vec3 u(0.0f, 1.0f, 0.0f);
+    glm::mat3 V(glm::vec3(10.0f, 0.0f, 0.0),
+                glm::vec3(0.0f, 0.01f, 0.0f),
+                glm::vec3(0.0f, 0.0f, 0.01f));
 
     glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
     SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
