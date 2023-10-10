@@ -19,15 +19,14 @@ vec2 toNDC(vec2 p)
 void main()
 {
     vec2 x = toNDC(gl_FragCoord.xy);
+    //vec2 x = gl_FragCoord.xy;
     vec2 d = x - p;
     float g = k * exp(-0.5f * dot(d, rhoInvMat * d));
 
-    /*
     if (d.x * d.x + d.y * d.y < 0.0001f)
     {
         g = 1.0;
     }
-    */
 
     // premultiplied alpha blending
     gl_FragColor.rgb = g * frag_color.a * frag_color.rgb;

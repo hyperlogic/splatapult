@@ -305,13 +305,28 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float f = 1.0f / tanf(FOVY / 2.0f);
     float sx = f / aspect;
     float sy = f;
-    float sz = (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR);
     float oz = (2.0f * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR);
-    float lr = -(sz * t.z) + (oz + sz * t.z) / tzSq;
+
+#define SPLAT_IN_NDC
+
+#ifdef SPLAT_IN_NDC
+    float lr = oz / tzSq;
     glm::mat3 J(glm::vec3(-(sx / t.z), 0, (sx * t.x) / tzSq),
                 glm::vec3(0.0f, -(sy / t.z), (sy * t.y) / tzSq),
                 glm::vec3(0.0f, 0.0f, lr));
-
+    J = glm::transpose(J);
+#else
+    float jsx = -(sx * WIDTH) / (2.0f * t.z);
+    float jsy = -(sy * HEIGHT) / (2.0f * t.z);
+    float jtx = (sx * t.x * WIDTH) / (2.0f * tzSq);
+    float jty = (sy * t.y * HEIGHT) / (2.0f * tzSq);
+    float iii = (Z_FAR - Z_NEAR) / 2.0f;
+    float jtz = (iii * oz) / tzSq;
+    glm::mat3 J(glm::vec3(jsx, 0.0f, jty),
+                glm::vec3(0.0f, jsy, jtx),
+                glm::vec3(0.0f, 0.0f, jtz));
+    J = glm::transpose(J);
+#endif
     // compute the 3d gaussian variance matrix in NDC coords
     glm::mat3 W(viewMat);
     glm::mat3 JW = J * W;
@@ -328,10 +343,14 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
     // transform the center of the guassian u into NDC coords.
+#ifdef SPLAT_IN_NDC
     glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
     glm::vec2 x2(x.x / x.z, x.y / x.z);
+#else
+    glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
+    glm::vec2 x2(x);
+#endif
 
-    // SplatInfo is in 2D NDC coords.
     // NOTE: I *think* The - is to account for right-handed to left-handed switch during the perspective transform.
     return SplatInfo(-k1 * k2, x2, glm::inverse(V_hat_prime));
 }
@@ -343,10 +362,10 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     glm::mat4 viewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-    glm::vec3 u(0.0f, 1.0f, 0.0f);
-    glm::mat3 V(glm::vec3(10.0f, 0.0f, 0.0),
-                glm::vec3(0.0f, 0.00001f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 0.00001f));
+    glm::vec3 u(0.0f, 0.0f, 0.0f);
+    glm::mat3 V(glm::vec3(1.0f, 0.0f, 0.0),
+                glm::vec3(0.0f, 1.0f, 0.0f),
+                glm::vec3(0.0f, 0.0f, 1.0f));
 
     glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
     SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
@@ -478,7 +497,6 @@ int main(int argc, char *argv[])
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
-
 
         JOYSTICK_ClearFlags();
 
