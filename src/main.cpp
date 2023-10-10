@@ -333,9 +333,16 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     // compute the projection / integration of the 3D gaussian onto the xy plane.
     glm::mat2 V_hat_prime(V_prime);
 
-    // AJT: TODO: low-pass filter, not sure what the correct parameters should be in NDC space
-    //V_hat_prime[0][0] = V_prime[0][0] + (2.0f / WIDTH);
-    //V_hat_prime[1][1] = V_prime[1][1] + (2.0f / HEIGHT);
+    // low-pass filter
+    // AJT: TODO: not sure what the correct parameters should be in NDC space
+    /*
+#ifndef SPLAT_IN_NDC
+    V_hat_prime[0][0] += 1.0f;
+    V_hat_prime[0][1] += 1.0f;
+    V_hat_prime[1][0] += 1.0f;
+    V_hat_prime[1][1] += 1.0f;
+#endif
+    */
 
     float k1 = 1.0f / glm::determinant(glm::inverse(JW));
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
@@ -362,8 +369,8 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
     glm::mat3 V(glm::vec3(10.0f, 0.0f, 0.0),
-                glm::vec3(0.0f, 0.0001f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 0.0001f));
+                glm::vec3(0.0f, 0.000001f, 0.0f),
+                glm::vec3(0.0f, 0.0f, 0.000001f));
 
     glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
     SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
