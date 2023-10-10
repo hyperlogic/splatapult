@@ -13,7 +13,7 @@ vec2 toNDC(vec2 p)
 {
     float w = 1024.0;
     float h = 768.0;
-    return vec2((p.x * (2.0 / h)) - (w / h), (p.y * (2.0 / h)) - 1.0);
+    return vec2((p.x * (2.0 / w)) - 1.0, (p.y * (2.0 / h)) - 1.0);
 }
 
 void main()

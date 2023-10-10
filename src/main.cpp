@@ -28,6 +28,7 @@ static SDL_Renderer *renderer = NULL;
 
 const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
+const float FOVY = glm::radians(45.0f);
 
 //#define SORT_POINTS
 
@@ -180,7 +181,7 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, Z_NEAR, Z_FAR);
+    glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
     pointProg->Bind();
     pointProg->SetUniform("modelViewMat", modelViewMat);
@@ -302,7 +303,7 @@ SplatInfo ComputeSplatInfoOld(const glm::vec3& u, const glm::mat3& V, const glm:
     const float HEIGHT = viewport.w;
 
     // combine the scale factor from projMat into W
-    const float tanFOV = tanf(glm::radians(45.0f) / 2.0f);
+    const float tanFOV = tanf(FOVY / 2.0f);
     const float SZ = -(Z_FAR + Z_NEAR) / (Z_FAR - Z_NEAR);
     glm::mat4 aspectMat(glm::vec4(tanFOV * HEIGHT / WIDTH, 0.0f, 0.0f, 0.0f),
                         glm::vec4(0.0, tanFOV, 0.0f, 0.0f),
@@ -410,9 +411,12 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     // compute Jacobian of perpsective transform
     float tzSq = t.z * t.z;
     float tLen = sqrtf(t.x * t.z + t.y * t.y + t.z * t.z);
-    float fovTerm = 1.0f / tanf(glm::radians(45.0f) / 2.0f);
-    glm::mat3 J(glm::vec3(fovTerm / t.z, 0, -t.x / tzSq),
-                glm::vec3(0.0f, fovTerm / t.z, -t.y / tzSq),
+    float aspect = WIDTH / HEIGHT;
+    float f = 1.0f / tanf(FOVY / 2.0f);
+    float sx = f / aspect;
+    float sy = f;
+    glm::mat3 J(glm::vec3(sx / t.z, 0, -(sx * t.x) / tzSq),
+                glm::vec3(0.0f, f / t.z, -(sy * t.y) / tzSq),
                 glm::vec3(t.x / tLen, t.y / tLen, t.z / tLen));
     glm::mat3 JW = J * W;
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
@@ -420,8 +424,9 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float k1 = 1.0f / glm::determinant(glm::inverse(JW));
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
-    glm::vec3 x3 = J * glm::vec3(viewMat * glm::vec4(u, 1.0f));
-    glm::vec2 x2(-x3.x / x3.z, -x3.y / x3.z);
+    //glm::vec3 x = glm::projectNO(u, viewMat, projMat, viewport);
+    glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
+    glm::vec2 x2(x.x / x.z, x.y / x.z);
 
     return SplatInfo(-k1 * k2, x2, glm::inverse(V_hat_prime));
 }
@@ -431,7 +436,7 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 viewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)width / (float)height, Z_NEAR, Z_FAR);
+    glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
     glm::mat3 V(1.0f);
