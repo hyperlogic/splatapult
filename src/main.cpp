@@ -284,122 +284,12 @@ struct SplatInfo
     glm::mat2 rhoInvMat;
 };
 
-float Gaussian2D(const glm::vec2& d, glm::mat2& V)
-{
-    float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V)));
-    float e = glm::dot(d, glm::inverse(V) * d);
-    return k * expf(-0.5f * e);
-}
-
-// Algorithm from Zwicker et. al 2001 "EWS Volume Splatting"
-// and "EWS Splatting"
+// Basic ideas from Zwicker et. al 2001 "EWS Volume Splatting" and "EWS Splatting"
 // u = center of Splat in obj coords
-// V = varience matrix of spalt in object coords
+// V = varience matrix of splat in object coords
 // viewMat = object to view transform
 // projMat = view to clip coords
 // viewport = (0, 0, W, H)
-SplatInfo ComputeSplatInfoOld(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
-{
-    const float WIDTH = viewport.z;
-    const float HEIGHT = viewport.w;
-
-    // combine the scale factor from projMat into W
-    const float tanFOV = tanf(FOVY / 2.0f);
-    const float SZ = -(Z_FAR + Z_NEAR) / (Z_FAR - Z_NEAR);
-    glm::mat4 aspectMat(glm::vec4(tanFOV * HEIGHT / WIDTH, 0.0f, 0.0f, 0.0f),
-                        glm::vec4(0.0, tanFOV, 0.0f, 0.0f),
-                        glm::vec4(0.0, 0.0f, SZ, 0.0f),
-                        glm::vec4(0.0, 0.0f, 0.0f, 1.0f));
-    glm::mat4 W4 = aspectMat * viewMat;
-
-    // compute camera coords, t
-    glm::vec4 t = W4 * glm::vec4(u, 1.0f);
-
-    // compute Jacobian J
-    float l = glm::length(glm::vec3(t));
-
-    // HACK: flip z (assume looking down z axis) not -z
-    t.z = -t.z;
-
-    PrintMat(projMat, "projMat");
-
-    glm::mat3 J(glm::vec3(1.0f / t.z, 0.0f, t.x / l),
-                glm::vec3(0.0f, 1.0f / t.z, t.y / l),
-                glm::vec3(-t.x / (t.z * t.z), -t.y / (t.z * t.z), t.z / l));
-
-    /*
-    float tzSq = t.z * t.z;
-    float D = (2.0f * Z_FAR * Z_NEAR) / (Z_FAR - Z_NEAR);
-    glm::mat3 J(glm::vec3(1.0f / -t.z, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f / -t.z, 0.0f),
-                glm::vec3(t.x / tzSq, t.y / tzSq, D / tzSq));
-    */
-
-    // compute 3D NDC to viewport transform (don't need translation part)
-    glm::mat3 S(glm::vec3(WIDTH / 2.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, HEIGHT / 2.0f, 0.0f),
-                glm::vec3(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f));
-
-    // compute the variance matrix V_prime
-    glm::mat3 W(W4);
-    glm::mat3 SJW = S * J * W;
-    glm::mat3 V_prime = SJW * V * glm::transpose(SJW);
-
-    // project t to screen coords, x
-    //glm::vec3 x = glm::projectNO(u, viewMat, projMat, viewport);
-
-    // AJT: TODO REMOVE DEBUGGING.s.s.
-    glm::mat4 viewportMat(glm::vec4(WIDTH / 2.0f, 0.0f, 0.0f, 0.0f),
-                          glm::vec4(0.0f, HEIGHT / 2.0f, 0.0f, 0.0f),
-                          glm::vec4(0.0f, 0.0f, (Z_FAR - Z_NEAR) / 2.0f, 0.0f),
-                          glm::vec4(WIDTH / 2.0f, HEIGHT / 2.0f, (Z_FAR + Z_NEAR) / 2.0f, 1.0f));
-    //glm::mat4 fullMat = viewportMat * projMat * viewMat;
-    //glm::vec4 xx4 = fullMat * glm::vec4(u, 1.0f);
-    //glm::vec3 xx(xx4.x / xx4.w, xx4.y / xx4.w, xx4.z / xx4.w);
-
-    glm::mat4 clipMat = projMat * viewMat;
-    glm::vec4 cc4 = clipMat * glm::vec4(u, 1.0f);
-    glm::vec3 ndc(cc4.x / cc4.w, cc4.y / cc4.w, cc4.z / cc4.w);
-    glm::vec4 x = viewportMat * glm::vec4(ndc, 1.0f);
-
-    // AJT: TODO REMOVE dump coordiantes
-    PrintVec(u, "u");
-    PrintVec(t, "t");
-    PrintVec(x, "x");
-
-    // setup the resampling filter rho[k]
-    // AJT: TODO SKIP low-pass filter, part, I DON"T KNOW WHAT the variance should be on that.
-    glm::mat2 V_hat_prime = glm::mat2(V_prime);
-    float k1 = 1.0f / (glm::determinant(glm::inverse(SJW)));
-    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
-
-    // AJT: REMOVE, compute G at center of screen. viewport.z
-    PrintVec(glm::vec2(k1, k2), "k1, k2");
-    Log::printf("k = %.5f\n", k1 * k2);
-    PrintMat(V_hat_prime, "V_hat_prime");
-
-    PrintMat(V, "V");
-    PrintMat(W, "W");
-    PrintMat(glm::inverse(W), "inv W");
-    PrintMat(J, "J");
-    PrintMat(glm::inverse(J), "inv J");
-    PrintMat(S, "S");
-    PrintMat(glm::inverse(S), "inv S");
-    PrintMat(V_prime, "V_prime");
-    PrintMat(V_hat_prime, "V_hat_prime");
-    PrintMat(glm::inverse(V_hat_prime), "inv V_hat_prime");
-
-    glm::vec2 p(WIDTH / 2.0f, HEIGHT / 2.0f);
-    float g = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
-    p += glm::vec2(1.0f, 1.0f);
-    float g_offset = k1 * Gaussian2D(p - glm::vec2(x), V_hat_prime);
-
-    Log::printf("g(center) = %.5f\n", g);
-    Log::printf("g(center + offset) = %.5f\n", g_offset);
-
-    return SplatInfo(k1 * k2, glm::vec2(x), glm::inverse(V_hat_prime));
-}
-
 SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
 {
     const float WIDTH = viewport.z;
@@ -407,7 +297,6 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
 
     // compute camera coords, t
     glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
-    glm::mat3 W(viewMat);
 
     // compute Jacobian of perpsective transform
     float tzSq = t.z * t.z;
@@ -422,16 +311,24 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     glm::mat3 J(glm::vec3(-(sx / t.z), 0, (sx * t.x) / tzSq),
                 glm::vec3(0.0f, -(sy / t.z), (sy * t.y) / tzSq),
                 glm::vec3(0.0f, 0.0f, lr));
+
+    // compute the 3d gaussian variance matrix in NDC coords
+    glm::mat3 W(viewMat);
     glm::mat3 JW = J * W;
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
+
+
+    // compute the projection / integration of the 3D gaussian onto the xy plane.
     glm::mat2 V_hat_prime(V_prime);
     float k1 = 1.0f / glm::determinant(glm::inverse(JW));
     float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
 
-    //glm::vec3 x = glm::projectNO(u, viewMat, projMat, viewport);
+    // transform the center of the guassian u into NDC coords.
     glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
     glm::vec2 x2(x.x / x.z, x.y / x.z);
 
+    // SplatInfo is in 2D NDC coords.
+    // NOTE: I *think* The - is to account for right-handed to left-handed switch during the perspective transform.
     return SplatInfo(-k1 * k2, x2, glm::inverse(V_hat_prime));
 }
 
