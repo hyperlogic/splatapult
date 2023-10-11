@@ -305,9 +305,10 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
 //#define SPLAT_IN_NDC
 
 #ifdef SPLAT_IN_NDC
-    float jsx = -(f * HEIGHT) / (WIDTH * t.z);
+    float ss = f * HEIGHT;
+    float jsx = -ss / (WIDTH * t.z);
     float jsy = -f / t.z;
-    float jtx = (f * t.x * HEIGHT) / (WIDTH * tzSq);
+    float jtx = (ss * t.x) / (WIDTH * tzSq);
     float jty = (f * t.y) / tzSq;
     float jtz = -(2.0f * Z_FAR * Z_NEAR) / ((Z_FAR - Z_NEAR) * tzSq);
     glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
@@ -315,10 +316,11 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
                 glm::vec3(0.0f, 0.0f, jtz));
     J = glm::transpose(J);
 #else
-    float jsx = -(f * HEIGHT) / (2.0f * t.z);
-    float jsy = -(f * HEIGHT) / (2.0f * t.z);
-    float jtx = (f * HEIGHT * t.x) / (2.0f * tzSq);
-    float jty = (f * HEIGHT * t.y) / (2.0f * tzSq);
+    float ss = f * HEIGHT;
+    float jsx = -ss / (2.0f * t.z);
+    float jsy = -ss / (2.0f * t.z);
+    float jtx = (ss * t.x) / (2.0f * tzSq);
+    float jty = (ss * t.y) / (2.0f * tzSq);
     float jtz = -(Z_FAR * Z_NEAR) / tzSq;
     glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
                 glm::vec3(0.0f, jsy, jty),
@@ -344,8 +346,10 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
 #endif
     */
 
-    float k1 = 1.0f / glm::determinant(glm::inverse(JW));
-    float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
+    //float k1 = 1.0f / glm::determinant(glm::inverse(JW));
+    //float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
+    float k1 = -1.0f;
+    float k2 = 1.0f;
 
     // transform the center of the guassian u into NDC coords.
 #ifdef SPLAT_IN_NDC
@@ -368,9 +372,9 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
     glm::vec3 u(0.0f, 0.0f, 0.0f);
-    glm::mat3 V(glm::vec3(10.0f, 0.0f, 0.0),
-                glm::vec3(0.0f, 0.000001f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 0.000001f));
+    glm::mat3 V(glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 0.0001f, 0.0f),
+                glm::vec3(0.0f, 0.0f, 0.0001f));
 
     glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
     SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
