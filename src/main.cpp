@@ -32,6 +32,28 @@ const float FOVY = glm::radians(45.0f);
 
 //#define SORT_POINTS
 
+void Clear()
+{
+    SDL_GL_MakeCurrent(window, gl_context);
+
+    // pre-multiplied alpha blending
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+    glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
+    //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // enable writes to depth buffer
+    glEnable(GL_DEPTH_TEST);
+
+    // enable alpha test
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.01f);
+}
+
 std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> pointProg)
 {
     SDL_GL_MakeCurrent(window, gl_context);
@@ -151,28 +173,6 @@ std::shared_ptr<PointCloud> LoadPointCloud()
     return pointCloud;
 }
 
-void Clear()
-{
-    SDL_GL_MakeCurrent(window, gl_context);
-
-    // pre-multiplied alpha blending
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-    glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
-    //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-    glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // enable writes to depth buffer
-    glEnable(GL_DEPTH_TEST);
-
-    // enable alpha test
-    glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.01f);
-}
-
 void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex,
                       std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<VertexArrayObject> pointCloudVAO,
                       const glm::mat4& cameraMat)
@@ -239,174 +239,99 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     pointCloudVAO->Draw();
 }
 
-std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const Program> splatProg)
+std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> splatProg)
 {
     SDL_GL_MakeCurrent(window, gl_context);
     auto splatVAO = std::make_shared<VertexArrayObject>();
 
-    int width, height;
-    SDL_GetWindowSize(window, &width, &height);
-    const float ASPECT_RATIO = (float)width / (float)height;
+    glm::vec2 uvLowerLeft(0.0f, 0.0f);
+    glm::vec2 uvUpperRight(1.0f, 1.0f);
 
-    // setup a rect in front of the camera.
-    // these points are hardcoded in view space.
-    std::vector<glm::vec3> viewPosVec;
-    viewPosVec.reserve(4);
-    const float DEPTH = -20.2f;
-    const float SIZE = 10.5f;
-    viewPosVec.push_back(glm::vec3(SIZE, -SIZE, DEPTH));
-    viewPosVec.push_back(glm::vec3(SIZE, SIZE, DEPTH));
-    viewPosVec.push_back(glm::vec3(-SIZE, SIZE, DEPTH));
-    viewPosVec.push_back(glm::vec3(-SIZE, -SIZE, DEPTH));
+    // convert pointCloud into attribute arrays, where each splat will have 4 vertices.
+    std::vector<glm::vec3> positionVec;
+    std::vector<glm::vec2> uvVec;
+    std::vector<glm::vec4> colorVec;
+    std::vector<glm::vec3> cov3_col0Vec;
+    std::vector<glm::vec3> cov3_col1Vec;
+    std::vector<glm::vec3> cov3_col2Vec;
 
-    /*
-    std::vector<glm::vec3> colorVec;
-    colorVec.reserve(4);
-    colorVec.push_back(glm::vec4(1.0f, 1.0f, 1.0f
-    */
+    const int NUM_CORNERS = 4;
+    const int N = (int)pointCloud->GetPointVec().size() * NUM_CORNERS;
 
-    auto viewPosVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, viewPosVec);
+    positionVec.reserve(N);
+    uvVec.reserve(N);
+    colorVec.reserve(N);
+    cov3_col0Vec.reserve(N);
+    cov3_col1Vec.reserve(N);
+    cov3_col2Vec.reserve(N);
 
-    std::vector<uint32_t> indexVec = {0, 1, 2, 0, 2, 3};
+    for (auto&& p : pointCloud->GetPointVec())
+    {
+        glm::vec3 pos(p.position[0], p.position[1], p.position[2]);
+        positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos);
+
+        uvVec.push_back(uvLowerLeft);
+        uvVec.push_back(glm::vec2(uvUpperRight.x, uvLowerLeft.y));
+        uvVec.push_back(uvUpperRight);
+        uvVec.push_back(glm::vec2(uvLowerLeft.x, uvUpperRight.y));
+
+        glm::vec4 color(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f);
+        colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
+
+        glm::mat3 V(glm::vec3(0.0001f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0001f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0001f));
+        cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
+        cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
+        cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]);
+    }
+    auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
+    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
+    auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
+    auto cov3_col0VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col0Vec);
+    auto cov3_col1VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col1Vec);
+    auto cov3_col2VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col2Vec);
+
+    std::vector<uint32_t> indexVec;
+    const size_t NUM_INDICES = 6;
+    indexVec.reserve(pointCloud->GetPointVec().size() * NUM_INDICES);
+    assert(pointCloud->GetPointVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
+    for (uint32_t i = 0; i < (uint32_t)pointCloud->GetPointVec().size(); i++)
+    {
+        indexVec.push_back(i * NUM_CORNERS + 0);
+        indexVec.push_back(i * NUM_CORNERS + 1);
+        indexVec.push_back(i * NUM_CORNERS + 2);
+        indexVec.push_back(i * NUM_CORNERS + 0);
+        indexVec.push_back(i * NUM_CORNERS + 2);
+        indexVec.push_back(i * NUM_CORNERS + 3);
+    }
     auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
 
-    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("viewPos"), viewPosVBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("position"), positionVBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("uv"), uvVBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("color"), colorVBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col0"), cov3_col0VBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col1"), cov3_col1VBO);
+    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col2"), cov3_col2VBO);
     splatVAO->SetElementBuffer(indexEBO);
 
     return splatVAO;
 }
 
-struct SplatInfo
-{
-    SplatInfo(float kIn, const glm::vec2& pIn, const glm::mat4& rhoInvMatIn) : k(kIn), p(pIn), rhoInvMat(rhoInvMatIn) {}
-    float k;
-    glm::vec2 p;
-    glm::mat2 rhoInvMat;
-};
-
-// Basic ideas from Zwicker et. al 2001 "EWS Volume Splatting" and "EWS Splatting"
-// u = center of Splat in obj coords
-// V = varience matrix of splat in object coords
-// viewMat = object to view transform
-// projMat = view to clip coords
-// viewport = (0, 0, W, H)
-SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::mat4& viewMat, const glm::mat4& projMat, const glm::vec4 viewport)
-{
-    const float WIDTH = viewport.z;
-    const float HEIGHT = viewport.w;
-
-    // Transform u into view coordinates.
-    glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
-
-    // Compute Jacobian of the OpenGL perpsective and viewport transform, J
-    float tzSq = t.z * t.z;
-    float f = 1.0f / tanf(FOVY / 2.0f);
-
-//#define SPLAT_IN_NDC
-
-#ifdef SPLAT_IN_NDC
-    float ss = f * HEIGHT;
-    float jsx = -ss / (WIDTH * t.z);
-    float jsy = -f / t.z;
-    float jtx = (ss * t.x) / (WIDTH * tzSq);
-    float jty = (f * t.y) / tzSq;
-    float jtz = -(2.0f * Z_FAR * Z_NEAR) / ((Z_FAR - Z_NEAR) * tzSq);
-    glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
-                glm::vec3(0.0f, jsy, jty),
-                glm::vec3(0.0f, 0.0f, jtz));
-    J = glm::transpose(J);
-#else
-    float ss = f * HEIGHT;
-    float jsx = -ss / (2.0f * t.z);
-    float jsy = -ss / (2.0f * t.z);
-    float jtx = (ss * t.x) / (2.0f * tzSq);
-    float jty = (ss * t.y) / (2.0f * tzSq);
-    float jtz = -(Z_FAR * Z_NEAR) / tzSq;
-    glm::mat3 J(glm::vec3(jsx, 0.0f, jtx),
-                glm::vec3(0.0f, jsy, jty),
-                glm::vec3(0.0f, 0.0f, jtz));
-    J = glm::transpose(J);
-#endif
-    // compute the 3d gaussian variance matrix
-    glm::mat3 W(viewMat);
-    glm::mat3 JW = J * W;
-    glm::mat3 V_prime = JW * V * glm::transpose(JW);
-
-    // the projection / integration of the 3D gaussian onto the xy plane.
-    glm::mat2 V_hat_prime(V_prime);
-
-    // low-pass filter
-    // AJT: TODO: not sure what the correct parameters should be in NDC space
-    /*
-#ifndef SPLAT_IN_NDC
-    V_hat_prime[0][0] += 1.0f;
-    V_hat_prime[0][1] += 1.0f;
-    V_hat_prime[1][0] += 1.0f;
-    V_hat_prime[1][1] += 1.0f;
-#endif
-    */
-
-    //float k1 = 1.0f / glm::determinant(glm::inverse(JW));
-    //float k2 = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V_hat_prime)));
-    float k1 = -1.0f;
-    float k2 = 1.0f;
-
-    // transform the center of the gaussian u into NDC coords.
-#ifdef SPLAT_IN_NDC
-    glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
-    glm::vec2 x2(x.x / x.w, x.y / x.w);
-#else
-    glm::vec3 x = glm::project(u, viewMat, projMat, viewport);
-    glm::vec2 x2(x);
-#endif
-
-    // NOTE: I *think* The - is to account for right-handed to left-handed switch during the perspective transform.
-    return SplatInfo(-k1 * k2, x2, glm::inverse(V_hat_prime));
-}
-
-void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
+void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
 {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 viewMat = glm::inverse(cameraMat);
     glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-    glm::vec3 u(0.0f, 0.0f, 0.0f);
-    glm::mat3 V(glm::vec3(1.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 0.0001f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 0.0001f));
-
-    glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
-    SplatInfo splatInfo = ComputeSplatInfo(u, V, viewMat, projMat, viewport);
-
     splatProg->Bind();
+    splatProg->SetUniform("viewMat", viewMat);
     splatProg->SetUniform("projMat", projMat);
-
-    // AJT: TODO These should be attribs.
-    splatProg->SetUniform("k", splatInfo.k);
-    splatProg->SetUniform("p", splatInfo.p);
-    splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
-
-    /*
-    // AJT: HACK MANUALY SET 2D gaussian parameters
-    float sigma = 100.0f;
-    glm::mat2 V2(glm::vec2(0.5f / (sigma * sigma), 0.0f),
-                 glm::vec2(0.0f, 4.0f / (sigma * sigma)));
-    float theta = glm::pi<float>() / 4.0f;
-    glm::mat2 R(glm::vec2(cosf(theta), sinf(theta)),
-                glm::vec2(-sinf(theta), cosf(theta)));
-
-    PrintMat(V2, "V2");
-    //float k = 1.0f / (2.0f * glm::pi<float>() * sqrtf(glm::determinant(V2)));
-    float k = 1.0f;
-    splatProg->SetUniform("k", k);
-    //splatProg->SetUniform("p", glm::vec2((float)width / 2.0f, (float)height / 2.0f));
-    splatProg->SetUniform("rhoInvMat", R * V2 * glm::transpose(R));
-    */
-
+    splatProg->SetUniform("projParams", glm::vec4((float)height / tanf(FOVY / 2.0f), Z_NEAR, Z_FAR, 0.0f));
+    splatProg->SetUniform("viewport", glm::vec4(0.0f, 0.0f, (float)width, (float)height));
 
     splatVAO->Draw();
 }
+
 
 int SDLCALL Watch(void *userdata, SDL_Event* event)
 {
@@ -481,11 +406,12 @@ int main(int argc, char *argv[])
         Log::printf("Error loading splat shaders!\n");
         return 1;
     }
-    auto splatVAO = BuildSplatVAO(splatProg);
+
+    auto splatVAO = BuildSplatVAO(pointCloud, splatProg);
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
-    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 10.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    FlyCam flyCam(glm::vec3(0.25f, 0.25f, 3.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
     uint32_t frameCount = 1;
@@ -544,8 +470,8 @@ int main(int argc, char *argv[])
         }
 
         Clear();
-        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
-        RenderSplat(splatProg, splatVAO, flyCam.GetCameraMat());
+        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
+        RenderSplats(splatProg, splatVAO, flyCam.GetCameraMat());
         frameCount++;
 
         SDL_GL_SwapWindow(window);
