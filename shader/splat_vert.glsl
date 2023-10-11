@@ -66,9 +66,16 @@ void main(void)
     mat2 cov2Dinv = inverseMat2(cov2D);
     cov2Dinv4 = vec4(cov2Dinv[0], cov2Dinv[1]);
 
-    // TODO: use cov2 to compute extents.
+    // transform position into clip coordinates.
     vec4 viewPos = viewMat * vec4(position, 1);
-    float POINT_SIZE = 0.5f;
-    viewPos.xy += (uv - vec2(0.5f, 0.5f)) * POINT_SIZE;
     gl_Position = projMat * viewPos;
+
+    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
+    float FUDGE = 2.0f;
+    vec2 offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
+
+    // transform that offset back into clip space
+    offset.x *= (2.0f / viewport.z) * gl_Position.z;
+    offset.y *= (2.0f / viewport.w) * gl_Position.z;
+    gl_Position.xy += offset;
 }

@@ -278,7 +278,7 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
         glm::vec4 color(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
 
-        glm::mat3 V(glm::vec3(0.0001f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0001f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0001f));
+        glm::mat3 V(glm::vec3(0.001f, 0.0f, 0.0f), glm::vec3(0.0f, 0.001f, 0.0f), glm::vec3(0.0f, 0.0f, 0.001f));
         cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
         cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]);
