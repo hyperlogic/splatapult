@@ -295,10 +295,10 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     const float WIDTH = viewport.z;
     const float HEIGHT = viewport.w;
 
-    // compute camera coords, t
+    // Transform u into view coordinates.
     glm::vec4 t = viewMat * glm::vec4(u, 1.0f);
 
-    // compute Jacobian of perpsective transform
+    // Compute Jacobian of the OpenGL perpsective and viewport transform, J
     float tzSq = t.z * t.z;
     float f = 1.0f / tanf(FOVY / 2.0f);
 
@@ -327,12 +327,12 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
                 glm::vec3(0.0f, 0.0f, jtz));
     J = glm::transpose(J);
 #endif
-    // compute the 3d gaussian variance matrix in NDC coords
+    // compute the 3d gaussian variance matrix
     glm::mat3 W(viewMat);
     glm::mat3 JW = J * W;
     glm::mat3 V_prime = JW * V * glm::transpose(JW);
 
-    // compute the projection / integration of the 3D gaussian onto the xy plane.
+    // the projection / integration of the 3D gaussian onto the xy plane.
     glm::mat2 V_hat_prime(V_prime);
 
     // low-pass filter
@@ -351,7 +351,7 @@ SplatInfo ComputeSplatInfo(const glm::vec3& u, const glm::mat3& V, const glm::ma
     float k1 = -1.0f;
     float k2 = 1.0f;
 
-    // transform the center of the guassian u into NDC coords.
+    // transform the center of the gaussian u into NDC coords.
 #ifdef SPLAT_IN_NDC
     glm::vec4 x = projMat * viewMat * glm::vec4(u, 1.0f);
     glm::vec2 x2(x.x / x.w, x.y / x.w);
@@ -388,7 +388,7 @@ void RenderSplat(std::shared_ptr<const Program> splatProg, std::shared_ptr<Verte
     splatProg->SetUniform("rhoInvMat", splatInfo.rhoInvMat);
 
     /*
-    // AJT: HACK MANUALY SET 2D guassian parameters
+    // AJT: HACK MANUALY SET 2D gaussian parameters
     float sigma = 100.0f;
     glm::mat2 V2(glm::vec2(0.5f / (sigma * sigma), 0.0f),
                  glm::vec2(0.0f, 4.0f / (sigma * sigma)));
