@@ -54,6 +54,9 @@ void main(void)
     mat3 JW = J * W;
     mat3 V_prime = JW * V * transpose(JW);
     mat2 cov2D = mat2(V_prime);
+    cov2D[0] += vec2(0.3f, 0.3f); // low pass filter for anti-aliasing
+    cov2D[1] += vec2(0.3f, 0.3f);
+
     vec4 p4 = projMat * viewMat * vec4(position, 1.0f);
     p = vec2(p4.x / p4.w, p4.y / p4.w);
 

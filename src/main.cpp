@@ -31,7 +31,7 @@ const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
-//#define SORT_POINTS
+#define SORT_POINTS
 
 void Clear()
 {
@@ -284,20 +284,21 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
                         0.5f + SH_C0 * g.f_dc[2], alpha);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
 
+
         // from paper V = R * S * transpose(S) * transpose(R);
-        /*
-        glm::quat rot(g.rot[3], g.rot[0], g.rot[1], g.rot[2]);
+        glm::quat rot(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
         glm::mat3 R(glm::normalize(rot));
         glm::mat3 S(glm::vec3(expf(g.scale[0]), 0.0f, 0.0f),
                     glm::vec3(0.0f, expf(g.scale[1]), 0.0f),
                     glm::vec3(0.0f, 0.0f, expf(g.scale[2])));
         glm::mat3 V = R * S * glm::transpose(S) * glm::transpose(R);
-        */
 
+        /*
         float pointSize = 0.00001f;
         glm::mat3 V(glm::vec3(pointSize, 0.0f, 0.0f),
                     glm::vec3(0.0f, pointSize, 0.0f),
                     glm::vec3(0.0f, 0.0f, pointSize));
+        */
 
         cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
@@ -325,7 +326,12 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
         indexVec.push_back(i * NUM_CORNERS + 2);
         indexVec.push_back(i * NUM_CORNERS + 3);
     }
+
+#ifdef SORT_POINTS
+    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true);
+#else
     auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
+#endif
 
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("position"), positionVBO);
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("uv"), uvVBO);
@@ -350,7 +356,8 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     return gaussianCloud;
 }
 
-void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
+void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<const GaussianCloud> gaussianCloud,
+                  std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
 {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
@@ -362,6 +369,49 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<Vert
     splatProg->SetUniform("projMat", projMat);
     splatProg->SetUniform("projParams", glm::vec4((float)height / tanf(FOVY / 2.0f), Z_NEAR, Z_FAR, 0.0f));
     splatProg->SetUniform("viewport", glm::vec4(0.0f, 0.0f, (float)width, (float)height));
+
+#ifdef SORT_POINTS
+    // AJT: dont need to build this everyframe
+    std::vector<glm::vec4> posVec;
+    const size_t numPoints = gaussianCloud->GetGaussianVec().size();
+    posVec.reserve(numPoints);
+    // transform and copy points into view space.
+    for (size_t i = 0; i < numPoints; i++)
+    {
+        posVec.push_back(viewMat * glm::vec4(gaussianCloud->GetGaussianVec()[i].position[0],
+                                             gaussianCloud->GetGaussianVec()[i].position[1],
+                                             gaussianCloud->GetGaussianVec()[i].position[2], 1.0f));
+    }
+    // sort indices by z.
+    std::vector<uint32_t> indexVec;
+    indexVec.reserve(numPoints);
+    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+    {
+        indexVec.push_back(i);
+    }
+    std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+    {
+        return posVec[a].z < posVec[b].z;
+    });
+    // expand out indexVec for rendering
+    const int NUM_CORNERS = 4;
+    std::vector<uint32_t> newIndexVec;
+    newIndexVec.reserve(numPoints * 4);
+    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+    {
+        const int ii = indexVec[i];
+        newIndexVec.push_back(ii * NUM_CORNERS + 0);
+        newIndexVec.push_back(ii * NUM_CORNERS + 1);
+        newIndexVec.push_back(ii * NUM_CORNERS + 2);
+        newIndexVec.push_back(ii * NUM_CORNERS + 0);
+        newIndexVec.push_back(ii * NUM_CORNERS + 2);
+        newIndexVec.push_back(ii * NUM_CORNERS + 3);
+    }
+
+    // store newIndexVec into elementBuffer
+    auto elementBuffer = splatVAO->GetElementBuffer();
+    elementBuffer->Update(newIndexVec);
+#endif
 
     splatVAO->Draw();
 }
@@ -525,7 +575,7 @@ int main(int argc, char *argv[])
 
         Clear();
         //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
-        RenderSplats(splatProg, splatVAO, flyCam.GetCameraMat());
+        RenderSplats(splatProg, gaussianCloud, splatVAO, flyCam.GetCameraMat());
         frameCount++;
 
         SDL_GL_SwapWindow(window);

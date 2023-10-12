@@ -294,3 +294,9 @@ const std::string& GetRootPath()
     return ROOT_PATH;
 }
 
+bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm::vec3& aabbMax)
+{
+    return (point.x >= aabbMin.x && point.x <= aabbMax.x) &&
+           (point.y >= aabbMin.y && point.y <= aabbMax.y) &&
+           (point.z >= aabbMin.z && point.z <= aabbMax.z);
+}

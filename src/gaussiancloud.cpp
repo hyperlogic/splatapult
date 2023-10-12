@@ -126,14 +126,26 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     const size_t GAUSSIAN_SIZE = 62 * sizeof(float);
     static_assert(sizeof(Gaussian) >= GAUSSIAN_SIZE);
 
-    gaussianVec.resize(numGaussians);
+    glm::vec3 pos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
+    pos += glm::vec3(0.0f, 0.0f, 3.0f);
+    const float SIZE = 3.0f;
+    glm::vec3 aabbMin = pos + glm::vec3(-0.5f, -0.5f, -0.5f) * SIZE;
+    glm::vec3 aabbMax = pos + glm::vec3(0.5f, 0.5f, 0.5f) * SIZE;
+
+    gaussianVec.reserve(numGaussians);
     for (int i = 0; i < numGaussians; i++)
     {
-        plyFile.read((char*)&gaussianVec[i], GAUSSIAN_SIZE);
+        Gaussian g;
+        plyFile.read((char*)&g, GAUSSIAN_SIZE);
         if (plyFile.gcount() != GAUSSIAN_SIZE)
         {
             Log::printf("Error reading gaussian[%d]\n", i);
             return false;
+        }
+        glm::vec3 p(g.position[0], g.position[1], g.position[2]);
+        if (PointInsideAABB(p, aabbMin, aabbMax))
+        {
+            gaussianVec.push_back(g);
         }
     }
 
