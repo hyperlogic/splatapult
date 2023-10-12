@@ -55,6 +55,13 @@ void Clear()
     glAlphaFunc(GL_GREATER, 0.01f);
 }
 
+void Resize(int newWidth, int newHeight)
+{
+    SDL_GL_MakeCurrent(window, gl_context);
+
+    glViewport(0, 0, newWidth, newHeight);
+}
+
 std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> pointProg)
 {
     SDL_GL_MakeCurrent(window, gl_context);
@@ -437,7 +444,8 @@ int main(int argc, char *argv[])
 
     const int32_t WIDTH = 1024;
     const int32_t HEIGHT = 768;
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     gl_context = SDL_GL_CreateContext(window);
 
@@ -562,6 +570,17 @@ int main(int argc, char *argv[])
 			case SDL_JOYBUTTONUP:
 				JOYSTICK_UpdateButton(&event.jbutton);
 				break;
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                {
+                    // The window was resized
+                    int newWidth = event.window.data1;
+                    int newHeight = event.window.data2;
+                    // Handle the resize event, e.g., adjust your viewport, etc.
+                    Resize(newWidth, newHeight);
+                    SDL_RenderSetLogicalSize(renderer, newWidth, newHeight);
+                }
+                break;
             }
         }
 
