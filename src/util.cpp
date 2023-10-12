@@ -300,3 +300,22 @@ bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm
            (point.y >= aabbMin.y && point.y <= aabbMax.y) &&
            (point.z >= aabbMin.z && point.z <= aabbMax.z);
 }
+
+glm::vec4 LinearToSRGB(const glm::vec4& linearColor)
+{
+    glm::vec4 sRGBColor;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        if (linearColor[i] <= 0.0031308f)
+        {
+            sRGBColor[i] = 12.92f * linearColor[i];
+        }
+        else
+        {
+            sRGBColor[i] = 1.055f * std::pow(linearColor[i], 1.0f / 2.4f) - 0.055f;
+        }
+    }
+    sRGBColor.a = linearColor.a;
+    return sRGBColor;
+}

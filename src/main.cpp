@@ -282,8 +282,8 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
         glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
                         0.5f + SH_C0 * g.f_dc[1],
                         0.5f + SH_C0 * g.f_dc[2], alpha);
+        //color = LinearToSRGB(color);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
-
 
         // from paper V = R * S * transpose(S) * transpose(R);
         glm::quat rot(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
