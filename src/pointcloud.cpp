@@ -8,7 +8,7 @@
 
 #include "util.h"
 
-bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
+static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {
     std::string line;
     return std::getline(plyFile, line) && line == validLine;

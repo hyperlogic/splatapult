@@ -1,0 +1,141 @@
+#include "gaussiancloud.h"
+
+#include <cassert>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+
+#include "log.h"
+#include "util.h"
+
+static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
+{
+    std::string line;
+    return std::getline(plyFile, line) && line == validLine;
+}
+
+GaussianCloud::GaussianCloud()
+{
+}
+
+bool GaussianCloud::ImportPly(const std::string& plyFilename)
+{
+    std::ifstream plyFile(GetRootPath() + plyFilename, std::ios::binary);
+    if (!plyFile.is_open())
+    {
+        Log::printf("failed to open %s\n", plyFilename.c_str());
+        return false;
+    }
+
+    // validate start of header
+    if (!CheckLine(plyFile, "ply") ||
+        !CheckLine(plyFile, "format binary_little_endian 1.0"))
+    {
+        Log::printf("Invalid ply file\n");
+        return false;
+    }
+
+    // parse "element vertex 123"
+    std::string line;
+    if (!std::getline(plyFile, line))
+    {
+        Log::printf("Invalid ply file\n");
+        return false;
+    }
+    std::istringstream iss(line);
+    std::string token1, token2;
+    int numGaussians;
+    if (!((iss >> token1 >> token2 >> numGaussians) && (token1 == "element") && (token2 == "vertex")))
+    {
+        Log::printf("Invalid ply file\n");
+        return false;
+    }
+
+    // validate rest of header
+    if (!CheckLine(plyFile, "property float x") ||
+        !CheckLine(plyFile, "property float y") ||
+        !CheckLine(plyFile, "property float z") ||
+        !CheckLine(plyFile, "property float nx") ||
+        !CheckLine(plyFile, "property float ny") ||
+        !CheckLine(plyFile, "property float nz") ||
+        !CheckLine(plyFile, "property float f_dc_0") ||
+        !CheckLine(plyFile, "property float f_dc_1") ||
+        !CheckLine(plyFile, "property float f_dc_2") ||
+        !CheckLine(plyFile, "property float f_rest_0") ||
+        !CheckLine(plyFile, "property float f_rest_1") ||
+        !CheckLine(plyFile, "property float f_rest_2") ||
+        !CheckLine(plyFile, "property float f_rest_3") ||
+        !CheckLine(plyFile, "property float f_rest_4") ||
+        !CheckLine(plyFile, "property float f_rest_5") ||
+        !CheckLine(plyFile, "property float f_rest_6") ||
+        !CheckLine(plyFile, "property float f_rest_7") ||
+        !CheckLine(plyFile, "property float f_rest_8") ||
+        !CheckLine(plyFile, "property float f_rest_9") ||
+        !CheckLine(plyFile, "property float f_rest_10") ||
+        !CheckLine(plyFile, "property float f_rest_11") ||
+        !CheckLine(plyFile, "property float f_rest_12") ||
+        !CheckLine(plyFile, "property float f_rest_13") ||
+        !CheckLine(plyFile, "property float f_rest_14") ||
+        !CheckLine(plyFile, "property float f_rest_15") ||
+        !CheckLine(plyFile, "property float f_rest_16") ||
+        !CheckLine(plyFile, "property float f_rest_17") ||
+        !CheckLine(plyFile, "property float f_rest_18") ||
+        !CheckLine(plyFile, "property float f_rest_19") ||
+        !CheckLine(plyFile, "property float f_rest_20") ||
+        !CheckLine(plyFile, "property float f_rest_21") ||
+        !CheckLine(plyFile, "property float f_rest_22") ||
+        !CheckLine(plyFile, "property float f_rest_23") ||
+        !CheckLine(plyFile, "property float f_rest_24") ||
+        !CheckLine(plyFile, "property float f_rest_25") ||
+        !CheckLine(plyFile, "property float f_rest_26") ||
+        !CheckLine(plyFile, "property float f_rest_27") ||
+        !CheckLine(plyFile, "property float f_rest_28") ||
+        !CheckLine(plyFile, "property float f_rest_29") ||
+        !CheckLine(plyFile, "property float f_rest_30") ||
+        !CheckLine(plyFile, "property float f_rest_31") ||
+        !CheckLine(plyFile, "property float f_rest_32") ||
+        !CheckLine(plyFile, "property float f_rest_33") ||
+        !CheckLine(plyFile, "property float f_rest_34") ||
+        !CheckLine(plyFile, "property float f_rest_35") ||
+        !CheckLine(plyFile, "property float f_rest_36") ||
+        !CheckLine(plyFile, "property float f_rest_37") ||
+        !CheckLine(plyFile, "property float f_rest_38") ||
+        !CheckLine(plyFile, "property float f_rest_39") ||
+        !CheckLine(plyFile, "property float f_rest_40") ||
+        !CheckLine(plyFile, "property float f_rest_41") ||
+        !CheckLine(plyFile, "property float f_rest_42") ||
+        !CheckLine(plyFile, "property float f_rest_43") ||
+        !CheckLine(plyFile, "property float f_rest_44") ||
+        !CheckLine(plyFile, "property float opacity") ||
+        !CheckLine(plyFile, "property float scale_0") ||
+        !CheckLine(plyFile, "property float scale_1") ||
+        !CheckLine(plyFile, "property float scale_2") ||
+        !CheckLine(plyFile, "property float rot_0") ||
+        !CheckLine(plyFile, "property float rot_1") ||
+        !CheckLine(plyFile, "property float rot_2") ||
+        !CheckLine(plyFile, "property float rot_3") ||
+        !CheckLine(plyFile, "end_header"))
+    {
+        Log::printf("Invalid ply file\n");
+        return false;
+    }
+
+    // the data in the plyFile is packed
+    // so we read it in one Gaussian structure at a time
+    const size_t GAUSSIAN_SIZE = 62 * sizeof(float);
+    static_assert(sizeof(Gaussian) >= GAUSSIAN_SIZE);
+
+    gaussianVec.resize(numGaussians);
+    for (int i = 0; i < numGaussians; i++)
+    {
+        plyFile.read((char*)&gaussianVec[i], GAUSSIAN_SIZE);
+        if (plyFile.gcount() != GAUSSIAN_SIZE)
+        {
+            Log::printf("Error reading gaussian[%d]\n", i);
+            return false;
+        }
+    }
+
+    return true;
+}

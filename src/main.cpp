@@ -12,6 +12,7 @@
 #include <stdlib.h> //rand()
 
 #include "flycam.h"
+#include "gaussiancloud.h"
 #include "image.h"
 #include "joystick.h"
 #include "log.h"
@@ -239,7 +240,7 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     pointCloudVAO->Draw();
 }
 
-std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> splatProg)
+std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianCloud> gaussianCloud, std::shared_ptr<const Program> splatProg)
 {
     SDL_GL_MakeCurrent(window, gl_context);
     auto splatVAO = std::make_shared<VertexArrayObject>();
@@ -256,7 +257,7 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
     std::vector<glm::vec3> cov3_col2Vec;
 
     const int NUM_CORNERS = 4;
-    const int N = (int)pointCloud->GetPointVec().size() * NUM_CORNERS;
+    const int N = (int)gaussianCloud->GetGaussianVec().size() * NUM_CORNERS;
 
     positionVec.reserve(N);
     uvVec.reserve(N);
@@ -265,9 +266,10 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
     cov3_col1Vec.reserve(N);
     cov3_col2Vec.reserve(N);
 
-    for (auto&& p : pointCloud->GetPointVec())
+    int i = 0;
+    for (auto&& g : gaussianCloud->GetGaussianVec())
     {
-        glm::vec3 pos(p.position[0], p.position[1], p.position[2]);
+        glm::vec3 pos(g.position[0], g.position[1], g.position[2]);
         positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos);
 
         uvVec.push_back(uvLowerLeft);
@@ -275,13 +277,42 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
         uvVec.push_back(uvUpperRight);
         uvVec.push_back(glm::vec2(uvLowerLeft.x, uvUpperRight.y));
 
-        glm::vec4 color(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f);
+        const float SH_C0 = 0.28209479177387814f;
+        float alpha = 1.0f / (1.0f + expf(-g.opacity));
+        glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
+                        0.5f + SH_C0 * g.f_dc[1],
+                        0.5f + SH_C0 * g.f_dc[2], alpha);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
 
-        glm::mat3 V(glm::vec3(0.001f, 0.0f, 0.0f), glm::vec3(0.0f, 0.001f, 0.0f), glm::vec3(0.0f, 0.0f, 0.001f));
+        if (i < 100)
+        {
+            // dump info
+            Log::printf("gaussian[%d]\n", i);
+            Log::printf("    scale = (%.5f, %.5f, %.5f)\n", g.scale[0], g.scale[1], g.scale[2]);
+            Log::printf("    rot = (%.5f, %.5f, %.5f, %.5f)\n", g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+        }
+
+        // WTF are these values??!?!
+        float FUDGE = 0.00001f;
+        float sx = 0.00001f;//g.scale[0] * FUDGE;
+        float sy = 0.00001f;//g.scale[1] * FUDGE;
+        float sz = 0.00001f;//g.scale[2] * FUDGE;
+        //glm::quat rot(g.rot[3], g.rot[0], g.rot[1], g.rot[2]);
+        //rot = glm::normalize(rot);
+        glm::quat rot(1.0f, 0.0f, 0.0f, 0.0f);
+        glm::mat3 V(glm::rotate(rot, glm::vec3(sx, 0.0f, 0.0f)),
+                    glm::rotate(rot, glm::vec3(0.0f, sy, 0.0f)),
+                    glm::rotate(rot, glm::vec3(0.0f, 0.0f, sz)));
+
+        //glm::mat3 V(glm::vec3(sx, 0.0f, 0.0f),
+//                    glm::vec3(0.0f, sy, 0.0f),
+//                    glm::vec3(0.0f, 0.0f, sz));
+
         cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
         cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]);
+
+        i++;
     }
     auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
     auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
@@ -292,9 +323,9 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
 
     std::vector<uint32_t> indexVec;
     const size_t NUM_INDICES = 6;
-    indexVec.reserve(pointCloud->GetPointVec().size() * NUM_INDICES);
-    assert(pointCloud->GetPointVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
-    for (uint32_t i = 0; i < (uint32_t)pointCloud->GetPointVec().size(); i++)
+    indexVec.reserve(gaussianCloud->GetGaussianVec().size() * NUM_INDICES);
+    assert(gaussianCloud->GetGaussianVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
+    for (uint32_t i = 0; i < (uint32_t)gaussianCloud->GetGaussianVec().size(); i++)
     {
         indexVec.push_back(i * NUM_CORNERS + 0);
         indexVec.push_back(i * NUM_CORNERS + 1);
@@ -314,6 +345,18 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const PointClou
     splatVAO->SetElementBuffer(indexEBO);
 
     return splatVAO;
+}
+
+std::shared_ptr<GaussianCloud> LoadGaussianCloud()
+{
+    auto gaussianCloud = std::make_shared<GaussianCloud>();
+    if (!gaussianCloud->ImportPly("data/point_cloud.ply"))
+    {
+        Log::printf("Error loading GaussianCloud!\n");
+        return nullptr;
+    }
+
+    return gaussianCloud;
 }
 
 void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
@@ -382,6 +425,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    auto gaussianCloud = LoadGaussianCloud();
+
     Image pointImg;
     if (!pointImg.Load("texture/sphere.png"))
     {
@@ -407,11 +452,29 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto splatVAO = BuildSplatVAO(pointCloud, splatProg);
+    auto splatVAO = BuildSplatVAO(gaussianCloud, splatProg);
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
-    FlyCam flyCam(glm::vec3(0.25f, 0.25f, 3.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+
+
+    /*
+      [{"id": 0, "img_name": "00001", "width": 1959, "height": 1090,
+  "position": [-3.0089893469241797, -0.11086489695181866, -3.7527640949141428],
+  "rotation": [[0.876134201218856, 0.06925962026449776, 0.47706599800804744],
+               [-0.04747421839895102, 0.9972110940209488, -0.057586739349882114],
+               [-0.4797239414934443, 0.027805376500959853, 0.8769787916452908]],
+  "fy": 1164.6601287484507, "fx": 1159.5880733038064},
+    */
+    // hack for train model
+    glm::vec3 pos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
+    glm::mat3 rot(glm::vec3(0.876134201218856f, 0.06925962026449776f, 0.47706599800804744f),
+                  glm::vec3(-0.04747421839895102, 0.9972110940209488, -0.057586739349882114),
+                  glm::vec3(-0.4797239414934443, 0.027805376500959853, 0.8769787916452908));
+
+    //rot = glm::transpose(rot);
+    //FlyCam flyCam(glm::vec3(0.25f, 0.25f, 3.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    FlyCam flyCam(pos, glm::quat(0.0f, 0.0f, 1.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
     uint32_t frameCount = 1;

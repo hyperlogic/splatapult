@@ -31,10 +31,17 @@ void FlyCam::Process(float dt)
 
     // build camera matrix
     // prevent roll by doing gram-smith orthgonalization, where z is the primary axis and (0, 1, 0) is the secondary one.
+
     glm::vec3 z = rot * glm::vec3(0.0f, 0.0f, 1.0f);
     glm::vec3 y = glm::vec3(0.0f, 1.0f, 0.0f);
     glm::vec3 x = glm::cross(y, z);
     y = glm::cross(z, x);
+
+    /*
+    glm::vec3 z = rot * glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 y = rot * glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 x = rot * glm::vec3(1.0f, 0.0f, 0.0f);
+    */
 
     cameraMat = glm::mat4(glm::vec4(x, 0.0f),
                           glm::vec4(y, 0.0f),
