@@ -284,29 +284,20 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
                         0.5f + SH_C0 * g.f_dc[2], alpha);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
 
-        if (i < 100)
-        {
-            // dump info
-            Log::printf("gaussian[%d]\n", i);
-            Log::printf("    scale = (%.5f, %.5f, %.5f)\n", g.scale[0], g.scale[1], g.scale[2]);
-            Log::printf("    rot = (%.5f, %.5f, %.5f, %.5f)\n", g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
-        }
+        // from paper V = R * S * transpose(S) * transpose(R);
+        /*
+        glm::quat rot(g.rot[3], g.rot[0], g.rot[1], g.rot[2]);
+        glm::mat3 R(glm::normalize(rot));
+        glm::mat3 S(glm::vec3(expf(g.scale[0]), 0.0f, 0.0f),
+                    glm::vec3(0.0f, expf(g.scale[1]), 0.0f),
+                    glm::vec3(0.0f, 0.0f, expf(g.scale[2])));
+        glm::mat3 V = R * S * glm::transpose(S) * glm::transpose(R);
+        */
 
-        // WTF are these values??!?!
-        float FUDGE = 0.00001f;
-        float sx = 0.00001f;//g.scale[0] * FUDGE;
-        float sy = 0.00001f;//g.scale[1] * FUDGE;
-        float sz = 0.00001f;//g.scale[2] * FUDGE;
-        //glm::quat rot(g.rot[3], g.rot[0], g.rot[1], g.rot[2]);
-        //rot = glm::normalize(rot);
-        glm::quat rot(1.0f, 0.0f, 0.0f, 0.0f);
-        glm::mat3 V(glm::rotate(rot, glm::vec3(sx, 0.0f, 0.0f)),
-                    glm::rotate(rot, glm::vec3(0.0f, sy, 0.0f)),
-                    glm::rotate(rot, glm::vec3(0.0f, 0.0f, sz)));
-
-        //glm::mat3 V(glm::vec3(sx, 0.0f, 0.0f),
-//                    glm::vec3(0.0f, sy, 0.0f),
-//                    glm::vec3(0.0f, 0.0f, sz));
+        float pointSize = 0.00001f;
+        glm::mat3 V(glm::vec3(pointSize, 0.0f, 0.0f),
+                    glm::vec3(0.0f, pointSize, 0.0f),
+                    glm::vec3(0.0f, 0.0f, pointSize));
 
         cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
