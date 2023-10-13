@@ -1,5 +1,5 @@
 //
-// WIP splat fragment shader
+// 3d gaussian splat fragment shader
 //
 
 #version 120

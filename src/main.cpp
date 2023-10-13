@@ -11,6 +11,7 @@
 #include <SDL_opengl.h>
 #include <stdlib.h> //rand()
 
+#include "debugdraw.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
 #include "image.h"
@@ -48,7 +49,7 @@ void Clear()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // enable writes to depth buffer
-    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
@@ -289,7 +290,6 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
         glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
                         0.5f + SH_C0 * g.f_dc[1],
                         0.5f + SH_C0 * g.f_dc[2], alpha);
-        //color = LinearToSRGB(color);
         colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
 
         // from paper V = R * S * transpose(S) * transpose(R);
@@ -299,13 +299,6 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
                     glm::vec3(0.0f, expf(g.scale[1]), 0.0f),
                     glm::vec3(0.0f, 0.0f, expf(g.scale[2])));
         glm::mat3 V = R * S * glm::transpose(S) * glm::transpose(R);
-
-        /*
-        float pointSize = 0.00001f;
-        glm::mat3 V(glm::vec3(pointSize, 0.0f, 0.0f),
-                    glm::vec3(0.0f, pointSize, 0.0f),
-                    glm::vec3(0.0f, 0.0f, pointSize));
-        */
 
         cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
@@ -465,6 +458,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    SDL_GL_MakeCurrent(window, gl_context);
+    if (!DebugDraw_Init())
+    {
+        Log::printf("DebugDraw Init failed\n");
+        return 1;
+    }
+
     SDL_AddEventWatch(Watch, NULL);
 
     auto pointCloud = LoadPointCloud();
@@ -515,15 +515,23 @@ int main(int argc, char *argv[])
                [-0.4797239414934443, 0.027805376500959853, 0.8769787916452908]],
   "fy": 1164.6601287484507, "fx": 1159.5880733038064},
     */
-    // hack for train model
-    glm::vec3 pos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
-    glm::mat3 rot(glm::vec3(0.876134201218856f, 0.06925962026449776f, 0.47706599800804744f),
-                  glm::vec3(-0.04747421839895102, 0.9972110940209488, -0.057586739349882114),
-                  glm::vec3(-0.4797239414934443, 0.027805376500959853, 0.8769787916452908));
 
-    //rot = glm::transpose(rot);
-    //FlyCam flyCam(glm::vec3(0.25f, 0.25f, 3.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
-    FlyCam flyCam(pos, glm::quat(0.0f, 0.0f, 1.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    // AJT HACK: for train model, first camera in json
+    glm::vec3 trainPos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
+    glm::mat4 trainCam(glm::vec4(0.876134201218856f, 0.06925962026449776f, 0.47706599800804744f, trainPos.x),
+                       glm::vec4(-0.04747421839895102, 0.9972110940209488, -0.057586739349882114, trainPos.y),
+                       glm::vec4(-0.4797239414934443, 0.027805376500959853, 0.8769787916452908, trainPos.z),
+                       glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    trainCam = glm::transpose(trainCam);
+
+    // convert cam into y-up and -z forward.
+    glm::mat4 cam(-glm::vec4(-glm::vec3(trainCam[0]), 0.0f),
+                  glm::vec4(-glm::vec3(trainCam[1]), 0.0f),
+                  glm::vec4(-glm::vec3(trainCam[2]), 0.0f),
+                  glm::vec4(trainPos, 1.0f));
+
+    FlyCam flyCam(trainPos, glm::quat(glm::mat3(cam)), MOVE_SPEED, ROT_SPEED);
+    //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 5.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
     uint32_t frameCount = 1;
@@ -544,8 +552,6 @@ int main(int argc, char *argv[])
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
-
-        JOYSTICK_ClearFlags();
 
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -587,20 +593,36 @@ int main(int argc, char *argv[])
         Joystick* joystick = JOYSTICK_GetJoystick();
         if (joystick)
         {
+            float roll = 0.0f;
+            roll -= (joystick->buttonStateFlags & (1 << Joystick::LeftBumper)) ? 1.0f : 0.0f;
+            roll += (joystick->buttonStateFlags & (1 << Joystick::RightBumper)) ? 1.0f : 0.0f;
             flyCam.SetInput(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
-                            glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]));
+                            glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]), roll);
             flyCam.Process(dt);
         }
 
         Clear();
-        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, flyCam.GetCameraMat());
-        RenderSplats(splatProg, gaussianCloud, splatVAO, flyCam.GetCameraMat());
+
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+
+        glm::mat4 cameraMat = flyCam.GetCameraMat();
+
+        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
+        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
+
+        //DebugDraw_Transform(cam);
+
+        glm::mat4 modelViewMat = glm::inverse(cameraMat);
+        glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+        DebugDraw_Render(projMat * modelViewMat);
         frameCount++;
 
         SDL_GL_SwapWindow(window);
 
     }
 
+    DebugDraw_Shutdown();
     JOYSTICK_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(gl_context);

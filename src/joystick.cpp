@@ -1,6 +1,9 @@
 #include "joystick.h"
-#include <SDL.h>
+
 #include <assert.h>
+#include <SDL.h>
+
+#include "log.h"
 
 SDL_Joystick* s_sdlJoy = 0;
 Joystick s_joy;
@@ -116,9 +119,7 @@ void JOYSTICK_UpdateButton(const SDL_JoyButtonEvent* event)
     }
 
     int i = s_buttonMap[event->button];
-
     s_joy.buttonStateFlags = UpdateButtonFlag(s_joy.buttonStateFlags, 1 << i, event->state);
-
     if (event->state)
     {
         s_joy.buttonPressFlags = UpdateButtonFlag(s_joy.buttonPressFlags, 1 << i, event->state);

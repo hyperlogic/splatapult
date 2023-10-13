@@ -1,13 +1,13 @@
 
 //
-// WIP splat vertex shader
+// 3d gaussian splat vertex shader
 //
 
 #version 120
 
 uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
-uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = X_FAR
+uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 
 attribute vec3 position;  // center of the gaussian in object coordinates.
@@ -70,7 +70,7 @@ void main(void)
     cov2D[0] += vec2(0.3f, 0.3f);
     cov2D[1] += vec2(0.3f, 0.3f);
 
-    // p is the splat center transformed into screen space
+    // p is the gaussian center transformed into screen space
     vec4 p4 = projMat * viewMat * vec4(position, 1.0f);
     p = vec2(p4.x / p4.w, p4.y / p4.w);
     float WIDTH_2 = viewport.z / 2.0f;
@@ -80,8 +80,7 @@ void main(void)
 
     frag_color = color;
 
-    // we pass the inverse of the 2d covariance matrix to the pixel shader, to prevent
-    // doing a matrix inverse in the pixel shader.
+    // we pass the inverse of the 2d covariance matrix to the pixel shader, to avoid doing a matrix inverse per pixel.
     mat2 cov2Dinv = inverseMat2(cov2D);
     cov2Dinv4 = vec4(cov2Dinv[0], cov2Dinv[1]); // cram it into a vec4
 

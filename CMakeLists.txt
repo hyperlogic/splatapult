@@ -27,6 +27,7 @@ find_package(PNG REQUIRED)
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
+    src/debugdraw.cpp
     src/flycam.cpp
     src/gaussiancloud.cpp
     src/image.cpp
