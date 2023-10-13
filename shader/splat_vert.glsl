@@ -67,16 +67,19 @@ void main(void)
 
     // use the fact that the convolution of a gaussian with another gaussian is the sum
     // of their covariance matrices to apply a low-pass filter to anti-alias the splats
-    cov2D[0] += vec2(0.3f, 0.3f);
-    cov2D[1] += vec2(0.3f, 0.3f);
+    cov2D[0] += vec2(1.0f, 1.0f);
+    cov2D[1] += vec2(1.0f, 1.0f);
+
+    float X0 = viewport.x;
+    float Y0 = viewport.y;
+    float WIDTH = viewport.z;
+    float HEIGHT = viewport.w;
 
     // p is the gaussian center transformed into screen space
     vec4 p4 = projMat * viewMat * vec4(position, 1.0f);
     p = vec2(p4.x / p4.w, p4.y / p4.w);
-    float WIDTH_2 = viewport.z / 2.0f;
-    float HEIGHT_2 = viewport.w / 2.0f;
-    p.x = p.x * WIDTH_2 + viewport.x + WIDTH_2;
-    p.y = p.y * HEIGHT_2 + viewport.y + HEIGHT_2;
+    p.x = 0.5f * (WIDTH + (p.x * WIDTH) + (2.0f * X0));
+    p.y = 0.5f * (HEIGHT + (p.y * HEIGHT) + (2.0f * Y0));
 
     frag_color = color;
 
@@ -90,11 +93,21 @@ void main(void)
 
     // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
     // this is used to embiggen the splat to fit the actual gaussian
-    float FUDGE = 2.0f;  // I bet there's an optimal value for this...
+    float FUDGE = 1.0f;  // I bet there's an optimal value for this...
     vec2 offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
 
     // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / viewport.z) * gl_Position.z;
-    offset.y *= (2.0f / viewport.w) * gl_Position.z;
+    offset.x *= (2.0f / WIDTH) * gl_Position.w;
+    offset.y *= (2.0f / HEIGHT) * gl_Position.w;
     gl_Position.xy += offset;
+
+    // discard splats that end up outside of a guard band
+    vec3 ndcP = p4.xyz / p4.w;
+    if (ndcP.z < 0.25f ||
+        ndcP.x > 2.0f || ndcP.x < -2.0f ||
+        ndcP.y > 2.0f || ndcP.y < -2.0f)
+    {
+        // discard this point
+        gl_Position = vec4(0.0f, 0.0f, -2.0f, 1.0f); // Place vertex behind the camera
+    }
 }

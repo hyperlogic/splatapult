@@ -38,6 +38,10 @@ void Clear()
 {
     SDL_GL_MakeCurrent(window, gl_context);
 
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+
     // pre-multiplied alpha blending
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
@@ -49,7 +53,7 @@ void Clear()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // enable writes to depth buffer
-    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
@@ -345,14 +349,14 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
-    /*
     if (!gaussianCloud->ImportPly("data/point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
-    */
 
+
+    /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
     //
@@ -415,6 +419,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     g.opacity = 100.0f;
     g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+    */
 
     return gaussianCloud;
 }

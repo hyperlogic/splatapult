@@ -128,7 +128,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
     glm::vec3 pos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
     pos += glm::vec3(0.0f, 0.0f, 3.0f);
-    const float SIZE = 3.0f;
+    const float SIZE = 300.0f;
     glm::vec3 aabbMin = pos + glm::vec3(-0.5f, -0.5f, -0.5f) * SIZE;
     glm::vec3 aabbMax = pos + glm::vec3(0.5f, 0.5f, 0.5f) * SIZE;
 
