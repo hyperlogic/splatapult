@@ -11,6 +11,7 @@
 #include <SDL_opengl.h>
 #include <stdlib.h> //rand()
 
+#include "cameras.h"
 #include "debugdraw.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
@@ -134,7 +135,7 @@ std::shared_ptr<PointCloud> LoadPointCloud()
     auto pointCloud = std::make_shared<PointCloud>();
 
     /*
-    if (!pointCloud->ImportPly("data/input.ply"))
+    if (!pointCloud->ImportPly("data/train/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
@@ -349,7 +350,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
-    if (!gaussianCloud->ImportPly("data/point_cloud.ply"))
+    if (!gaussianCloud->ImportPly("data/train/point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
@@ -535,6 +536,13 @@ int main(int argc, char *argv[])
 
     SDL_AddEventWatch(Watch, NULL);
 
+    auto cameras = std::make_shared<Cameras>();
+    if (!cameras->ImportJson("data/train/cameras.json"))
+    {
+        Log::printf("Error loading cameras.json\n");
+        return 1;
+    }
+
     auto pointCloud = LoadPointCloud();
     if (!pointCloud)
     {
@@ -573,32 +581,11 @@ int main(int argc, char *argv[])
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
 
+    int cameraIndex = 0;
+    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
-    /*
-      [{"id": 0, "img_name": "00001", "width": 1959, "height": 1090,
-  "position": [-3.0089893469241797, -0.11086489695181866, -3.7527640949141428],
-  "rotation": [[0.876134201218856, 0.06925962026449776, 0.47706599800804744],
-               [-0.04747421839895102, 0.9972110940209488, -0.057586739349882114],
-               [-0.4797239414934443, 0.027805376500959853, 0.8769787916452908]],
-  "fy": 1164.6601287484507, "fx": 1159.5880733038064},
-    */
-
-    // AJT HACK: for train model, first camera in json
-    glm::vec3 trainPos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
-    glm::mat4 trainCam(glm::vec4(0.876134201218856f, 0.06925962026449776f, 0.47706599800804744f, trainPos.x),
-                       glm::vec4(-0.04747421839895102, 0.9972110940209488, -0.057586739349882114, trainPos.y),
-                       glm::vec4(-0.4797239414934443, 0.027805376500959853, 0.8769787916452908, trainPos.z),
-                       glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-    trainCam = glm::transpose(trainCam);
-
-    // convert cam into y-up and -z forward.
-    glm::mat4 cam(-glm::vec4(-glm::vec3(trainCam[0]), 0.0f),
-                  glm::vec4(-glm::vec3(trainCam[1]), 0.0f),
-                  glm::vec4(-glm::vec3(trainCam[2]), 0.0f),
-                  glm::vec4(trainPos, 1.0f));
-
-    FlyCam flyCam(trainPos, glm::quat(glm::mat3(cam)), MOVE_SPEED, ROT_SPEED);
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 5.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
@@ -688,6 +675,9 @@ int main(int argc, char *argv[])
 
         SDL_GL_SwapWindow(window);
 
+        // cycle camera mat
+        cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
+        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
     }
 
     DebugDraw_Shutdown();

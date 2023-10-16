@@ -1,11 +1,11 @@
 #ifndef GAUSSIANCLOUD_H
 #define GAUSSIANCLOUD_H
 
-#include <string>
-#include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <string>
+#include <vector>
 
 class GaussianCloud
 {
@@ -40,8 +40,6 @@ public:
     };
 
     const std::vector<Gaussian>& GetGaussianVec() const { return gaussianVec; }
-
-    // AJT: HACK FOR NOW give full access to gaussianVec
     std::vector<Gaussian>& GetGaussianVec() { return gaussianVec; }
 
 protected:

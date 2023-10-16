@@ -13,6 +13,7 @@ public:
     void SetInput(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, const float rollAmountIn);
     void Process(float dt);
     const glm::mat4& GetCameraMat() const { return cameraMat; }
+    void SetCameraMat(const glm::mat4& cameraMat);
 
 protected:
 

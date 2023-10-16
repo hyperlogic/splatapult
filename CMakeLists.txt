@@ -24,9 +24,13 @@ find_package(glm REQUIRED)
 # png
 find_package(PNG REQUIRED)
 
+# nlohmann-json
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
+    src/cameras.cpp
     src/debugdraw.cpp
     src/flycam.cpp
     src/gaussiancloud.cpp
@@ -55,6 +59,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GLEW::GLEW
     glm::glm
     PNG::PNG
+    nlohmann_json::nlohmann_json
 )
 
 
