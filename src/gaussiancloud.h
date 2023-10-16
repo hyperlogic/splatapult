@@ -14,6 +14,8 @@ public:
 
     bool ImportPly(const std::string& plyFilename);
 
+    bool ExportPly(const std::string& plyFilename) const;
+
     struct Gaussian
     {
         float position[3];  // in world space
