@@ -256,7 +256,13 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
             //uint8_t a = (uint8_t)(glm::clamp(accum, 0.0f, 1.0f) * 255.0f);
 
             SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-            SDL_RenderDrawPoint(renderer, x, y);
+            for (int xx = 0; xx < PIXEL_STEP; xx++)
+            {
+                for (int yy = 0; yy < PIXEL_STEP; yy++)
+                {
+                    SDL_RenderDrawPoint(renderer, x + xx, y + yy);
+                }
+            }
         }
     }
 }
