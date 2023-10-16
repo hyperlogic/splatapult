@@ -54,6 +54,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     const float SH_ONE = 1.0f / (2.0f * SH_C0);
     const float SH_ZERO = -1.0f / (2.0f * SH_C0);
 
+    /*
     // x axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
@@ -99,6 +100,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
         gaussianVec.push_back(g);
     }
+    */
 
     GaussianCloud::Gaussian g;
     memset(&g, 0, sizeof(GaussianCloud::Gaussian));
@@ -125,6 +127,8 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
     return 1;
 }
 
+static bool s_debug = false;
+
 struct Gaussian
 {
     Gaussian() {}
@@ -138,6 +142,14 @@ struct Gaussian
     float Eval(const glm::vec3& x) const
     {
         glm::vec3 d = x - p;
+
+        if (s_debug)
+        {
+            PrintVec(d, "    d");
+            PrintMat(cov, "    cov");
+            Log::printf("    k = %.5f\n", k);
+        }
+
         return k * expf(-0.5f * glm::dot(d, covInv * d));
     }
 
@@ -149,6 +161,7 @@ struct Gaussian
     float k;
     glm::mat3 covInv;
 };
+
 
 std::shared_ptr<std::vector<Gaussian>> BuildGaussianVec(std::shared_ptr<const GaussianCloud> gCloud)
 {
@@ -196,6 +209,14 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
             glm::vec3 localRay(sinf(phi), sinf(theta), -cosf(theta));
             glm::vec3 ray = glm::normalize(camMat3 * localRay);
 
+            s_debug = false;
+            if (x == width/2 - 10 && y == height/2 - 10)
+            {
+                s_debug = true;
+                Log::printf("pixel[%d, %d] ray\n", x, y);
+                PrintVec(ray, "    ray");
+            }
+
             // integrate along the ray, (midpoint rule)
             const float RAY_LENGTH = 5.0f;
             const int NUM_STEPS = 50;
@@ -208,11 +229,27 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
                 for (auto&& g : *gVec)
                 {
                     float gg = g.Eval(x0 + ray * t);
-                    accum += (gg * dt) * g.color;
+
+                    if (s_debug)
+                    {
+                        Log::printf("    ** gg = %.5f\n", gg);
+                    }
+                    accum += (gg * dt);
                 }
             }
+            if (s_debug)
+            {
+                Log::printf("integral = %.5f\n", accum.x);
+            }
+
+            accum *= 0.025f;
 
             // draw
+            /*
+            uint8_t r = (uint8_t)(glm::clamp(accum.x, 0.0f, 1.0f) * 255.0f);
+            uint8_t g = (uint8_t)(glm::clamp(accum.y, 0.0f, 1.0f) * 255.0f);
+            uint8_t b = (uint8_t)(glm::clamp(accum.z, 0.0f, 1.0f) * 255.0f);
+            */
             uint8_t r = (uint8_t)(glm::clamp(accum.x, 0.0f, 1.0f) * 255.0f);
             uint8_t g = (uint8_t)(glm::clamp(accum.y, 0.0f, 1.0f) * 255.0f);
             uint8_t b = (uint8_t)(glm::clamp(accum.z, 0.0f, 1.0f) * 255.0f);
@@ -254,6 +291,9 @@ int main(int argc, char *argv[])
         Log::printf("Error loading GaussianCloud\n");
         return 1;
     }
+
+    // AJT: Hack
+    gaussianCloud->ExportPly("data/single_gaussian.ply");
 
     auto gaussianVec = BuildGaussianVec(gaussianCloud);
 
