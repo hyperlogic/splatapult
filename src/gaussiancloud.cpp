@@ -151,3 +151,91 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
     return true;
 }
+
+bool GaussianCloud::ExportPly(const std::string& plyFilename) const
+{
+    std::ofstream plyFile(GetRootPath() + plyFilename, std::ios::binary);
+    if (!plyFile.is_open())
+    {
+        Log::printf("failed to open %s\n", plyFilename.c_str());
+        return false;
+    }
+
+    // ply files have unix line endings.
+    plyFile << "ply\n";
+    plyFile << "format binary_little_endian 1.0\n";
+    plyFile << "element vertex " << gaussianVec.size() << "\n";
+    plyFile << "property float x\n";
+    plyFile << "property float y\n";
+    plyFile << "property float z\n";
+    plyFile << "property float nx\n";
+    plyFile << "property float ny\n";
+    plyFile << "property float nz\n";
+    plyFile << "property float f_dc_0\n";
+    plyFile << "property float f_dc_1\n";
+    plyFile << "property float f_dc_2\n";
+    plyFile << "property float f_rest_0\n";
+    plyFile << "property float f_rest_1\n";
+    plyFile << "property float f_rest_2\n";
+    plyFile << "property float f_rest_3\n";
+    plyFile << "property float f_rest_4\n";
+    plyFile << "property float f_rest_5\n";
+    plyFile << "property float f_rest_6\n";
+    plyFile << "property float f_rest_7\n";
+    plyFile << "property float f_rest_8\n";
+    plyFile << "property float f_rest_9\n";
+    plyFile << "property float f_rest_10\n";
+    plyFile << "property float f_rest_11\n";
+    plyFile << "property float f_rest_12\n";
+    plyFile << "property float f_rest_13\n";
+    plyFile << "property float f_rest_14\n";
+    plyFile << "property float f_rest_15\n";
+    plyFile << "property float f_rest_16\n";
+    plyFile << "property float f_rest_17\n";
+    plyFile << "property float f_rest_18\n";
+    plyFile << "property float f_rest_19\n";
+    plyFile << "property float f_rest_20\n";
+    plyFile << "property float f_rest_21\n";
+    plyFile << "property float f_rest_22\n";
+    plyFile << "property float f_rest_23\n";
+    plyFile << "property float f_rest_24\n";
+    plyFile << "property float f_rest_25\n";
+    plyFile << "property float f_rest_26\n";
+    plyFile << "property float f_rest_27\n";
+    plyFile << "property float f_rest_28\n";
+    plyFile << "property float f_rest_29\n";
+    plyFile << "property float f_rest_30\n";
+    plyFile << "property float f_rest_31\n";
+    plyFile << "property float f_rest_32\n";
+    plyFile << "property float f_rest_33\n";
+    plyFile << "property float f_rest_34\n";
+    plyFile << "property float f_rest_35\n";
+    plyFile << "property float f_rest_36\n";
+    plyFile << "property float f_rest_37\n";
+    plyFile << "property float f_rest_38\n";
+    plyFile << "property float f_rest_39\n";
+    plyFile << "property float f_rest_40\n";
+    plyFile << "property float f_rest_41\n";
+    plyFile << "property float f_rest_42\n";
+    plyFile << "property float f_rest_43\n";
+    plyFile << "property float f_rest_44\n";
+    plyFile << "property float opacity\n";
+    plyFile << "property float scale_0\n";
+    plyFile << "property float scale_1\n";
+    plyFile << "property float scale_2\n";
+    plyFile << "property float rot_0\n";
+    plyFile << "property float rot_1\n";
+    plyFile << "property float rot_2\n";
+    plyFile << "property float rot_3\n";
+    plyFile << "end_header\n";
+
+    const size_t GAUSSIAN_SIZE = 62 * sizeof(float);
+    static_assert(sizeof(Gaussian) >= GAUSSIAN_SIZE);
+
+    for (auto&& g : gaussianVec)
+    {
+        plyFile.write((char*)&g, GAUSSIAN_SIZE);
+    }
+
+    return true;
+}
