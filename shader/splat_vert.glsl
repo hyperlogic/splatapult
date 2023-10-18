@@ -3,23 +3,23 @@
 // 3d gaussian splat vertex shader
 //
 
-#version 120
+#version 460
 
 uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 
-attribute vec3 position;  // center of the gaussian in object coordinates.
-attribute vec2 uv;  // not used for textures, but as an offset specifying which "corner" of the splat this represents.
-attribute vec4 color;  // radiance of the splat
-attribute vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
-attribute vec3 cov3_col1;
-attribute vec3 cov3_col2;
+in vec3 position;  // center of the gaussian in object coordinates.
+in vec2 uv;  // not used for textures, but as an offset specifying which "corner" of the splat this represents.
+in vec4 color;  // radiance of the splat
+in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
+in vec3 cov3_col1;
+in vec3 cov3_col2;
 
-varying vec4 frag_color;  // radiance of splat
-varying vec4 cov2Dinv4;  // inverse of the 2D screen space covariance matrix of the gaussian
-varying vec2 p;  // the 2D screen space center of the gaussian
+out vec4 frag_color;  // radiance of splat
+out vec4 cov2Dinv4;  // inverse of the 2D screen space covariance matrix of the gaussian
+out vec2 p;  // the 2D screen space center of the gaussian
 
 // used to invert the 2D screen space covariance matrix
 mat2 inverseMat2(mat2 m)
