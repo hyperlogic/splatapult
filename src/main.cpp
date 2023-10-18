@@ -40,6 +40,13 @@ const float FOVY = glm::radians(45.0f);
 // AJT: HACK do this smarter
 std::shared_ptr<BufferObject> g_pointKeyBuffer;
 std::shared_ptr<BufferObject> g_pointValBuffer;
+std::vector<uint32_t> g_pointIndexVec;
+std::vector<uint32_t> g_pointDepthVec;
+
+std::shared_ptr<BufferObject> g_gaussianKeyBuffer;
+std::shared_ptr<BufferObject> g_gaussianValBuffer;
+std::vector<uint32_t> g_gaussianIndexVec;
+std::vector<uint32_t> g_gaussianDepthVec;
 
 void Clear()
 {
@@ -198,13 +205,22 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     pointProg->SetUniform("colorTex", 0);
 
 #ifdef SORT_POINTS
-    // AJT: dont need to build this everyframe
-    std::vector<float> depthVec;
     const size_t numPoints = pointCloud->GetPointVec().size();
-    {
-        ZoneScopedNC("xform", tracy::Color::Red4);
 
-        depthVec.reserve(numPoints);
+    // lazy alloc of g_pointDepthVec
+    if (g_pointDepthVec.size() == 0)
+    {
+        g_pointDepthVec.resize(numPoints);
+    }
+
+    // lazy alloc of g_pointIndexVec
+    if (g_pointIndexVec.size() == 0)
+    {
+        g_pointIndexVec.resize(numPoints);
+    }
+
+    {
+        ZoneScopedNC("build vecs", tracy::Color::Red4);
 
         // transform forward vector into world space
         glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -216,99 +232,54 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
             glm::vec3 pos = glm::vec3(pointCloud->GetPointVec()[i].position[0],
                                       pointCloud->GetPointVec()[i].position[1],
                                       pointCloud->GetPointVec()[i].position[2]);
-            depthVec.push_back(glm::dot(pos - eye, forward));
+            float depth = glm::dot(pos - eye, forward);
+            g_pointDepthVec[i] = std::numeric_limits<uint32_t>::max() - (uint32_t)(depth * 65536.0f);
+            g_pointIndexVec[i] = (uint32_t)i;
         }
     }
 
-    // AJT: TODO dont build this every frame.
-    std::vector<uint32_t> indexVec;
     {
-        ZoneScopedNC("build indexVec", tracy::Color::DarkGray);
+        ZoneScopedNC("upload vecs", tracy::Color::DarkGreen);
 
-        indexVec.reserve(numPoints);
-        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        // update or create shader storage buffers
+        if (!g_pointKeyBuffer || !g_pointValBuffer)
         {
-            indexVec.push_back(i);
-        }
-    }
-
-    // AJT: NEWSORT
-
-    std::vector<uint32_t> keyVec;
-    {
-        ZoneScopedNC("build shader buffers", tracy::Color::DarkGreen);
-
-        keyVec.reserve(numPoints);
-
-        for (size_t i = 0; i < numPoints; i++)
-        {
-            // 16.16 fixed point
-            keyVec.push_back(std::numeric_limits<uint32_t>::max() - (uint32_t)(depthVec[i] * 65536.0f));
-        }
-
-        if (!g_pointKeyBuffer)
-        {
-            g_pointKeyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, keyVec, true);
-            g_pointValBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
+            g_pointKeyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_pointDepthVec, true);
+            g_pointValBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_pointIndexVec, true);
         }
         else
         {
-            g_pointKeyBuffer->Update(keyVec);
-            g_pointValBuffer->Update(indexVec);
+            g_pointKeyBuffer->Update(g_pointDepthVec);
+            g_pointValBuffer->Update(g_pointIndexVec);
         }
+    }
 
-        /*
-        // before sort print out arrays.
-        Log::printf("before sort\n");
-        Log::printf("    keys = [ %u", keyVec[0]);
-        for (size_t i = 1; i < numPoints; i++)
-        {
-            Log::printf(", %u", keyVec[i]);
-        }
-        Log::printf(" ]\n");
-
-        Log::printf("    vals = [ %u", indexVec[0]);
-        for (size_t i = 1; i < numPoints; i++)
-        {
-            Log::printf(", %u", indexVec[i]);
-        }
-        Log::printf(" ]\n");
-        */
+    {
+        ZoneScopedNC("sort", tracy::Color::Red4);
 
         sorter.sort(g_pointKeyBuffer->GetObj(), g_pointValBuffer->GetObj(), numPoints);
-
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    }
+
+    {
+        ZoneScopedNC("read back", tracy::Color::Blue);
 
         // read back data on the cpu!
-        //g_pointKeyBuffer->Bind();
-        //glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), keyVec.data());
+        // AJT: TODO: There must be a way to directly route the g_pointValBuffer into the element buffer.
+        // without reading back on the CPU
         g_pointValBuffer->Bind();
-        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), indexVec.data());
+        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), g_pointIndexVec.data());
+    }
+
+    {
+        ZoneScopedNC("update eao", tracy::Color::Pink);
 
         auto elementBuffer = pointCloudVAO->GetElementBuffer();
-        elementBuffer->Update(indexVec);
-
-        /*
-        Log::printf("after sort\n");
-        Log::printf("    keys = [ %u", keyVec[0]);
-        for (size_t i = 1; i < numPoints; i++)
-        {
-            Log::printf(", %u", keyVec[i]);
-        }
-        Log::printf(" ]\n");
-
-        Log::printf("    vals = [ %u", indexVec[0]);
-        for (size_t i = 1; i < numPoints; i++)
-        {
-            Log::printf(", %u", indexVec[i]);
-        }
-        Log::printf(" ]\n");
-        */
+        elementBuffer->Update(g_pointIndexVec);
     }
 
     pointProg->Bind();
 #endif
-
 
     pointCloudVAO->DrawElements(GL_POINTS);
 }
