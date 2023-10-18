@@ -262,20 +262,11 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
     }
 
     {
-        ZoneScopedNC("read back", tracy::Color::Blue);
+        ZoneScopedNC("copy indices", tracy::Color::Pink);
 
-        // read back data on the cpu!
-        // AJT: TODO: There must be a way to directly route the g_pointValBuffer into the element buffer.
-        // without reading back on the CPU
-        g_pointValBuffer->Bind();
-        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), g_pointIndexVec.data());
-    }
-
-    {
-        ZoneScopedNC("update eao", tracy::Color::Pink);
-
-        auto elementBuffer = pointCloudVAO->GetElementBuffer();
-        elementBuffer->Update(g_pointIndexVec);
+        glBindBuffer(GL_COPY_READ_BUFFER, g_pointValBuffer->GetObj());
+        glBindBuffer(GL_COPY_WRITE_BUFFER, pointCloudVAO->GetElementBuffer()->GetObj());
+        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
     }
 
     pointProg->Bind();
@@ -437,7 +428,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 }
 
 void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<const GaussianCloud> gaussianCloud,
-                  std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
+                  std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat, rgc::radix_sort::sorter& sorter)
 {
     ZoneScoped;
 
@@ -453,13 +444,22 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
     splatProg->SetUniform("viewport", glm::vec4(0.0f, 0.0f, (float)width, (float)height));
 
 #ifdef SORT_POINTS
-    // AJT: dont need to build this everyframe
-    std::vector<float> depthVec;
     const size_t numPoints = gaussianCloud->GetGaussianVec().size();
-    {
-        ZoneScopedNC("xform", tracy::Color::Red4);
 
-        depthVec.reserve(numPoints);
+    // lazy alloc of g_gaussianDepthVec
+    if (g_gaussianDepthVec.size() == 0)
+    {
+        g_gaussianDepthVec.resize(numPoints);
+    }
+
+    // lazy alloc of g_guassianIndexVec
+    if (g_gaussianIndexVec.size() == 0)
+    {
+        g_gaussianIndexVec.resize(numPoints);
+    }
+
+    {
+        ZoneScopedNC("build vecs", tracy::Color::Red4);
 
         // transform forward vector into world space
         glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -472,38 +472,43 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
                                       gaussianCloud->GetGaussianVec()[i].position[1],
                                       gaussianCloud->GetGaussianVec()[i].position[2]);
             float depth = glm::dot(pos - eye, forward);
-            depthVec.push_back(depth);
+            g_gaussianDepthVec[i] = std::numeric_limits<uint32_t>::max() - (uint32_t)(depth * 65536.0f);
+            g_gaussianIndexVec[i] = (uint32_t)i;
         }
     }
 
-    // sort indices by z.
-    std::vector<uint32_t> indexVec;
     {
-        ZoneScopedNC("build indexVec", tracy::Color::DarkGray);
+        ZoneScopedNC("upload vecs", tracy::Color::DarkGreen);
 
-        indexVec.reserve(numPoints);
-        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        // update or create shader storage buffers
+        if (!g_gaussianKeyBuffer || !g_gaussianValBuffer)
         {
-            indexVec.push_back(i);
+            g_gaussianKeyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_gaussianDepthVec, true);
+            g_gaussianValBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_gaussianIndexVec, true);
+        }
+        else
+        {
+            g_gaussianKeyBuffer->Update(g_gaussianDepthVec);
+            g_gaussianValBuffer->Update(g_gaussianIndexVec);
         }
     }
 
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        std::sort(indexVec.begin(), indexVec.end(), [&depthVec] (uint32_t a, uint32_t b)
-        {
-            return depthVec[a] > depthVec[b];
-        });
+        sorter.sort(g_gaussianKeyBuffer->GetObj(), g_gaussianValBuffer->GetObj(), numPoints);
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
     }
 
-    // store indexVec into elementBuffer
     {
-        ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
+        ZoneScopedNC("copy indices", tracy::Color::Pink);
 
-        auto elementBuffer = splatVAO->GetElementBuffer();
-        elementBuffer->Update(indexVec);
+        glBindBuffer(GL_COPY_READ_BUFFER, g_gaussianValBuffer->GetObj());
+        glBindBuffer(GL_COPY_WRITE_BUFFER, splatVAO->GetElementBuffer()->GetObj());
+        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
     }
+
+    splatProg->Bind();
 #endif
 
     splatVAO->DrawElements(GL_POINTS);
@@ -689,8 +694,8 @@ int main(int argc, char *argv[])
 
         glm::mat4 cameraMat = flyCam.GetCameraMat();
 
-        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat, sorter);
-        //RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
+        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat, sorter);
+        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat, sorter);
 
         //DebugDraw_Transform(cam);
 
