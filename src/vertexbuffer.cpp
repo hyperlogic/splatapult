@@ -167,9 +167,10 @@ void VertexArrayObject::SetElementBuffer(std::shared_ptr<BufferObject> elementBu
 	Unbind();
 }
 
-void VertexArrayObject::Draw() const
+void VertexArrayObject::DrawElements(int mode) const
 {
 	Bind();
-	glDrawElements(GL_TRIANGLES, elementBuffer->numElements, GL_UNSIGNED_INT, nullptr);
+	glDrawElements((GLenum)mode, elementBuffer->numElements, GL_UNSIGNED_INT, nullptr);
 	Unbind();
 }
+

@@ -74,48 +74,27 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const Poin
     SDL_GL_MakeCurrent(window, gl_context);
     auto pointCloudVAO = std::make_shared<VertexArrayObject>();
 
-    glm::vec2 uvLowerLeft(0.0f, 0.0f);
-    glm::vec2 uvUpperRight(1.0f, 1.0f);
-
     // convert pointCloud into position array, where each position is repeated 4 times.
-    const int NUM_CORNERS = 4;
     std::vector<glm::vec3> positionVec;
-    positionVec.reserve(pointCloud->GetPointVec().size() * NUM_CORNERS);
-    std::vector<glm::vec2> uvVec;
-    uvVec.reserve(pointCloud->GetPointVec().size() * NUM_CORNERS);
+    positionVec.reserve(pointCloud->GetPointVec().size());
+
     std::vector<glm::vec4> colorVec;
     for (auto&& p : pointCloud->GetPointVec())
     {
         positionVec.push_back(glm::vec3(p.position[0], p.position[1], p.position[2]));
-        positionVec.push_back(glm::vec3(p.position[0], p.position[1], p.position[2]));
-        positionVec.push_back(glm::vec3(p.position[0], p.position[1], p.position[2]));
-        positionVec.push_back(glm::vec3(p.position[0], p.position[1], p.position[2]));
-        uvVec.push_back(uvLowerLeft);
-        uvVec.push_back(glm::vec2(uvUpperRight.x, uvLowerLeft.y));
-        uvVec.push_back(uvUpperRight);
-        uvVec.push_back(glm::vec2(uvLowerLeft.x, uvUpperRight.y));
         glm::vec4 color(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f);
-        colorVec.push_back(color);
-        colorVec.push_back(color);
-        colorVec.push_back(color);
         colorVec.push_back(color);
     }
     auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
-    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
+
     auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
 
     std::vector<uint32_t> indexVec;
-    const size_t NUM_INDICES = 6;
-    indexVec.reserve(pointCloud->GetPointVec().size() * NUM_INDICES);
-    assert(pointCloud->GetPointVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
+    indexVec.reserve(pointCloud->GetPointVec().size());
+    assert(pointCloud->GetPointVec().size() <= std::numeric_limits<uint32_t>::max());
     for (uint32_t i = 0; i < (uint32_t)pointCloud->GetPointVec().size(); i++)
     {
-        indexVec.push_back(i * NUM_CORNERS + 0);
-        indexVec.push_back(i * NUM_CORNERS + 1);
-        indexVec.push_back(i * NUM_CORNERS + 2);
-        indexVec.push_back(i * NUM_CORNERS + 0);
-        indexVec.push_back(i * NUM_CORNERS + 2);
-        indexVec.push_back(i * NUM_CORNERS + 3);
+        indexVec.push_back(i);
     }
 #ifdef SORT_POINTS
     auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true);
@@ -124,7 +103,6 @@ std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const Poin
 #endif
 
     pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionVBO);
-    pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("uv"), uvVBO);
     pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("color"), colorVBO);
     pointCloudVAO->SetElementBuffer(indexEBO);
 
@@ -197,13 +175,15 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
 
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
+    float aspectRatio = (float)width / (float)height;
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+    glm::mat4 projMat = glm::perspective(FOVY, aspectRatio, Z_NEAR, Z_FAR);
 
     pointProg->Bind();
     pointProg->SetUniform("modelViewMat", modelViewMat);
     pointProg->SetUniform("projMat", projMat);
     pointProg->SetUniform("pointSize", 0.02f);
+    pointProg->SetUniform("invAspectRatio", 1.0f / aspectRatio);
 
     // use texture unit 0 for colorTexture
     glActiveTexture(GL_TEXTURE0);
@@ -233,7 +213,7 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
         }
     }
 
-    // sort indices by z.
+    // AJT: TODO dont build this every frame.
     std::vector<uint32_t> indexVec;
     {
         ZoneScopedNC("build indexVec", tracy::Color::DarkGray);
@@ -245,6 +225,7 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
         }
     }
 
+    // sort indices by z.
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
@@ -254,35 +235,16 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
         });
     }
 
-    // expand out indexVec for rendering
-    const int NUM_CORNERS = 4;
-    std::vector<uint32_t> newIndexVec;
-    {
-        ZoneScopedNC("expand", tracy::Color::DarkGray);
-
-        newIndexVec.reserve(numPoints * 4);
-        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
-        {
-            const int ii = indexVec[i];
-            newIndexVec.push_back(ii * NUM_CORNERS + 0);
-            newIndexVec.push_back(ii * NUM_CORNERS + 1);
-            newIndexVec.push_back(ii * NUM_CORNERS + 2);
-            newIndexVec.push_back(ii * NUM_CORNERS + 0);
-            newIndexVec.push_back(ii * NUM_CORNERS + 2);
-            newIndexVec.push_back(ii * NUM_CORNERS + 3);
-        }
-    }
-
-    // store newIndexVec into elementBuffer
+    // store indexVec into elementBuffer
     {
         ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
 
         auto elementBuffer = pointCloudVAO->GetElementBuffer();
-        elementBuffer->Update(newIndexVec);
+        elementBuffer->Update(indexVec);
     }
 #endif
 
-    pointCloudVAO->Draw();
+    pointCloudVAO->DrawElements(GL_POINTS);
 }
 
 std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianCloud> gaussianCloud, std::shared_ptr<const Program> splatProg)
@@ -545,7 +507,7 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
     }
 #endif
 
-    splatVAO->Draw();
+    splatVAO->DrawElements(GL_TRIANGLES);
 }
 
 
@@ -624,7 +586,7 @@ int main(int argc, char *argv[])
     Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
     auto pointTex = std::make_shared<Texture>(pointImg, texParams);
     auto pointProg = std::make_shared<Program>();
-    if (!pointProg->Load("shader/point_vert.glsl", "shader/point_frag.glsl"))
+    if (!pointProg->Load("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
     {
         Log::printf("Error loading point shaders!\n");
         return 1;

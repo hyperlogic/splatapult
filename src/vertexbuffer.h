@@ -48,7 +48,7 @@ public:
 	void SetAttribBuffer(int loc, std::shared_ptr<BufferObject> attribBufferIn);
 	void SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn);
 	std::shared_ptr<BufferObject> GetElementBuffer() const { return elementBuffer; }
-	void Draw() const;
+	void DrawElements(int mode) const;
 
 protected:
 	uint32_t obj;

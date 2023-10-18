@@ -74,31 +74,58 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
     return true;
 }
 
-Program::Program() : program(0), vertShader(0), fragShader(0)
+Program::Program() : program(0), vertShader(0), geomShader(0), fragShader(0)
 {
 }
 
 Program::~Program()
 {
     glDeleteShader(vertShader);
+    glDeleteShader(geomShader);
     glDeleteShader(fragShader);
     glDeleteProgram(program);
 }
 
 bool Program::Load(const std::string& vertFilename, const std::string& fragFilename)
 {
+    return Load(vertFilename, std::string(), fragFilename);
+}
+
+bool Program::Load(const std::string& vertFilename, const std::string& geomFilename, const std::string& fragFilename)
+{
+    const bool useGeomShader = !geomFilename.empty();
+
+    if (useGeomShader)
+    {
+        debugName = vertFilename + " + " + geomFilename + " + " + fragFilename;
+    }
+    else
+    {
+        debugName = vertFilename + " + " + fragFilename;
+    }
+
     glDeleteShader(vertShader);
+    glDeleteShader(geomShader);
     glDeleteShader(fragShader);
     glDeleteProgram(program);
 
     uniforms.clear();
     attribs.clear();
 
-    std::string vertSource, fragSource;
+    std::string vertSource, geomSource, fragSource;
     if (!LoadFile(vertFilename, vertSource))
     {
         Log::printf("Failed to load vertex shader %s\n", vertFilename.c_str());
         return false;
+    }
+
+    if (useGeomShader)
+    {
+        if (!LoadFile(geomFilename, geomSource))
+        {
+            Log::printf("Failed to load geometry shader %s\n", geomFilename.c_str());
+            return false;
+        }
     }
 
     if (!LoadFile(fragFilename, fragSource))
@@ -113,6 +140,15 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
         return false;
     }
 
+    if (useGeomShader)
+    {
+        if (!CompileShader(GL_GEOMETRY_SHADER, geomSource, &geomShader, geomFilename))
+        {
+            Log::printf("Failed to compile geometry shader %s\n", geomFilename.c_str());
+            return false;
+        }
+    }
+
     if (!CompileShader(GL_FRAGMENT_SHADER, fragSource, &fragShader, fragFilename))
     {
         Log::printf("Failed to compile fragment shader %s\n", fragFilename.c_str());
@@ -122,6 +158,10 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
     program = glCreateProgram();
     glAttachShader(program, vertShader);
     glAttachShader(program, fragShader);
+    if (useGeomShader)
+    {
+        glAttachShader(program, geomShader);
+    }
     glLinkProgram(program);
 
     GLint linked;
@@ -129,7 +169,7 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
 
     if (!linked)
     {
-        Log::printf("Failed to link shaders %s, %s\n", vertFilename.c_str(), fragFilename.c_str());
+        Log::printf("Failed to link shaders \"%s\"\n", debugName.c_str());
     }
 
     const GLint MAX_BUFFER_LEN = 4096;
@@ -140,12 +180,17 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
     {
         if (linked)
         {
-            Log::printf("Warning during linking shaders %s, %s\n", vertFilename.c_str(), fragFilename.c_str());
+            Log::printf("Warning during linking shaders \"%s\"\n", debugName.c_str());
         }
         Log::printf("%s\n", buffer.get());
 
         Log::printf("%s =\n", vertFilename.c_str());
         DumpShaderSource(vertSource);
+        if (useGeomShader)
+        {
+            Log::printf("%s =\n", geomFilename.c_str());
+            DumpShaderSource(geomSource);
+        }
         Log::printf("%s =\n", fragFilename.c_str());
         DumpShaderSource(fragSource);
     }
@@ -184,8 +229,6 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
         v.loc = loc;
         uniforms[name] = v;
     }
-
-    debugName = vertFilename + " + " + fragFilename;
 
     return true;
 }

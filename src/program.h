@@ -10,6 +10,7 @@ struct Program
     Program();
     ~Program();
     bool Load(const std::string& vertFilename, const std::string& fragFilename);
+    bool Load(const std::string& vertFilename, const std::string& geomFilename, const std::string& fragFilename);
     void Bind() const;
 
     int GetUniformLoc(const std::string& name) const;
@@ -59,6 +60,7 @@ struct Program
 
     int program;
     int vertShader;
+    int geomShader;
     int fragShader;
 
     struct Variable
