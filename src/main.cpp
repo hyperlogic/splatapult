@@ -252,22 +252,16 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
     SDL_GL_MakeCurrent(window, gl_context);
     auto splatVAO = std::make_shared<VertexArrayObject>();
 
-    glm::vec2 uvLowerLeft(0.0f, 0.0f);
-    glm::vec2 uvUpperRight(1.0f, 1.0f);
-
     // convert pointCloud into attribute arrays, where each splat will have 4 vertices.
     std::vector<glm::vec3> positionVec;
-    std::vector<glm::vec2> uvVec;
     std::vector<glm::vec4> colorVec;
     std::vector<glm::vec3> cov3_col0Vec;
     std::vector<glm::vec3> cov3_col1Vec;
     std::vector<glm::vec3> cov3_col2Vec;
 
-    const int NUM_CORNERS = 4;
-    const int N = (int)gaussianCloud->GetGaussianVec().size() * NUM_CORNERS;
+    const int N = (int)gaussianCloud->GetGaussianVec().size();
 
     positionVec.reserve(N);
-    uvVec.reserve(N);
     colorVec.reserve(N);
     cov3_col0Vec.reserve(N);
     cov3_col1Vec.reserve(N);
@@ -277,50 +271,38 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
     for (auto&& g : gaussianCloud->GetGaussianVec())
     {
         glm::vec3 pos(g.position[0], g.position[1], g.position[2]);
-        positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos); positionVec.push_back(pos);
-
-        uvVec.push_back(uvLowerLeft);
-        uvVec.push_back(glm::vec2(uvUpperRight.x, uvLowerLeft.y));
-        uvVec.push_back(uvUpperRight);
-        uvVec.push_back(glm::vec2(uvLowerLeft.x, uvUpperRight.y));
+        positionVec.push_back(pos);
 
         const float SH_C0 = 0.28209479177387814f;
         float alpha = 1.0f / (1.0f + expf(-g.opacity));
         glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
                         0.5f + SH_C0 * g.f_dc[1],
                         0.5f + SH_C0 * g.f_dc[2], alpha);
-        colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color); colorVec.push_back(color);
+        colorVec.push_back(color);
 
         glm::mat3 V = g.ComputeCovMat();
 
         //glm::vec3 S(0.001f, 0.001f, 0.0001f);
         //glm::mat3 V(glm::vec3(S.x, 0.0f, 0.0f), glm::vec3(0.0f, S.y, 0.0f), glm::vec3(0.0f, 0.0f, S.z));
 
-        cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]); cov3_col0Vec.push_back(V[0]);
-        cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]); cov3_col1Vec.push_back(V[1]);
-        cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]); cov3_col2Vec.push_back(V[2]);
+        cov3_col0Vec.push_back(V[0]);
+        cov3_col1Vec.push_back(V[1]);
+        cov3_col2Vec.push_back(V[2]);
 
         i++;
     }
     auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
-    auto uvVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
     auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
     auto cov3_col0VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col0Vec);
     auto cov3_col1VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col1Vec);
     auto cov3_col2VBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col2Vec);
 
     std::vector<uint32_t> indexVec;
-    const size_t NUM_INDICES = 6;
-    indexVec.reserve(gaussianCloud->GetGaussianVec().size() * NUM_INDICES);
-    assert(gaussianCloud->GetGaussianVec().size() * 6 <= std::numeric_limits<uint32_t>::max());
+    indexVec.reserve(gaussianCloud->GetGaussianVec().size());
+    assert(gaussianCloud->GetGaussianVec().size() <= std::numeric_limits<uint32_t>::max());
     for (uint32_t i = 0; i < (uint32_t)gaussianCloud->GetGaussianVec().size(); i++)
     {
-        indexVec.push_back(i * NUM_CORNERS + 0);
-        indexVec.push_back(i * NUM_CORNERS + 1);
-        indexVec.push_back(i * NUM_CORNERS + 2);
-        indexVec.push_back(i * NUM_CORNERS + 0);
-        indexVec.push_back(i * NUM_CORNERS + 2);
-        indexVec.push_back(i * NUM_CORNERS + 3);
+        indexVec.push_back(i);
     }
 
 #ifdef SORT_POINTS
@@ -330,7 +312,6 @@ std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianC
 #endif
 
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("position"), positionVBO);
-    splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("uv"), uvVBO);
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("color"), colorVBO);
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col0"), cov3_col0VBO);
     splatVAO->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col1"), cov3_col1VBO);
@@ -479,35 +460,16 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
         });
     }
 
-    // expand out indexVec for rendering
-    const int NUM_CORNERS = 4;
-    std::vector<uint32_t> newIndexVec;
-    {
-        ZoneScopedNC("expand", tracy::Color::DarkGray);
-
-        newIndexVec.reserve(numPoints * 4);
-        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
-        {
-            const int ii = indexVec[i];
-            newIndexVec.push_back(ii * NUM_CORNERS + 0);
-            newIndexVec.push_back(ii * NUM_CORNERS + 1);
-            newIndexVec.push_back(ii * NUM_CORNERS + 2);
-            newIndexVec.push_back(ii * NUM_CORNERS + 0);
-            newIndexVec.push_back(ii * NUM_CORNERS + 2);
-            newIndexVec.push_back(ii * NUM_CORNERS + 3);
-        }
-    }
-
-    // store newIndexVec into elementBuffer
+    // store indexVec into elementBuffer
     {
         ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
 
         auto elementBuffer = splatVAO->GetElementBuffer();
-        elementBuffer->Update(newIndexVec);
+        elementBuffer->Update(indexVec);
     }
 #endif
 
-    splatVAO->DrawElements(GL_TRIANGLES);
+    splatVAO->DrawElements(GL_POINTS);
 }
 
 
@@ -596,7 +558,7 @@ int main(int argc, char *argv[])
     auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
 
     auto splatProg = std::make_shared<Program>();
-    if (!splatProg->Load("shader/splat_vert.glsl", "shader/splat_frag.glsl"))
+    if (!splatProg->Load("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
         Log::printf("Error loading splat shaders!\n");
         return 1;
@@ -688,8 +650,8 @@ int main(int argc, char *argv[])
 
         glm::mat4 cameraMat = flyCam.GetCameraMat();
 
-        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
-        //RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
+        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
+        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
 
         //DebugDraw_Transform(cam);
 

@@ -11,28 +11,14 @@ uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 
 in vec3 position;  // center of the gaussian in object coordinates.
-in vec2 uv;  // not used for textures, but as an offset specifying which "corner" of the splat this represents.
 in vec4 color;  // radiance of the splat
 in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
 in vec3 cov3_col2;
 
-out vec4 frag_color;  // radiance of splat
-out vec4 cov2Dinv4;  // inverse of the 2D screen space covariance matrix of the gaussian
-out vec2 p;  // the 2D screen space center of the gaussian
-
-// used to invert the 2D screen space covariance matrix
-mat2 inverseMat2(mat2 m)
-{
-    float det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
-    mat2 inv;
-    inv[0][0] =  m[1][1] / det;
-    inv[0][1] = -m[0][1] / det;
-    inv[1][0] = -m[1][0] / det;
-    inv[1][1] =  m[0][0] / det;
-
-    return inv;
-}
+out vec4 geom_color;  // radiance of splat
+out vec4 geom_cov2;  // 2D screen space covariance matrix of the gaussian
+out vec2 geom_p;  // the 2D screen space center of the gaussian
 
 void main(void)
 {
@@ -69,37 +55,24 @@ void main(void)
     // of their covariance matrices to apply a low-pass filter to anti-alias the splats
     cov2D[0] += vec2(1.0f, 1.0f);
     cov2D[1] += vec2(1.0f, 1.0f);
+    geom_cov2 = vec4(cov2D[0], cov2D[1]); // cram it into a vec4
 
     float X0 = viewport.x;
     float Y0 = viewport.y;
     float WIDTH = viewport.z;
     float HEIGHT = viewport.w;
 
-    // p is the gaussian center transformed into screen space
+    // geom_p is the gaussian center transformed into screen space
     vec4 p4 = projMat * viewMat * vec4(position, 1.0f);
-    p = vec2(p4.x / p4.w, p4.y / p4.w);
-    p.x = 0.5f * (WIDTH + (p.x * WIDTH) + (2.0f * X0));
-    p.y = 0.5f * (HEIGHT + (p.y * HEIGHT) + (2.0f * Y0));
+    geom_p = vec2(p4.x / p4.w, p4.y / p4.w);
+    geom_p.x = 0.5f * (WIDTH + (geom_p.x * WIDTH) + (2.0f * X0));
+    geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
 
-    frag_color = color;
-
-    // we pass the inverse of the 2d covariance matrix to the pixel shader, to avoid doing a matrix inverse per pixel.
-    mat2 cov2Dinv = inverseMat2(cov2D);
-    cov2Dinv4 = vec4(cov2Dinv[0], cov2Dinv[1]); // cram it into a vec4
+    geom_color = color;
 
     // transform position into clip coordinates.
     vec4 viewPos = viewMat * vec4(position, 1);
     gl_Position = projMat * viewPos;
-
-    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
-    // this is used to embiggen the splat to fit the actual gaussian
-    float FUDGE = 1.0f;  // I bet there's an optimal value for this...
-    vec2 offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
-
-    // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * gl_Position.w;
-    offset.y *= (2.0f / HEIGHT) * gl_Position.w;
-    gl_Position.xy += offset;
 
     // discard splats that end up outside of a guard band
     vec3 ndcP = p4.xyz / p4.w;
