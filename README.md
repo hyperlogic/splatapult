@@ -10,6 +10,8 @@ Use vcpkg to install the following packages:
 * `vcpkg install glew:x64-windows`
 * `vcpkg install glm:x64-windows`
 * `vcpkg install libpng:x64-windows`
+* `vcpkg install nlohmann-json:x64-windows`
+* `vcpkg install tracy:x64-windows`
 
 Use cmake to make the visual studio project:
 * `mkdir build`

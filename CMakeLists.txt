@@ -27,6 +27,10 @@ find_package(PNG REQUIRED)
 # nlohmann-json
 find_package(nlohmann_json CONFIG REQUIRED)
 
+# tracy
+find_package(Tracy CONFIG REQUIRED)
+add_compile_definitions(TRACY_ENABLE)
+
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
@@ -60,6 +64,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glm::glm
     PNG::PNG
     nlohmann_json::nlohmann_json
+    Tracy::TracyClient
 )
 
 

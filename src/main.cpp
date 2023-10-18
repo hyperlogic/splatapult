@@ -10,6 +10,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <stdlib.h> //rand()
+#include <tracy/Tracy.hpp>
 
 #include "cameras.h"
 #include "debugdraw.h"
@@ -428,6 +429,8 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<const GaussianCloud> gaussianCloud,
                   std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat)
 {
+    ZoneScoped;
+
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     glm::mat4 viewMat = glm::inverse(cameraMat);
@@ -443,43 +446,65 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
     // AJT: dont need to build this everyframe
     std::vector<glm::vec4> posVec;
     const size_t numPoints = gaussianCloud->GetGaussianVec().size();
-    posVec.reserve(numPoints);
-    // transform and copy points into view space.
-    for (size_t i = 0; i < numPoints; i++)
     {
-        posVec.push_back(viewMat * glm::vec4(gaussianCloud->GetGaussianVec()[i].position[0],
-                                             gaussianCloud->GetGaussianVec()[i].position[1],
-                                             gaussianCloud->GetGaussianVec()[i].position[2], 1.0f));
+        ZoneScopedNC("xform", tracy::Color::Red4);
+
+        posVec.reserve(numPoints);
+        // transform and copy points into view space.
+        for (size_t i = 0; i < numPoints; i++)
+        {
+            posVec.push_back(viewMat * glm::vec4(gaussianCloud->GetGaussianVec()[i].position[0],
+                                                 gaussianCloud->GetGaussianVec()[i].position[1],
+                                                 gaussianCloud->GetGaussianVec()[i].position[2], 1.0f));
+        }
     }
     // sort indices by z.
     std::vector<uint32_t> indexVec;
-    indexVec.reserve(numPoints);
-    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
     {
-        indexVec.push_back(i);
+        ZoneScopedNC("build indexVec", tracy::Color::DarkGray);
+
+        indexVec.reserve(numPoints);
+        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        {
+            indexVec.push_back(i);
+        }
     }
-    std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+
     {
-        return posVec[a].z < posVec[b].z;
-    });
+        ZoneScopedNC("sort", tracy::Color::Red4);
+
+        std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+        {
+            return posVec[a].z < posVec[b].z;
+        });
+    }
+
     // expand out indexVec for rendering
     const int NUM_CORNERS = 4;
     std::vector<uint32_t> newIndexVec;
-    newIndexVec.reserve(numPoints * 4);
-    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
     {
-        const int ii = indexVec[i];
-        newIndexVec.push_back(ii * NUM_CORNERS + 0);
-        newIndexVec.push_back(ii * NUM_CORNERS + 1);
-        newIndexVec.push_back(ii * NUM_CORNERS + 2);
-        newIndexVec.push_back(ii * NUM_CORNERS + 0);
-        newIndexVec.push_back(ii * NUM_CORNERS + 2);
-        newIndexVec.push_back(ii * NUM_CORNERS + 3);
+        ZoneScopedNC("expand", tracy::Color::DarkGray);
+
+        newIndexVec.reserve(numPoints * 4);
+        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        {
+            const int ii = indexVec[i];
+            newIndexVec.push_back(ii * NUM_CORNERS + 0);
+            newIndexVec.push_back(ii * NUM_CORNERS + 1);
+            newIndexVec.push_back(ii * NUM_CORNERS + 2);
+            newIndexVec.push_back(ii * NUM_CORNERS + 0);
+            newIndexVec.push_back(ii * NUM_CORNERS + 2);
+            newIndexVec.push_back(ii * NUM_CORNERS + 3);
+        }
     }
 
     // store newIndexVec into elementBuffer
-    auto elementBuffer = splatVAO->GetElementBuffer();
-    elementBuffer->Update(newIndexVec);
+    {
+        ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
+
+        auto elementBuffer = splatVAO->GetElementBuffer();
+        elementBuffer->Update(newIndexVec);
+    }
 #endif
 
     splatVAO->Draw();
@@ -678,6 +703,8 @@ int main(int argc, char *argv[])
         // cycle camera mat
         cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+
+        FrameMark;
     }
 
     DebugDraw_Shutdown();
