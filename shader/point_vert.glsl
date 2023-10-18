@@ -3,17 +3,18 @@
 // fullbright textured particle
 //
 
-#version 120
+#version 460
 
 uniform float pointSize;
 uniform mat4 modelViewMat;
 uniform mat4 projMat;
-attribute vec3 position;
-attribute vec2 uv;
-attribute vec4 color;
 
-varying vec4 frag_color;
-varying vec2 frag_uv;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec2 uv;
+layout(location = 2) in vec4 color;
+
+out vec4 frag_color;
+out vec2 frag_uv;
 
 void main(void)
 {

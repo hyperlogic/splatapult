@@ -726,8 +726,8 @@ int main(int argc, char *argv[])
 
         glm::mat4 cameraMat = flyCam.GetCameraMat();
 
-        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
-        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
+        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
+        //RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
 
         //DebugDraw_Transform(cam);
 
