@@ -135,14 +135,13 @@ std::shared_ptr<PointCloud> LoadPointCloud()
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
-    /*
     if (!pointCloud->ImportPly("data/train/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -184,6 +183,7 @@ std::shared_ptr<PointCloud> LoadPointCloud()
         p.color[1] = 0;
         p.color[2] = 255;
     }
+    */
 
     return pointCloud;
 }
@@ -192,6 +192,8 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
                       std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<VertexArrayObject> pointCloudVAO,
                       const glm::mat4& cameraMat)
 {
+
+    ZoneScoped;
 
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
@@ -210,45 +212,74 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
 
 #ifdef SORT_POINTS
     // AJT: dont need to build this everyframe
-    std::vector<glm::vec4> posVec;
+    std::vector<float> depthVec;
     const size_t numPoints = pointCloud->GetPointVec().size();
-    posVec.reserve(numPoints);
-    // transform and copy points into view space.
-    for (size_t i = 0; i < numPoints; i++)
     {
-        posVec.push_back(modelViewMat * glm::vec4(pointCloud->GetPointVec()[i].position[0],
-                                                  pointCloud->GetPointVec()[i].position[1],
-                                                  pointCloud->GetPointVec()[i].position[2], 1.0f));
+        ZoneScopedNC("xform", tracy::Color::Red4);
+
+        depthVec.reserve(numPoints);
+
+        // transform forward vector into world space
+        glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 eye = glm::vec3(cameraMat[3]);
+
+        // transform and copy points into view space.
+        for (size_t i = 0; i < numPoints; i++)
+        {
+            glm::vec3 pos = glm::vec3(pointCloud->GetPointVec()[i].position[0],
+                                      pointCloud->GetPointVec()[i].position[1],
+                                      pointCloud->GetPointVec()[i].position[2]);
+            depthVec.push_back(glm::dot(pos - eye, forward));
+        }
     }
+
     // sort indices by z.
     std::vector<uint32_t> indexVec;
-    indexVec.reserve(numPoints);
-    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
     {
-        indexVec.push_back(i);
+        ZoneScopedNC("build indexVec", tracy::Color::DarkGray);
+
+        indexVec.reserve(numPoints);
+        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        {
+            indexVec.push_back(i);
+        }
     }
-    std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+
     {
-        return posVec[a].z < posVec[b].z;
-    });
+        ZoneScopedNC("sort", tracy::Color::Red4);
+
+        std::sort(indexVec.begin(), indexVec.end(), [&depthVec] (uint32_t a, uint32_t b)
+        {
+            return depthVec[a] > depthVec[b];
+        });
+    }
+
     // expand out indexVec for rendering
     const int NUM_CORNERS = 4;
     std::vector<uint32_t> newIndexVec;
-    newIndexVec.reserve(numPoints * 4);
-    for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
     {
-        const int ii = indexVec[i];
-        newIndexVec.push_back(ii * NUM_CORNERS + 0);
-        newIndexVec.push_back(ii * NUM_CORNERS + 1);
-        newIndexVec.push_back(ii * NUM_CORNERS + 2);
-        newIndexVec.push_back(ii * NUM_CORNERS + 0);
-        newIndexVec.push_back(ii * NUM_CORNERS + 2);
-        newIndexVec.push_back(ii * NUM_CORNERS + 3);
+        ZoneScopedNC("expand", tracy::Color::DarkGray);
+
+        newIndexVec.reserve(numPoints * 4);
+        for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
+        {
+            const int ii = indexVec[i];
+            newIndexVec.push_back(ii * NUM_CORNERS + 0);
+            newIndexVec.push_back(ii * NUM_CORNERS + 1);
+            newIndexVec.push_back(ii * NUM_CORNERS + 2);
+            newIndexVec.push_back(ii * NUM_CORNERS + 0);
+            newIndexVec.push_back(ii * NUM_CORNERS + 2);
+            newIndexVec.push_back(ii * NUM_CORNERS + 3);
+        }
     }
 
     // store newIndexVec into elementBuffer
-    auto elementBuffer = pointCloudVAO->GetElementBuffer();
-    elementBuffer->Update(newIndexVec);
+    {
+        ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
+
+        auto elementBuffer = pointCloudVAO->GetElementBuffer();
+        elementBuffer->Update(newIndexVec);
+    }
 #endif
 
     pointCloudVAO->Draw();
@@ -357,7 +388,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         return nullptr;
     }
 
-
     /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
@@ -444,20 +474,28 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
 
 #ifdef SORT_POINTS
     // AJT: dont need to build this everyframe
-    std::vector<glm::vec4> posVec;
+    std::vector<float> depthVec;
     const size_t numPoints = gaussianCloud->GetGaussianVec().size();
     {
         ZoneScopedNC("xform", tracy::Color::Red4);
 
-        posVec.reserve(numPoints);
+        depthVec.reserve(numPoints);
+
+        // transform forward vector into world space
+        glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 eye = glm::vec3(cameraMat[3]);
+
         // transform and copy points into view space.
         for (size_t i = 0; i < numPoints; i++)
         {
-            posVec.push_back(viewMat * glm::vec4(gaussianCloud->GetGaussianVec()[i].position[0],
-                                                 gaussianCloud->GetGaussianVec()[i].position[1],
-                                                 gaussianCloud->GetGaussianVec()[i].position[2], 1.0f));
+            glm::vec3 pos = glm::vec3(gaussianCloud->GetGaussianVec()[i].position[0],
+                                      gaussianCloud->GetGaussianVec()[i].position[1],
+                                      gaussianCloud->GetGaussianVec()[i].position[2]);
+            float depth = glm::dot(pos - eye, forward);
+            depthVec.push_back(depth);
         }
     }
+
     // sort indices by z.
     std::vector<uint32_t> indexVec;
     {
@@ -473,9 +511,9 @@ void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<cons
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        std::sort(indexVec.begin(), indexVec.end(), [&posVec] (uint32_t a, uint32_t b)
+        std::sort(indexVec.begin(), indexVec.end(), [&depthVec] (uint32_t a, uint32_t b)
         {
-            return posVec[a].z < posVec[b].z;
+            return depthVec[a] > depthVec[b];
         });
     }
 
