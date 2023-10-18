@@ -12,6 +12,10 @@
 #include "log.h"
 #include "util.h"
 
+#ifndef NDEBUG
+#define WARNINGS_AS_ERRORS
+#endif
+
 static void DumpShaderSource(const std::string& source)
 {
     std::stringstream ss(source);
@@ -25,7 +29,7 @@ static void DumpShaderSource(const std::string& source)
     Log::printf("\n");
 }
 
-static bool CompileShader(GLenum type, const std::string& source, GLint* shaderOut)
+static bool CompileShader(GLenum type, const std::string& source, GLint* shaderOut, const std::string& debugName)
 {
     GLint shader = glCreateShader(type);
     int size = static_cast<int>(source.size());
@@ -35,21 +39,37 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
 
     GLint compiled;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+
     if (!compiled)
     {
-        Log::printf("shader compilation error!\n");
-        GLint bufferLen = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufferLen);
-        if (bufferLen > 1)
+        Log::printf("shader compilation error for \"%s\"!\n", debugName.c_str());
+    }
+
+    GLint bufferLen = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufferLen);
+    if (bufferLen > 1)
+    {
+        if (compiled)
         {
-            GLsizei len = 0;
-            std::unique_ptr<char> buffer(new char[bufferLen]);
-            glGetShaderInfoLog(shader, bufferLen, &len, buffer.get());
-            Log::printf("%s\n", buffer.get());
-            DumpShaderSource(source);
+            Log::printf("shader compilation warning for \"%s\"!\n", debugName.c_str());
         }
+
+        GLsizei len = 0;
+        std::unique_ptr<char> buffer(new char[bufferLen]);
+        glGetShaderInfoLog(shader, bufferLen, &len, buffer.get());
+        Log::printf("%s\n", buffer.get());
+        DumpShaderSource(source);
+    }
+
+#ifdef WARNINGS_AS_ERRORS
+    if (!compiled || bufferLen > 1)
+#else
+    if (!compiled)
+#endif
+    {
         return false;
     }
+
     *shaderOut = shader;
     return true;
 }
@@ -87,13 +107,13 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
         return false;
     }
 
-    if (!CompileShader(GL_VERTEX_SHADER, vertSource, &vertShader))
+    if (!CompileShader(GL_VERTEX_SHADER, vertSource, &vertShader, vertFilename))
     {
         Log::printf("Failed to compile vertex shader %s\n", vertFilename.c_str());
         return false;
     }
 
-    if (!CompileShader(GL_FRAGMENT_SHADER, fragSource, &fragShader))
+    if (!CompileShader(GL_FRAGMENT_SHADER, fragSource, &fragShader, fragFilename))
     {
         Log::printf("Failed to compile fragment shader %s\n", fragFilename.c_str());
         return false;
@@ -106,55 +126,68 @@ bool Program::Load(const std::string& vertFilename, const std::string& fragFilen
 
     GLint linked;
     glGetProgramiv(program, GL_LINK_STATUS, &linked);
+
     if (!linked)
     {
         Log::printf("Failed to link shaders %s, %s\n", vertFilename.c_str(), fragFilename.c_str());
-        const GLint bufferLen = 4096;
-        GLsizei len = 0;
-        std::unique_ptr<char> buffer(new char[bufferLen]);
-        glGetProgramInfoLog(program, bufferLen, &len, buffer.get());
-        if (len > 0)
+    }
+
+    const GLint MAX_BUFFER_LEN = 4096;
+    GLsizei bufferLen = 0;
+    std::unique_ptr<char> buffer(new char[MAX_BUFFER_LEN]);
+    glGetProgramInfoLog(program, MAX_BUFFER_LEN, &bufferLen, buffer.get());
+    if (bufferLen > 0)
+    {
+        if (linked)
         {
-            Log::printf("%s\n", buffer.get());
+            Log::printf("Warning during linking shaders %s, %s\n", vertFilename.c_str(), fragFilename.c_str());
         }
+        Log::printf("%s\n", buffer.get());
+
         Log::printf("%s =\n", vertFilename.c_str());
         DumpShaderSource(vertSource);
         Log::printf("%s =\n", fragFilename.c_str());
         DumpShaderSource(fragSource);
+    }
+
+#ifdef WARNINGS_AS_ERRORS
+    if (!linked || bufferLen > 1)
+#else
+    if (!linked)
+#endif
+    {
         return false;
     }
-    else
+
+    const int MAX_NAME_SIZE = 1028;
+    static char name[MAX_NAME_SIZE];
+
+    GLint numAttribs;
+    glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &numAttribs);
+    for (int i = 0; i < numAttribs; ++i)
     {
-        const int MAX_NAME_SIZE = 1028;
-        static char name[MAX_NAME_SIZE];
-
-        GLint numAttribs;
-        glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &numAttribs);
-        for (int i = 0; i < numAttribs; ++i)
-        {
-            Variable v;
-            GLsizei strLen;
-            glGetActiveAttrib(program, i, MAX_NAME_SIZE, &strLen, &v.size, &v.type, name);
-            v.loc = glGetAttribLocation(program, name);
-            attribs[name] = v;
-        }
-
-        GLint numUniforms;
-        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
-        for (int i = 0; i < numUniforms; ++i)
-        {
-            Variable v;
-            GLsizei strLen;
-            glGetActiveUniform(program, i, MAX_NAME_SIZE, &strLen, &v.size, &v.type, name);
-            int loc = glGetUniformLocation(program, name);
-            v.loc = loc;
-            uniforms[name] = v;
-        }
-
-        debugName = vertFilename + " + " + fragFilename;
-
-        return true;
+        Variable v;
+        GLsizei strLen;
+        glGetActiveAttrib(program, i, MAX_NAME_SIZE, &strLen, &v.size, &v.type, name);
+        v.loc = glGetAttribLocation(program, name);
+        attribs[name] = v;
     }
+
+    GLint numUniforms;
+    glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
+    for (int i = 0; i < numUniforms; ++i)
+    {
+        Variable v;
+        GLsizei strLen;
+        glGetActiveUniform(program, i, MAX_NAME_SIZE, &strLen, &v.size, &v.type, name);
+        int loc = glGetUniformLocation(program, name);
+        v.loc = loc;
+        uniforms[name] = v;
+    }
+
+    debugName = vertFilename + " + " + fragFilename;
+
+    return true;
 }
 
 void Program::Bind() const

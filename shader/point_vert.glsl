@@ -3,6 +3,8 @@
 // fullbright textured particle
 //
 
+#version 120
+
 uniform float pointSize;
 uniform mat4 modelViewMat;
 uniform mat4 projMat;

@@ -2,6 +2,8 @@
 // fullbright textured particle
 //
 
+#version 120
+
 uniform sampler2D colorTex;
 
 varying vec2 frag_uv;
