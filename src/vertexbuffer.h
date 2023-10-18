@@ -29,6 +29,8 @@ public:
 	void Update(const std::vector<glm::vec4>& data);
 	void Update(const std::vector<uint32_t>& data);
 
+	uint32_t GetObj() const { return obj; }
+
 protected:
 	int target;
     uint32_t obj;

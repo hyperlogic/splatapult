@@ -63,7 +63,7 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, boo
 BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -159,7 +159,8 @@ void VertexArrayObject::SetAttribBuffer(int loc, std::shared_ptr<BufferObject> a
 
 void VertexArrayObject::SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn)
 {
-	assert(elementBufferIn->target == GL_ELEMENT_ARRAY_BUFFER);
+	//AJT: DISABLED
+	//assert(elementBufferIn->target == GL_ELEMENT_ARRAY_BUFFER);
 	elementBuffer = elementBufferIn;
 
 	Bind();

@@ -21,6 +21,7 @@
 #include "log.h"
 #include "pointcloud.h"
 #include "program.h"
+#include "radix_sort.hpp"
 #include "texture.h"
 #include "util.h"
 #include "vertexbuffer.h"
@@ -35,6 +36,10 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 #define SORT_POINTS
+
+// AJT: HACK do this smarter
+std::shared_ptr<BufferObject> g_pointKeyBuffer;
+std::shared_ptr<BufferObject> g_pointValBuffer;
 
 void Clear()
 {
@@ -58,8 +63,10 @@ void Clear()
     glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
+    /*
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
+    */
 }
 
 void Resize(int newWidth, int newHeight)
@@ -168,7 +175,7 @@ std::shared_ptr<PointCloud> LoadPointCloud()
 
 void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex,
                       std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<VertexArrayObject> pointCloudVAO,
-                      const glm::mat4& cameraMat)
+                      const glm::mat4& cameraMat, rgc::radix_sort::sorter& sorter)
 {
 
     ZoneScoped;
@@ -225,24 +232,83 @@ void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::share
         }
     }
 
-    // sort indices by z.
-    {
-        ZoneScopedNC("sort", tracy::Color::Red4);
+    // AJT: NEWSORT
 
-        std::sort(indexVec.begin(), indexVec.end(), [&depthVec] (uint32_t a, uint32_t b)
+    std::vector<uint32_t> keyVec;
+    {
+        ZoneScopedNC("build shader buffers", tracy::Color::DarkGreen);
+
+        keyVec.reserve(numPoints);
+
+        for (size_t i = 0; i < numPoints; i++)
         {
-            return depthVec[a] > depthVec[b];
-        });
-    }
+            // 16.16 fixed point
+            keyVec.push_back(std::numeric_limits<uint32_t>::max() - (uint32_t)(depthVec[i] * 65536.0f));
+        }
 
-    // store indexVec into elementBuffer
-    {
-        ZoneScopedNC("glBufferSubData", tracy::Color::DarkGray);
+        if (!g_pointKeyBuffer)
+        {
+            g_pointKeyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, keyVec, true);
+            g_pointValBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
+        }
+        else
+        {
+            g_pointKeyBuffer->Update(keyVec);
+            g_pointValBuffer->Update(indexVec);
+        }
+
+        /*
+        // before sort print out arrays.
+        Log::printf("before sort\n");
+        Log::printf("    keys = [ %u", keyVec[0]);
+        for (size_t i = 1; i < numPoints; i++)
+        {
+            Log::printf(", %u", keyVec[i]);
+        }
+        Log::printf(" ]\n");
+
+        Log::printf("    vals = [ %u", indexVec[0]);
+        for (size_t i = 1; i < numPoints; i++)
+        {
+            Log::printf(", %u", indexVec[i]);
+        }
+        Log::printf(" ]\n");
+        */
+
+        sorter.sort(g_pointKeyBuffer->GetObj(), g_pointValBuffer->GetObj(), numPoints);
+
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+        // read back data on the cpu!
+        //g_pointKeyBuffer->Bind();
+        //glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), keyVec.data());
+        g_pointValBuffer->Bind();
+        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numPoints * sizeof(uint32_t), indexVec.data());
 
         auto elementBuffer = pointCloudVAO->GetElementBuffer();
         elementBuffer->Update(indexVec);
+
+        /*
+        Log::printf("after sort\n");
+        Log::printf("    keys = [ %u", keyVec[0]);
+        for (size_t i = 1; i < numPoints; i++)
+        {
+            Log::printf(", %u", keyVec[i]);
+        }
+        Log::printf(" ]\n");
+
+        Log::printf("    vals = [ %u", indexVec[0]);
+        for (size_t i = 1; i < numPoints; i++)
+        {
+            Log::printf(", %u", indexVec[i]);
+        }
+        Log::printf(" ]\n");
+        */
     }
+
+    pointProg->Bind();
 #endif
+
 
     pointCloudVAO->DrawElements(GL_POINTS);
 }
@@ -557,6 +623,8 @@ int main(int argc, char *argv[])
     // build static VertexArrayObject from the pointCloud
     auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
 
+    rgc::radix_sort::sorter sorter(pointCloud->GetPointVec().size());
+
     auto splatProg = std::make_shared<Program>();
     if (!splatProg->Load("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
@@ -650,8 +718,8 @@ int main(int argc, char *argv[])
 
         glm::mat4 cameraMat = flyCam.GetCameraMat();
 
-        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat);
-        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
+        RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat, sorter);
+        //RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat);
 
         //DebugDraw_Transform(cam);
 
@@ -663,8 +731,10 @@ int main(int argc, char *argv[])
         SDL_GL_SwapWindow(window);
 
         // cycle camera mat
+        /*
         cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+        */
 
         FrameMark;
     }
