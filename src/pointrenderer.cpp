@@ -83,22 +83,11 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
 
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, preSortPosBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
 
-        const int S = 32;
+        const int S = 256;
         glDispatchCompute(((GLuint)numPoints + (S - 1)) / S, 1, 1); // Assuming S threads per group
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    }
-
-    {
-        ZoneScopedNC("update buffers", tracy::Color::DarkGreen);
-
-        for (size_t i = 0; i < numPoints; i++)
-        {
-            indexVec[i] = (uint32_t)i;
-        }
-
-        // TODO: I guess I could do this in the preSort compute shader as well.
-        valBuffer->Update(indexVec);
     }
 
     {

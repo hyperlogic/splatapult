@@ -30,6 +30,7 @@ protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 
     std::shared_ptr<Program> splatProg;
+    std::shared_ptr<Program> preSortProg;
     std::shared_ptr<VertexArrayObject> splatVao;
 
     std::vector<uint32_t> indexVec;
@@ -39,6 +40,7 @@ protected:
 
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> valBuffer;
+    std::shared_ptr<BufferObject> preSortPosBuffer;
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
 };

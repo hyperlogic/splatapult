@@ -1,6 +1,6 @@
 #version 460
 
-layout(local_size_x = 32) in;
+layout(local_size_x = 256) in;
 
 uniform vec3 forward;
 uniform vec3 eye;
@@ -15,6 +15,12 @@ layout(std430, binding = 1) writeonly buffer OutputBuffer
     uint quantizedZs[];
 };
 
+layout(std430, binding = 2) writeonly buffer OutputBuffer2
+{
+    uint indices[];
+};
+
+
 void main()
 {
     uint idx = gl_GlobalInvocationID.x;
@@ -25,4 +31,5 @@ void main()
     uint fixedPointZ = 0xffffffff - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
 
     quantizedZs[idx] = fixedPointZ;
+	indices[idx] = idx;
 }

@@ -373,8 +373,8 @@ int main(int argc, char *argv[])
         glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
         glm::vec2 nearFar(Z_NEAR, Z_FAR);
 
-        pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
-        //splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+        //pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+        splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
 
         //DebugDraw_Transform(cam);
 
@@ -386,10 +386,8 @@ int main(int argc, char *argv[])
         SDL_GL_SwapWindow(window);
 
         // cycle camera mat
-        /*
         cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-        */
 
         FrameMark;
     }
