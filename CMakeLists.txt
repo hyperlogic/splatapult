@@ -46,6 +46,7 @@ add_executable(${PROJECT_NAME}
     src/pointrenderer.cpp
     src/program.cpp
     src/texture.cpp
+    src/splatrenderer.cpp
     src/util.cpp
     src/vertexbuffer.cpp
 )

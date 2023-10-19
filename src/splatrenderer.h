@@ -1,14 +1,13 @@
-#ifndef POINTRENDERER_H
-#define POINTRENDERER_H
+#ifndef SPLATRENDERER_H
+#define SPLATRENDERER_H
 
 #include <glm/glm.hpp>
 #include <memory>
 #include <stdint.h>
 #include <vector>
 
-#include "pointcloud.h"
+#include "gaussiancloud.h"
 #include "program.h"
-#include "texture.h"
 #include "vertexbuffer.h"
 
 namespace rgc::radix_sort
@@ -16,23 +15,22 @@ namespace rgc::radix_sort
     struct sorter;
 }
 
-class PointRenderer
+class SplatRenderer
 {
 public:
-    PointRenderer();
-    ~PointRenderer();
+    SplatRenderer();
+    ~SplatRenderer();
 
-    bool Init(std::shared_ptr<PointCloud> pointCloud);
+    bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
 
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
                 const glm::vec2& nearFar, float fovy);
 protected:
-    void BuildVertexArrayObject(std::shared_ptr<PointCloud> pointCloud);
+    void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 
-    std::shared_ptr<Texture> pointTex;
-    std::shared_ptr<Program> pointProg;
-    std::shared_ptr<VertexArrayObject> pointVao;
+    std::shared_ptr<Program> splatProg;
+    std::shared_ptr<VertexArrayObject> splatVao;
 
     std::vector<uint32_t> indexVec;
     std::vector<uint32_t> depthVec;

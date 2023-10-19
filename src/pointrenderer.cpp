@@ -118,6 +118,8 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     // convert pointCloud positions and colors into buffers
     size_t numPoints = pointCloud->size();
     positionVec.reserve(numPoints);
+
+    std::vector<glm::vec4> colorVec;
     colorVec.reserve(numPoints);
     for (auto&& p : pointCloud->GetPointVec())
     {
@@ -128,8 +130,8 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     auto colorBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
 
     // build element array
-    indexVec.reserve(pointCloud->GetPointVec().size());
-    assert(pointCloud->GetPointVec().size() <= std::numeric_limits<uint32_t>::max());
+    indexVec.reserve(numPoints);
+    assert(numPoints <= std::numeric_limits<uint32_t>::max());
     for (uint32_t i = 0; i < (uint32_t)numPoints; i++)
     {
         indexVec.push_back(i);
