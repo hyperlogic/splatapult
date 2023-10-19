@@ -252,6 +252,9 @@ bool Program::LoadCompute(const std::string& computeFilename)
         int loc = glGetUniformLocation(program, name);
         v.loc = loc;
         uniforms[name] = v;
+
+        // AJT: REMOVE
+        Log::printf("uniform %s, loc = %d\n", name, v.loc);
     }
 
     // TODO: build reflection info on shader storage blocks

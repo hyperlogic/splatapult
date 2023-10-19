@@ -60,8 +60,10 @@ void Clear()
     glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
+    /*
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
+    */
 }
 
 void Resize(int newWidth, int newHeight)
@@ -371,8 +373,8 @@ int main(int argc, char *argv[])
         glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
         glm::vec2 nearFar(Z_NEAR, Z_FAR);
 
-        //pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
-        splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+        pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+        //splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
 
         //DebugDraw_Transform(cam);
 

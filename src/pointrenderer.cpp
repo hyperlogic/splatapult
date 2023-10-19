@@ -35,10 +35,29 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
         return false;
     }
 
+    preSortProg = std::make_shared<Program>();
+    if (!preSortProg->LoadCompute("shader/presort_compute.glsl"))
+    {
+        Log::printf("Error loading point pre-sort compute shader!\n");
+        return false;
+    }
+
     BuildVertexArrayObject(pointCloud);
     depthVec.resize(pointCloud->size());
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, true);
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
+
+    // convert positionVec from vec3 to vec4.
+    // the preSort compute shader needs it to be a vec4.
+    const size_t numPoints = pointCloud->size();
+    std::vector<glm::vec4> preSortPosVec;
+    preSortPosVec.resize(numPoints);
+    for (size_t i = 0; i < numPoints; i++)
+    {
+        preSortPosVec[i] = glm::vec4(positionVec[i], 1.0f);
+    }
+    preSortPosBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, preSortPosVec);
+
     sorter = std::make_shared<rgc::radix_sort::sorter>(pointCloud->size());
 
     return true;
@@ -52,26 +71,33 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
     const size_t numPoints = positionVec.size();
 
     {
-        // TODO: DO THIS IN A COMPUTE SHADER
-        ZoneScopedNC("build vecs", tracy::Color::Red4);
+        ZoneScopedNC("depth compute", tracy::Color::Red4);
 
         // transform forward vector into world space
         glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
         glm::vec3 eye = glm::vec3(cameraMat[3]);
 
-        // transform and copy points into view space.
-        for (size_t i = 0; i < numPoints; i++)
-        {
-            float depth = glm::dot(positionVec[i] - eye, forward);
-            depthVec[i] = std::numeric_limits<uint32_t>::max() - (uint32_t)(depth * 65536.0f);
-            indexVec[i] = (uint32_t)i;
-        }
+        preSortProg->Bind();
+        preSortProg->SetUniform("forward", forward);
+        preSortProg->SetUniform("eye", eye);
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, preSortPosBuffer->GetObj());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
+
+        const int S = 32;
+        glDispatchCompute(((GLuint)numPoints + (S - 1)) / S, 1, 1); // Assuming S threads per group
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     {
         ZoneScopedNC("update buffers", tracy::Color::DarkGreen);
 
-        keyBuffer->Update(depthVec);
+        for (size_t i = 0; i < numPoints; i++)
+        {
+            indexVec[i] = (uint32_t)i;
+        }
+
+        // TODO: I guess I could do this in the preSort compute shader as well.
         valBuffer->Update(indexVec);
     }
 

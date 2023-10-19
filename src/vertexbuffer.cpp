@@ -11,7 +11,7 @@
 BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -24,7 +24,7 @@ BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool is
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -37,7 +37,7 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, boo
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -50,7 +50,7 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, boo
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic)
 {
 	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER);
+	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
