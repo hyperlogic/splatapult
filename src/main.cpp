@@ -428,7 +428,8 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 }
 
 void RenderSplats(std::shared_ptr<const Program> splatProg, std::shared_ptr<const GaussianCloud> gaussianCloud,
-                  std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat, rgc::radix_sort::sorter& sorter)
+                  std::shared_ptr<VertexArrayObject> splatVAO, const glm::mat4& cameraMat, rgc::radix_sort::sorter& sorter,
+                  std::shared_ptr<const Program> splatCompute)
 {
     ZoneScoped;
 
@@ -590,7 +591,7 @@ int main(int argc, char *argv[])
     Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
     auto pointTex = std::make_shared<Texture>(pointImg, texParams);
     auto pointProg = std::make_shared<Program>();
-    if (!pointProg->Load("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
+    if (!pointProg->LoadVertGeomFrag("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
     {
         Log::printf("Error loading point shaders!\n");
         return 1;
@@ -601,8 +602,15 @@ int main(int argc, char *argv[])
 
     rgc::radix_sort::sorter sorter(pointCloud->GetPointVec().size());
 
+    auto splatCompute = std::make_shared<Program>();
+    if (!splatCompute->LoadCompute("shader/splat_compute.glsl"))
+    {
+        Log::printf("Error loading splat compute shader!\n");
+        return 1;
+    }
+
     auto splatProg = std::make_shared<Program>();
-    if (!splatProg->Load("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
+    if (!splatProg->LoadVertGeomFrag("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
         Log::printf("Error loading splat shaders!\n");
         return 1;
@@ -695,7 +703,7 @@ int main(int argc, char *argv[])
         glm::mat4 cameraMat = flyCam.GetCameraMat();
 
         //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat, sorter);
-        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat, sorter);
+        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat, sorter, splatCompute);
 
         //DebugDraw_Transform(cam);
 

@@ -5,12 +5,15 @@
 #include <unordered_map>
 #include <glm/glm.hpp>
 
-struct Program
+class Program
 {
+public:
     Program();
     ~Program();
-    bool Load(const std::string& vertFilename, const std::string& fragFilename);
-    bool Load(const std::string& vertFilename, const std::string& geomFilename, const std::string& fragFilename);
+
+    bool LoadVertFrag(const std::string& vertFilename, const std::string& fragFilename);
+    bool LoadVertGeomFrag(const std::string& vertFilename, const std::string& geomFilename, const std::string& fragFilename);
+    bool LoadCompute(const std::string& computeFilename);
     void Bind() const;
 
     int GetUniformLoc(const std::string& name) const;
@@ -58,10 +61,16 @@ struct Program
     void SetAttrib(int loc, glm::vec3* values, size_t stride = 0) const;
     void SetAttrib(int loc, glm::vec4* values, size_t stride = 0) const;
 
+protected:
+
+    void Delete();
+    bool CheckLinkStatus();
+
     int program;
     int vertShader;
     int geomShader;
     int fragShader;
+    int computeShader;
 
     struct Variable
     {

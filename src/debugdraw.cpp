@@ -15,7 +15,7 @@ static std::vector<glm::vec3> lineColorVec;
 bool DebugDraw_Init()
 {
     ddProg = std::make_shared<Program>();
-    if (!ddProg->Load("shader/debugdraw_vert.glsl", "shader/debugdraw_frag.glsl"))
+    if (!ddProg->LoadVertFrag("shader/debugdraw_vert.glsl", "shader/debugdraw_frag.glsl"))
     {
         Log::printf("Error loading debugdraw shaders!\n");
         return false;
