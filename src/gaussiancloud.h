@@ -41,6 +41,7 @@ public:
 
     const std::vector<Gaussian>& GetGaussianVec() const { return gaussianVec; }
     std::vector<Gaussian>& GetGaussianVec() { return gaussianVec; }
+    size_t size() const { return gaussianVec.size(); }
 
 protected:
 

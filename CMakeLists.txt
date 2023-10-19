@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
     src/log.cpp
     src/main.cpp
     src/pointcloud.cpp
+    src/pointrenderer.cpp
     src/program.cpp
     src/texture.cpp
     src/util.cpp

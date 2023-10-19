@@ -9,6 +9,7 @@
 #include <memory>
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <stdint.h>
 #include <stdlib.h> //rand()
 #include <tracy/Tracy.hpp>
 
@@ -20,6 +21,7 @@
 #include "joystick.h"
 #include "log.h"
 #include "pointcloud.h"
+#include "pointrenderer.h"
 #include "program.h"
 #include "radix_sort.hpp"
 #include "texture.h"
@@ -36,12 +38,6 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 #define SORT_POINTS
-
-// AJT: HACK do this smarter
-std::shared_ptr<BufferObject> g_pointKeyBuffer;
-std::shared_ptr<BufferObject> g_pointValBuffer;
-std::vector<uint32_t> g_pointIndexVec;
-std::vector<uint32_t> g_pointDepthVec;
 
 std::shared_ptr<BufferObject> g_gaussianKeyBuffer;
 std::shared_ptr<BufferObject> g_gaussianValBuffer;
@@ -81,46 +77,6 @@ void Resize(int newWidth, int newHeight)
     SDL_GL_MakeCurrent(window, gl_context);
 
     glViewport(0, 0, newWidth, newHeight);
-}
-
-std::shared_ptr<VertexArrayObject> BuildPointCloudVAO(std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<const Program> pointProg)
-{
-    SDL_GL_MakeCurrent(window, gl_context);
-    auto pointCloudVAO = std::make_shared<VertexArrayObject>();
-
-    // convert pointCloud into position array, where each position is repeated 4 times.
-    std::vector<glm::vec3> positionVec;
-    positionVec.reserve(pointCloud->GetPointVec().size());
-
-    std::vector<glm::vec4> colorVec;
-    for (auto&& p : pointCloud->GetPointVec())
-    {
-        positionVec.push_back(glm::vec3(p.position[0], p.position[1], p.position[2]));
-        glm::vec4 color(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f);
-        colorVec.push_back(color);
-    }
-    auto positionVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
-
-    auto colorVBO = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
-
-    std::vector<uint32_t> indexVec;
-    indexVec.reserve(pointCloud->GetPointVec().size());
-    assert(pointCloud->GetPointVec().size() <= std::numeric_limits<uint32_t>::max());
-    for (uint32_t i = 0; i < (uint32_t)pointCloud->GetPointVec().size(); i++)
-    {
-        indexVec.push_back(i);
-    }
-#ifdef SORT_POINTS
-    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true);
-#else
-    auto indexEBO = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
-#endif
-
-    pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionVBO);
-    pointCloudVAO->SetAttribBuffer(pointProg->GetAttribLoc("color"), colorVBO);
-    pointCloudVAO->SetElementBuffer(indexEBO);
-
-    return pointCloudVAO;
 }
 
 std::shared_ptr<PointCloud> LoadPointCloud()
@@ -178,101 +134,6 @@ std::shared_ptr<PointCloud> LoadPointCloud()
     */
 
     return pointCloud;
-}
-
-void RenderPointCloud(std::shared_ptr<const Program> pointProg, const std::shared_ptr<const Texture> pointTex,
-                      std::shared_ptr<const PointCloud> pointCloud, std::shared_ptr<VertexArrayObject> pointCloudVAO,
-                      const glm::mat4& cameraMat, rgc::radix_sort::sorter& sorter)
-{
-
-    ZoneScoped;
-
-    int width, height;
-    SDL_GetWindowSize(window, &width, &height);
-    float aspectRatio = (float)width / (float)height;
-    glm::mat4 modelViewMat = glm::inverse(cameraMat);
-    glm::mat4 projMat = glm::perspective(FOVY, aspectRatio, Z_NEAR, Z_FAR);
-
-    pointProg->Bind();
-    pointProg->SetUniform("modelViewMat", modelViewMat);
-    pointProg->SetUniform("projMat", projMat);
-    pointProg->SetUniform("pointSize", 0.02f);
-    pointProg->SetUniform("invAspectRatio", 1.0f / aspectRatio);
-
-    // use texture unit 0 for colorTexture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, pointTex->texture);
-    pointProg->SetUniform("colorTex", 0);
-
-#ifdef SORT_POINTS
-    const size_t numPoints = pointCloud->GetPointVec().size();
-
-    // lazy alloc of g_pointDepthVec
-    if (g_pointDepthVec.size() == 0)
-    {
-        g_pointDepthVec.resize(numPoints);
-    }
-
-    // lazy alloc of g_pointIndexVec
-    if (g_pointIndexVec.size() == 0)
-    {
-        g_pointIndexVec.resize(numPoints);
-    }
-
-    {
-        ZoneScopedNC("build vecs", tracy::Color::Red4);
-
-        // transform forward vector into world space
-        glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
-        glm::vec3 eye = glm::vec3(cameraMat[3]);
-
-        // transform and copy points into view space.
-        for (size_t i = 0; i < numPoints; i++)
-        {
-            glm::vec3 pos = glm::vec3(pointCloud->GetPointVec()[i].position[0],
-                                      pointCloud->GetPointVec()[i].position[1],
-                                      pointCloud->GetPointVec()[i].position[2]);
-            float depth = glm::dot(pos - eye, forward);
-            g_pointDepthVec[i] = std::numeric_limits<uint32_t>::max() - (uint32_t)(depth * 65536.0f);
-            g_pointIndexVec[i] = (uint32_t)i;
-        }
-    }
-
-    {
-        ZoneScopedNC("upload vecs", tracy::Color::DarkGreen);
-
-        // update or create shader storage buffers
-        if (!g_pointKeyBuffer || !g_pointValBuffer)
-        {
-            g_pointKeyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_pointDepthVec, true);
-            g_pointValBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, g_pointIndexVec, true);
-        }
-        else
-        {
-            g_pointKeyBuffer->Update(g_pointDepthVec);
-            g_pointValBuffer->Update(g_pointIndexVec);
-        }
-    }
-
-    {
-        ZoneScopedNC("sort", tracy::Color::Red4);
-
-        sorter.sort(g_pointKeyBuffer->GetObj(), g_pointValBuffer->GetObj(), numPoints);
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
-    }
-
-    {
-        ZoneScopedNC("copy indices", tracy::Color::Pink);
-
-        glBindBuffer(GL_COPY_READ_BUFFER, g_pointValBuffer->GetObj());
-        glBindBuffer(GL_COPY_WRITE_BUFFER, pointCloudVAO->GetElementBuffer()->GetObj());
-        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
-    }
-
-    pointProg->Bind();
-#endif
-
-    pointCloudVAO->DrawElements(GL_POINTS);
 }
 
 std::shared_ptr<VertexArrayObject> BuildSplatVAO(std::shared_ptr<const GaussianCloud> gaussianCloud, std::shared_ptr<const Program> splatProg)
@@ -582,25 +443,7 @@ int main(int argc, char *argv[])
 
     auto gaussianCloud = LoadGaussianCloud();
 
-    Image pointImg;
-    if (!pointImg.Load("texture/sphere.png"))
-    {
-        Log::printf("Error loading sphere.png\n");
-        return 1;
-    }
-    Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
-    auto pointTex = std::make_shared<Texture>(pointImg, texParams);
-    auto pointProg = std::make_shared<Program>();
-    if (!pointProg->LoadVertGeomFrag("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
-    {
-        Log::printf("Error loading point shaders!\n");
-        return 1;
-    }
-
-    // build static VertexArrayObject from the pointCloud
-    auto pointCloudVAO = BuildPointCloudVAO(pointCloud, pointProg);
-
-    rgc::radix_sort::sorter sorter(pointCloud->GetPointVec().size());
+    rgc::radix_sort::sorter gaussianSorter(gaussianCloud->size());
 
     auto splatCompute = std::make_shared<Program>();
     if (!splatCompute->LoadCompute("shader/splat_compute.glsl"))
@@ -627,6 +470,13 @@ int main(int argc, char *argv[])
 
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 5.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
+
+    auto pointRenderer = std::make_shared<PointRenderer>();
+    if (!pointRenderer->Init(pointCloud))
+    {
+        Log::printf("Error initializing point renderer!\n");
+        return 1;
+    }
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -699,11 +549,12 @@ int main(int argc, char *argv[])
 
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
-
         glm::mat4 cameraMat = flyCam.GetCameraMat();
+        glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
+        glm::vec2 nearFar(Z_NEAR, Z_FAR);
 
-        //RenderPointCloud(pointProg, pointTex, pointCloud, pointCloudVAO, cameraMat, sorter);
-        RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat, sorter, splatCompute);
+        //RenderSplats(splatProg, gaussianCloud, splatVAO, cameraMat, gaussianSorter, splatCompute);
+        pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
 
         //DebugDraw_Transform(cam);
 

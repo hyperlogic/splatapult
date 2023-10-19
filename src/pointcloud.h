@@ -18,6 +18,7 @@ public:
         uint8_t color[3];
     };
 
+    size_t size() const { return pointVec.size(); }
     const std::vector<Point>& GetPointVec() const { return pointVec; }
 
     // AJT: HACK FOR NOW give full access to pointVec
