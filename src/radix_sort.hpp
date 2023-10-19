@@ -302,7 +302,7 @@ namespace rgc::radix_sort
 				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_local_offsets_buf);
 				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_glob_counts_buf);
 
-				glUniform1ui(m_count_program.get_uniform_location("u_arr_len"), arr_len);
+				glUniform1ui(m_count_program.get_uniform_location("u_arr_len"), (GLuint)arr_len);
 				glUniform1ui(m_count_program.get_uniform_location("u_bitset_idx"), pass);
 
 				RGC_RADIX_SORT_RENDERDOC_WATCH(true, [&]()
@@ -381,7 +381,7 @@ namespace rgc::radix_sort
 				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, m_glob_counts_buf);
 
 				glUniform1ui(m_reorder_program.get_uniform_location("u_write_values"), val_buf != NULL);
-				glUniform1ui(m_reorder_program.get_uniform_location("u_arr_len"), arr_len);
+				glUniform1ui(m_reorder_program.get_uniform_location("u_arr_len"), (GLuint)arr_len);
 				glUniform1ui(m_reorder_program.get_uniform_location("u_bitset_idx"), pass);
 
 				RGC_RADIX_SORT_RENDERDOC_WATCH(true, [&]()
