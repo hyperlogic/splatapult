@@ -37,12 +37,11 @@ protected:
 
     std::vector<uint32_t> indexVec;
     std::vector<uint32_t> depthVec;
-
-    std::vector<glm::vec3> positionVec;
+    std::vector<glm::vec4> posVec;
 
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> valBuffer;
-    std::shared_ptr<BufferObject> preSortPosBuffer;
+    std::shared_ptr<BufferObject> posBuffer;
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
 };

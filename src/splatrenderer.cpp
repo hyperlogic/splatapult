@@ -37,17 +37,7 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     depthVec.resize(gaussianCloud->size());
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, true);
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
-
-    // convert positionVec from vec3 to vec4.
-    // the preSort compute shader needs it to be a vec4.
-    const size_t numPoints = gaussianCloud->size();
-    std::vector<glm::vec4> preSortPosVec;
-    preSortPosVec.resize(numPoints);
-    for (size_t i = 0; i < numPoints; i++)
-    {
-        preSortPosVec[i] = glm::vec4(positionVec[i], 1.0f);
-    }
-    preSortPosBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, preSortPosVec);
+    posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
 
     sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
 
@@ -59,7 +49,7 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
 {
     ZoneScoped;
 
-    const size_t numPoints = positionVec.size();
+    const size_t numPoints = posVec.size();
 
     {
         ZoneScopedNC("depth compute", tracy::Color::Red4);
@@ -72,12 +62,12 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
         preSortProg->SetUniform("forward", forward);
         preSortProg->SetUniform("eye", eye);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, preSortPosBuffer->GetObj());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, posBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
 
-        const int S = 256;
-        glDispatchCompute(((GLuint)numPoints + (S - 1)) / S, 1, 1); // Assuming S threads per group
+        const int LOCAL_SIZE = 256;
+        glDispatchCompute(((GLuint)numPoints + (LOCAL_SIZE - 1)) / LOCAL_SIZE, 1, 1); // Assuming LOCAL_SIZE threads per group
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
@@ -119,7 +109,7 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
 
     // convert gaussianCloud data into buffers
     size_t numPoints = gaussianCloud->size();
-    positionVec.reserve(numPoints);
+    posVec.reserve(numPoints);
 
     std::vector<glm::vec4> colorVec;
     std::vector<glm::vec3> cov3_col0Vec;
@@ -133,7 +123,7 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
 
     for (auto&& g : gaussianCloud->GetGaussianVec())
     {
-        positionVec.emplace_back(glm::vec3(g.position[0], g.position[1], g.position[2]));
+        posVec.emplace_back(glm::vec4(g.position[0], g.position[1], g.position[2], 1.0f));
 
         const float SH_C0 = 0.28209479177387814f;
         float alpha = 1.0f / (1.0f + expf(-g.opacity));
@@ -148,7 +138,7 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
         cov3_col1Vec.push_back(V[1]);
         cov3_col2Vec.push_back(V[2]);
     }
-    auto positionBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, positionVec);
+    auto positionBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
     auto colorBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
     auto cov3_col0Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col0Vec);
     auto cov3_col1Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col1Vec);

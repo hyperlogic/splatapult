@@ -10,7 +10,7 @@ uniform mat4 projMat;  // used to project view coordinates into clip coordinates
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 
-in vec3 position;  // center of the gaussian in object coordinates.
+in vec4 position;  // center of the gaussian in object coordinates.
 in vec4 color;  // radiance of the splat
 in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
@@ -23,7 +23,7 @@ out vec2 geom_p;  // the 2D screen space center of the gaussian
 void main(void)
 {
     // t is in view coordinates
-    vec4 t = viewMat * vec4(position, 1.0f);
+    vec4 t = viewMat * position;
 
     // J is the jacobian of the projection and viewport transformations.
     // this is an affine approximation of the real projection.
@@ -63,16 +63,15 @@ void main(void)
     float HEIGHT = viewport.w;
 
     // geom_p is the gaussian center transformed into screen space
-    vec4 p4 = projMat * viewMat * vec4(position, 1.0f);
+    vec4 p4 = projMat * t;
     geom_p = vec2(p4.x / p4.w, p4.y / p4.w);
     geom_p.x = 0.5f * (WIDTH + (geom_p.x * WIDTH) + (2.0f * X0));
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
 
     geom_color = color;
 
-    // transform position into clip coordinates.
-    vec4 viewPos = viewMat * vec4(position, 1);
-    gl_Position = projMat * viewPos;
+    // gl_Position is in clip coordinates.
+    gl_Position = p4;
 
     // discard splats that end up outside of a guard band
     vec3 ndcP = p4.xyz / p4.w;
