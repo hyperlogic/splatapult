@@ -54,7 +54,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     const float SH_ONE = 1.0f / (2.0f * SH_C0);
     const float SH_ZERO = -1.0f / (2.0f * SH_C0);
 
-    /*
     // x axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
@@ -100,7 +99,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
         gaussianVec.push_back(g);
     }
-    */
 
     GaussianCloud::Gaussian g;
     memset(&g, 0, sizeof(GaussianCloud::Gaussian));
@@ -135,7 +133,16 @@ struct Gaussian
     Gaussian(const glm::vec3& pIn, const glm::mat3& covIn, const glm::vec3& colorIn, float alphaIn) :
         p(pIn), cov(covIn), color(colorIn), alpha(alphaIn)
     {
-        k = 1.0f / (15.7496f * sqrtf(glm::determinant(cov)));
+        // 3d gaussian normaliation factor
+        float k3 = 1.0f / (15.7496f * sqrtf(glm::determinant(cov)));
+
+        // 2d gaussian normalization factor
+        float k2 = 1.0f / (2.50663f * sqrtf(glm::determinant(cov)));
+
+        // Uhh, I'm trying to mimic the same normalization coefficient of the guassian splatting renderer.
+        // I *think* this cancels out the 3d/2d projection.
+        k = k2 / k3;
+
         covInv = glm::inverse(cov);
     }
 
@@ -195,6 +202,24 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
 
     glm::vec3 x0 = glm::vec3(camMat[3]);
 
+    // AJT: REMOVE;
+    // J is the jacobian of the projection and viewport transformations.
+    // this is an affine approximation of the real projection.
+    // because gaussians are closed under affine transforms.
+    glm::mat4 viewMat = glm::inverse(camMat);
+    glm::vec4 t = viewMat * glm::vec4(gVec->at(0).p, 1.0f);
+    float SS = height / tanf(FOVY);
+    float tzSq = t.z * t.z;
+    float jsx = -SS / (2.0f * t.z);
+    float jsy = -SS / (2.0f * t.z);
+    float jtx = (SS * t.x) / (2.0f * tzSq);
+    float jty = (SS * t.y) / (2.0f * tzSq);
+    float jtz = -(Z_FAR * Z_NEAR) / tzSq;
+    glm::mat3 J = glm::mat3(glm::vec3(jsx, 0.0f, 0.0f),
+                            glm::vec3(0.0f, jsy, 0.0f),
+                            glm::vec3(jtx, jty, jtz));
+    float det = glm::determinant(glm::inverse(J));
+
     const int PIXEL_STEP = 2;
     const float theta0 = FOVY / 2.0f;
     const float dTheta = -FOVY / (float)height;
@@ -210,12 +235,14 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
             glm::vec3 ray = glm::normalize(camMat3 * localRay);
 
             s_debug = false;
+            /*
             if (x == width/2 - 10 && y == height/2 - 10)
             {
                 s_debug = true;
                 Log::printf("pixel[%d, %d] ray\n", x, y);
                 PrintVec(ray, "    ray");
             }
+            */
 
             // integrate along the ray, (midpoint rule)
             const float RAY_LENGTH = 5.0f;
@@ -234,15 +261,13 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
                     {
                         Log::printf("    ** gg = %.5f\n", gg);
                     }
-                    accum += (gg * dt);
+                    accum += g.color * (gg * dt);
                 }
             }
             if (s_debug)
             {
                 Log::printf("integral = %.5f\n", accum.x);
             }
-
-            accum *= 0.025f;
 
             // draw
             /*
