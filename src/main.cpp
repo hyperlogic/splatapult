@@ -133,16 +133,9 @@ struct Gaussian
     Gaussian(const glm::vec3& pIn, const glm::mat3& covIn, const glm::vec3& colorIn, float alphaIn) :
         p(pIn), cov(covIn), color(colorIn), alpha(alphaIn)
     {
-        // 3d gaussian normaliation factor
-        float k3 = 1.0f / (15.7496f * sqrtf(glm::determinant(cov)));
-
-        // 2d gaussian normalization factor
-        float k2 = 1.0f / (2.50663f * sqrtf(glm::determinant(cov)));
-
         // Uhh, I'm trying to mimic the same normalization coefficient of the guassian splatting renderer.
         // I *think* this cancels out the 3d/2d projection.
-        k = k2 / k3;
-
+        k = 6.28319f;  // 2 Pi
         covInv = glm::inverse(cov);
     }
 
