@@ -190,28 +190,9 @@ void Render(std::shared_ptr<std::vector<Gaussian>> gVec, const glm::mat4& camMat
     SDL_GetWindowSize(window, &width, &height);
 
     glm::mat3 camMat3 = glm::mat3(camMat);
-
     const float aspect = (float)width / (float)height;
 
     glm::vec3 x0 = glm::vec3(camMat[3]);
-
-    // AJT: REMOVE;
-    // J is the jacobian of the projection and viewport transformations.
-    // this is an affine approximation of the real projection.
-    // because gaussians are closed under affine transforms.
-    glm::mat4 viewMat = glm::inverse(camMat);
-    glm::vec4 t = viewMat * glm::vec4(gVec->at(0).p, 1.0f);
-    float SS = height / tanf(FOVY);
-    float tzSq = t.z * t.z;
-    float jsx = -SS / (2.0f * t.z);
-    float jsy = -SS / (2.0f * t.z);
-    float jtx = (SS * t.x) / (2.0f * tzSq);
-    float jty = (SS * t.y) / (2.0f * tzSq);
-    float jtz = -(Z_FAR * Z_NEAR) / tzSq;
-    glm::mat3 J = glm::mat3(glm::vec3(jsx, 0.0f, 0.0f),
-                            glm::vec3(0.0f, jsy, 0.0f),
-                            glm::vec3(jtx, jty, jtz));
-    float det = glm::determinant(glm::inverse(J));
 
     const int PIXEL_STEP = 2;
     const float theta0 = FOVY / 2.0f;
