@@ -21,7 +21,7 @@ public:
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
                 const glm::vec2& nearFar, float fovy, SDL_Renderer* renderer);
-protected:
+
     struct Gaussian
     {
         Gaussian() {}
@@ -48,7 +48,7 @@ protected:
         float k;
         glm::mat3 covInv;
     };
-
+protected:
     std::vector<Gaussian> gVec;
 };
 

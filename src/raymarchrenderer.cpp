@@ -33,6 +33,62 @@ bool RayMarchRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     return true;
 }
 
+const size_t NUM_STEPS = 50;
+struct Tau
+{
+    Tau(const glm::vec3& s, const glm::vec3& t, const RayMarchRenderer::Gaussian& g)
+    {
+        float accum = 0.0f;
+        float dn = glm::length(t - s) / (float)NUM_STEPS;
+        glm::vec3 n = glm::normalize(t - s);
+        float dist = 0.0f;
+        for (size_t i = 0; i < NUM_STEPS; i++)
+        {
+            dist += dn;
+            tau[i] = g.Eval(s + n * dist) * dn;
+            accum += tau[i];
+            integral[i] = accum;
+        }
+    }
+
+    // returns the area of a small slice of tau at step i
+    float AtStep(size_t i) const
+    {
+        assert(i < NUM_STEPS);
+        return tau[i];
+    }
+
+    // returns the sum of all the small slice areas from step 0 to step i.
+    float IntegralFromZeroToStep(size_t i) const
+    {
+        assert(i < NUM_STEPS);
+        return integral[i];
+    }
+
+    float tau[NUM_STEPS];
+    float integral[NUM_STEPS];
+};
+
+static float RayIntegral(size_t k, const std::vector<Tau>& tauVec)
+{
+    float sum = 0.0f;
+    for (size_t i = 0; i < NUM_STEPS; i++)
+    {
+        float product = 1.0f;
+        for (size_t j = 0; j < tauVec.size(); j++)
+        {
+            // ignore self occlusion
+            if (k == j)
+            {
+                continue;
+            }
+            product *= expf(-tauVec[j].IntegralFromZeroToStep(i));
+        }
+        sum += tauVec[k].AtStep(i) * product;
+    }
+    return sum;
+}
+
 // viewport = (x, y, width, height)
 void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
                               const glm::vec2& nearFar, float fovy, SDL_Renderer* renderer)
@@ -47,6 +103,7 @@ void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewp
     const int PIXEL_STEP = 4;
     const float theta0 = fovy / 2.0f;
     const float dTheta = -fovy / (float)height;
+
     for (int y = 0; y < height; y += PIXEL_STEP)
     {
         float theta = theta0 + dTheta * y;
@@ -58,26 +115,23 @@ void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewp
             glm::vec3 localRay(sinf(phi), sinf(theta), -cosf(theta));
             glm::vec3 ray = glm::normalize(cameraMat3 * localRay);
 
-            // integrate along the ray, (midpoint rule)
+            // ray march down each gaussian
             const float RAY_LENGTH = 6.0f;
-            const int NUM_STEPS = 50;
-            float t0 = 0.1f;
-            float dt = (RAY_LENGTH - t0) / NUM_STEPS;
-            glm::vec3 accum(0.0f, 0.0f, 0.0f);
-            for (int i = 0; i < NUM_STEPS; i++)
+            std::vector<Tau> tauVec;
+            for (auto&& g : gVec)
             {
-                float t = t0 + i * dt;
-                for (auto&& g : gVec)
-                {
-                    float gg = g.Eval(eye + ray * t);
-                    accum += g.color * (gg * dt);
-                }
+                tauVec.emplace_back(Tau(eye, ray * RAY_LENGTH, g));
             }
 
-            uint8_t r = (uint8_t)(glm::clamp(accum.x, 0.0f, 1.0f) * 255.0f);
-            uint8_t g = (uint8_t)(glm::clamp(accum.y, 0.0f, 1.0f) * 255.0f);
-            uint8_t b = (uint8_t)(glm::clamp(accum.z, 0.0f, 1.0f) * 255.0f);
-            //uint8_t a = (uint8_t)(glm::clamp(accum, 0.0f, 1.0f) * 255.0f);
+            glm::vec3 I(0.0f, 0.0f, 0.0f);
+            for (size_t k = 0; k < gVec.size(); k++)
+            {
+                I += gVec[k].color * RayIntegral(k, tauVec);
+            }
+
+            uint8_t r = (uint8_t)(glm::clamp(I.x, 0.0f, 1.0f) * 255.0f);
+            uint8_t g = (uint8_t)(glm::clamp(I.y, 0.0f, 1.0f) * 255.0f);
+            uint8_t b = (uint8_t)(glm::clamp(I.z, 0.0f, 1.0f) * 255.0f);
 
             SDL_SetRenderDrawColor(renderer, r, g, b, 255);
             for (int xx = 0; xx < PIXEL_STEP; xx++)

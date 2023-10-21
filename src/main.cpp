@@ -39,7 +39,7 @@ const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
-//#define USE_RAY_MARCH_RENDERER
+#define USE_RAY_MARCH_RENDERER
 
 void Clear()
 {
@@ -54,7 +54,7 @@ void Clear()
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    glm::vec4 clearColor(0.0f, 0.4f, 0.0f, 1.0f);
+    glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
     //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -150,7 +150,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     //
     std::vector<GaussianCloud::Gaussian>& gaussianVec = gaussianCloud->GetGaussianVec();
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 2;
+    const int NUM_SPLATS = 5;
     const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
     const float S = logf(0.05f);
     const float SH_C0 = 0.28209479177387814f;
@@ -302,12 +302,13 @@ int main(int argc, char *argv[])
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
-    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
 
     int cameraIndex = 0;
-    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+    //flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
-    //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 5.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+
     SDL_JoystickEventState(SDL_ENABLE);
 
 #ifdef USE_RAY_MARCH_RENDERER
