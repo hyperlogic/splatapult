@@ -24,6 +24,7 @@
 #include "pointrenderer.h"
 #include "program.h"
 #include "radix_sort.hpp"
+#include "raymarchrenderer.h"
 #include "splatrenderer.h"
 #include "texture.h"
 #include "util.h"
@@ -37,6 +38,8 @@ static SDL_Renderer *renderer = NULL;
 const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
+
+//#define USE_RAY_MARCH_RENDERER
 
 void Clear()
 {
@@ -134,29 +137,30 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
+    /*
     if (!gaussianCloud->ImportPly("data/train/point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
+    */
 
-    /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
     //
     std::vector<GaussianCloud::Gaussian>& gaussianVec = gaussianCloud->GetGaussianVec();
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 10;
+    const int NUM_SPLATS = 2;
     const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
-    gaussianVec.resize(NUM_SPLATS * 3 + 1);
     const float S = logf(0.05f);
     const float SH_C0 = 0.28209479177387814f;
     const float SH_ONE = 1.0f / (2.0f * SH_C0);
     const float SH_ZERO = -1.0f / (2.0f * SH_C0);
+
     // x axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian& g = gaussianVec[i];
+        GaussianCloud::Gaussian g;
         memset(&g, 0, sizeof(GaussianCloud::Gaussian));
         g.position[0] = i * DELTA + DELTA;
         g.position[1] = 0.0f;
@@ -166,11 +170,12 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         g.opacity = 100.0f;
         g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
     }
     // y axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian& g = gaussianVec[i + NUM_SPLATS];
+        GaussianCloud::Gaussian g;
         memset(&g, 0, sizeof(GaussianCloud::Gaussian));
         g.position[0] = 0.0f;
         g.position[1] = i * DELTA + DELTA;
@@ -180,11 +185,13 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         g.opacity = 100.0f;
         g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
     }
     // z axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian& g = gaussianVec[i + 2 * NUM_SPLATS];
+        GaussianCloud::Gaussian g;
+        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
         g.position[0] = 0.0f;
         g.position[1] = 0.0f;
         g.position[2] = i * DELTA + DELTA;
@@ -193,8 +200,10 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
         g.opacity = 100.0f;
         g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
     }
-    GaussianCloud::Gaussian& g = gaussianVec[3 * NUM_SPLATS];
+    GaussianCloud::Gaussian g;
+    memset(&g, 0, sizeof(GaussianCloud::Gaussian));
     g.position[0] = 0.0f;
     g.position[1] = 0.0f;
     g.position[2] = 0.0f;
@@ -203,7 +212,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     g.opacity = 100.0f;
     g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-    */
+    gaussianVec.push_back(g);
 
     return gaussianCloud;
 }
@@ -228,6 +237,21 @@ int main(int argc, char *argv[])
 
     const int32_t WIDTH = 1024;
     const int32_t HEIGHT = 768;
+
+#ifdef USE_RAY_MARCH_RENDERER
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
+                              SDL_WINDOW_RESIZABLE);
+
+    gl_context = nullptr;
+
+    renderer = SDL_CreateRenderer(window, -1, 0);
+	if (!renderer)
+    {
+        Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
+		return 1;
+	}
+
+#else
     window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
@@ -239,8 +263,6 @@ int main(int argc, char *argv[])
         Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
 		return 1;
 	}
-
-    JOYSTICK_Init();
 
     GLenum err = glewInit();
     if (GLEW_OK != err)
@@ -255,6 +277,10 @@ int main(int argc, char *argv[])
         Log::printf("DebugDraw Init failed\n");
         return 1;
     }
+
+#endif
+
+    JOYSTICK_Init();
 
     SDL_AddEventWatch(Watch, NULL);
 
@@ -284,6 +310,14 @@ int main(int argc, char *argv[])
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 5.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     SDL_JoystickEventState(SDL_ENABLE);
 
+#ifdef USE_RAY_MARCH_RENDERER
+    auto rayMarchRenderer = std::make_shared<RayMarchRenderer>();
+    if (!rayMarchRenderer->Init(gaussianCloud))
+    {
+        Log::printf("Error initializing ray march renderer!\n");
+        return 1;
+    }
+#else
     auto pointRenderer = std::make_shared<PointRenderer>();
     if (!pointRenderer->Init(pointCloud))
     {
@@ -297,6 +331,7 @@ int main(int argc, char *argv[])
         Log::printf("Error initializing splat renderer!\n");
         return 1;
     }
+#endif
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -365,7 +400,9 @@ int main(int argc, char *argv[])
             flyCam.Process(dt);
         }
 
+#ifndef USE_RAY_MARCH_RENDERER
         Clear();
+#endif
 
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
@@ -374,20 +411,35 @@ int main(int argc, char *argv[])
         glm::vec2 nearFar(Z_NEAR, Z_FAR);
 
         //pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+
+#ifdef USE_RAY_MARCH_RENDERER
+        rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
+#else
         splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
+#endif
+
 
         //DebugDraw_Transform(cam);
 
         glm::mat4 modelViewMat = glm::inverse(cameraMat);
         glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+
+#ifndef USE_RAY_MARCH_RENDERER
         DebugDraw_Render(projMat * modelViewMat);
+#endif
         frameCount++;
 
+#ifdef USE_RAY_MARCH_RENDERER
+        SDL_RenderPresent(renderer);
+#else
         SDL_GL_SwapWindow(window);
+#endif
 
         // cycle camera mat
+        /*
         cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+        */
 
         FrameMark;
     }
