@@ -31,6 +31,9 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 add_compile_definitions(TRACY_ENABLE)
 
+# openxr-loader
+find_package(OpenXR CONFIG REQUIRED)
+
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
@@ -50,6 +53,7 @@ add_executable(${PROJECT_NAME}
     src/splatrenderer.cpp
     src/util.cpp
     src/vertexbuffer.cpp
+    src/xrbuddy.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -68,6 +72,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     PNG::PNG
     nlohmann_json::nlohmann_json
     Tracy::TracyClient
+    OpenXR::headers
+    OpenXR::openxr_loader
 )
 
 

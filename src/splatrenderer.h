@@ -24,8 +24,8 @@ public:
     bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
 
     // viewport = (x, y, width, height)
-    void Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
-                const glm::vec2& nearFar, float fovy);
+    void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                const glm::vec4& viewport, const glm::vec2& nearFar);
 protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 

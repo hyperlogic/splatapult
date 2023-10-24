@@ -44,8 +44,8 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     return true;
 }
 
-void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
-                           const glm::vec2& nearFar, float fovy)
+void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                           const glm::vec4& viewport, const glm::vec2& nearFar)
 {
     ZoneScoped;
 
@@ -91,12 +91,11 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
         float height = viewport.w;
         float aspectRatio = width / height;
         glm::mat4 viewMat = glm::inverse(cameraMat);
-        glm::mat4 projMat = glm::perspective(fovy, aspectRatio, nearFar.x, nearFar.y);
 
         splatProg->Bind();
         splatProg->SetUniform("viewMat", viewMat);
         splatProg->SetUniform("projMat", projMat);
-        splatProg->SetUniform("projParams", glm::vec4(height / tanf(fovy / 2.0f), nearFar.x, nearFar.y, 0.0f));
+        splatProg->SetUniform("projParams", glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f));
         splatProg->SetUniform("viewport", viewport);
 
         splatVao->DrawElements(GL_POINTS);

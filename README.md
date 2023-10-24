@@ -12,15 +12,14 @@ Use vcpkg to install the following packages:
 * `vcpkg install libpng:x64-windows`
 * `vcpkg install nlohmann-json:x64-windows`
 * `vcpkg install tracy:x64-windows`
+* `vcpkg install openxr-loader:x64-windows`
 
 Use cmake to make the visual studio project:
 * `mkdir build`
 * `cd build`
 * `cmake -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\ajthy\code2\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
 
-Use visual studio to open and build the project
-
-To build from the command line:
+Use visual studio to open and build the project, or build from the command line:
 * `cmake --build . --config=Release`
 
 

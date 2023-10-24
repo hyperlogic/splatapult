@@ -52,8 +52,8 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
     return true;
 }
 
-void PointRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
-                           const glm::vec2& nearFar, float fovy)
+void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                           const glm::vec4& viewport, const glm::vec2& nearFar)
 {
     ZoneScoped;
 
@@ -99,7 +99,6 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport
         float height = viewport.w;
         float aspectRatio = width / height;
         glm::mat4 modelViewMat = glm::inverse(cameraMat);
-        glm::mat4 projMat = glm::perspective(fovy, aspectRatio, nearFar.x, nearFar.y);
 
         pointProg->Bind();
         pointProg->SetUniform("modelViewMat", modelViewMat);

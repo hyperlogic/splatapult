@@ -5,6 +5,8 @@
 
 #version 460
 
+#define OFF_AXIS_PROJECTION
+
 uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
@@ -25,18 +27,36 @@ void main(void)
     // t is in view coordinates
     vec4 t = viewMat * position;
 
+    //float X0 = viewport.x;
+    float X0 = viewport.x * (0.00001f * projParams.y);  // one weird hack to prevent projParams from being compiled away
+    float Y0 = viewport.y;
+    float WIDTH = viewport.z;
+    float HEIGHT = viewport.w;
+    float Z_NEAR = projParams.y;
+    float Z_FAR = projParams.z;
+
     // J is the jacobian of the projection and viewport transformations.
     // this is an affine approximation of the real projection.
     // because gaussians are closed under affine transforms.
+#ifdef OFF_AXIS_PROJECTION
+    float SX = projMat[0][0];
+    float SY = projMat[1][1];
+    float WZ =  projMat[3][2];
+    float tzSq = t.z * t.z;
+    float jsx = -(SX * WIDTH) / (2.0f * t.z);
+    float jsy = -(SY * HEIGHT) / (2.0f * t.z);
+    float jtx = (SX * t.x * WIDTH) / (2.0f * tzSq);
+    float jty = (SY * t.y * HEIGHT) / (2.0f * tzSq);
+    float jtz = ((Z_FAR - Z_NEAR) * WZ) / (2.0f * tzSq);
+#else
     float SS = projParams.x;
-    float Z_NEAR = projParams.y;
-    float Z_FAR = projParams.z;
     float tzSq = t.z * t.z;
     float jsx = -SS / (2.0f * t.z);
     float jsy = -SS / (2.0f * t.z);
     float jtx = (SS * t.x) / (2.0f * tzSq);
     float jty = (SS * t.y) / (2.0f * tzSq);
     float jtz = -(Z_FAR * Z_NEAR) / tzSq;
+#endif
     mat3 J = mat3(vec3(jsx, 0.0f, 0.0f),
                   vec3(0.0f, jsy, 0.0f),
                   vec3(jtx, jty, jtz));
@@ -56,11 +76,6 @@ void main(void)
     cov2D[0] += vec2(1.0f, 1.0f);
     cov2D[1] += vec2(1.0f, 1.0f);
     geom_cov2 = vec4(cov2D[0], cov2D[1]); // cram it into a vec4
-
-    float X0 = viewport.x;
-    float Y0 = viewport.y;
-    float WIDTH = viewport.z;
-    float HEIGHT = viewport.w;
 
     // geom_p is the gaussian center transformed into screen space
     vec4 p4 = projMat * t;

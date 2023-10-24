@@ -58,7 +58,10 @@ void DebugDraw_Render(const glm::mat4& modelViewProjMat)
     ddProg->SetAttrib("position", linePositionVec.data());
     ddProg->SetAttrib("color", lineColorVec.data());
     glDrawArrays(GL_LINES, 0, (GLsizei)linePositionVec.size());
+}
 
+void DebugDraw_Clear()
+{
     linePositionVec.clear();
     lineColorVec.clear();
 }

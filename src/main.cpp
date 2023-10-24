@@ -29,6 +29,7 @@
 #include "texture.h"
 #include "util.h"
 #include "vertexbuffer.h"
+#include "xrbuddy.h"
 
 static bool quitting = false;
 static SDL_Window *window = NULL;
@@ -39,22 +40,26 @@ const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
-#define USE_RAY_MARCH_RENDERER
+//#define USE_RAY_MARCH_RENDERER
+#define USE_OPENXR
 
-void Clear()
+void Clear(bool setViewport = true)
 {
     SDL_GL_MakeCurrent(window, gl_context);
 
-    int width, height;
-    SDL_GetWindowSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    if (setViewport)
+    {
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        glViewport(0, 0, width, height);
+    }
 
     // pre-multiplied alpha blending
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec4 clearColor(0.0f, 0.0f, 0.1f, 1.0f);
     //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -63,10 +68,8 @@ void Clear()
     glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
-    /*
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
-    */
 }
 
 void Resize(int newWidth, int newHeight)
@@ -80,13 +83,14 @@ std::shared_ptr<PointCloud> LoadPointCloud()
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
+    /*
     if (!pointCloud->ImportPly("data/train/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
+    */
 
-    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -128,7 +132,15 @@ std::shared_ptr<PointCloud> LoadPointCloud()
         p.color[1] = 0;
         p.color[2] = 255;
     }
-    */
+
+    // AJT: move splats by offset.
+    glm::vec3 offset(0.0f, 0.0f, -5.0f);
+    for (auto&& p : pointVec)
+    {
+        p.position[0] += offset.x;
+        p.position[1] += offset.y;
+        p.position[2] += offset.z;
+    }
 
     return pointCloud;
 }
@@ -137,14 +149,13 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
-    /*
     if (!gaussianCloud->ImportPly("data/train/point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
     //
@@ -214,6 +225,16 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
 
+    // AJT: move splats by offset.
+    glm::vec3 offset(0.0f, 0.0f, -5.0f);
+    for (auto&& g : gaussianVec)
+    {
+        g.position[0] += offset.x;
+        g.position[1] += offset.y;
+        g.position[2] += offset.z;
+    }
+    */
+
     return gaussianCloud;
 }
 
@@ -278,6 +299,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+#ifdef USE_OPENXR
+    XrBuddy xrBuddy;
+    if (!xrBuddy.Init())
+    {
+        Log::printf("OpenXR Init failed\n");
+        return 1;
+    }
+#endif
 #endif
 
     JOYSTICK_Init();
@@ -306,8 +335,7 @@ int main(int argc, char *argv[])
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
 
     int cameraIndex = 0;
-    //flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-
+    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
     SDL_JoystickEventState(SDL_ENABLE);
 
@@ -332,6 +360,28 @@ int main(int argc, char *argv[])
         Log::printf("Error initializing splat renderer!\n");
         return 1;
     }
+
+#ifdef USE_OPENXR
+    xrBuddy.SetRenderCallback([&splatRenderer, &flyCam](const glm::mat4& projMat, const glm::mat4& eyeMat,
+                                                        const glm::vec4& viewport, const glm::vec2& nearFar)
+    {
+        Clear(false);
+
+        //PrintMat(projMat, "projMat");
+        //PrintVec(viewport, "viewport");
+        //PrintMat(eyeMat, "eyeMat");
+
+        // AJT: IF THIS WORKS REMOVE FOVY
+        // AJT: TODO. sort once, render twice
+        glm::mat4 viewMat = glm::inverse(flyCam.GetCameraMat() * eyeMat);
+
+        splatRenderer->Render(flyCam.GetCameraMat() * eyeMat, projMat, viewport, nearFar);
+
+        DebugDraw_Render(projMat * viewMat);
+    });
+#endif
+
+
 #endif
 
     uint32_t frameCount = 1;
@@ -341,6 +391,14 @@ int main(int argc, char *argv[])
     {
         // update dt
         uint32_t ticks = SDL_GetTicks();
+
+#ifdef USE_OPENXR
+        if (!xrBuddy.PollEvents())
+        {
+            Log::printf("xrBuddy PollEvents failed\n");
+            return 1;
+        }
+#endif
 
         const int FPS_FRAMES = 100;
         if ((frameCount % FPS_FRAMES) == 0)
@@ -401,8 +459,39 @@ int main(int argc, char *argv[])
             flyCam.Process(dt);
         }
 
+#ifdef USE_OPENXR
+        if (!xrBuddy.SyncInput())
+        {
+            Log::printf("xrBuddy SyncInput failed\n");
+            return 1;
+        }
+#endif
+
 #ifndef USE_RAY_MARCH_RENDERER
         Clear();
+#endif
+
+        glm::mat4 m(glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
+                    glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
+                    glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                    glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        DebugDraw_Transform(m, 10.0f);
+        m[3][0] = 5.0f;
+        DebugDraw_Transform(m, 10.0f);
+        m[3][0] = -5.0f;
+        DebugDraw_Transform(m, 10.0f);
+        m[3][0] = 0.0f;
+        m[3][2] = 5.0f;
+        DebugDraw_Transform(m, 10.0f);
+        m[3][2] = -5.0f;
+        DebugDraw_Transform(m, 10.0f);
+
+#ifdef USE_OPENXR
+        if (!xrBuddy.RenderFrame())
+        {
+            Log::printf("xrBuddy RenderFrame failed\n");
+            return 1;
+        }
 #endif
 
         int width, height;
@@ -416,18 +505,16 @@ int main(int argc, char *argv[])
 #ifdef USE_RAY_MARCH_RENDERER
         rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
 #else
+#ifdef USE_OPENXR
+        // ? Render desktop
+#else
         splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
 #endif
-
-
-        //DebugDraw_Transform(cam);
+#endif
 
         glm::mat4 modelViewMat = glm::inverse(cameraMat);
         glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-#ifndef USE_RAY_MARCH_RENDERER
-        DebugDraw_Render(projMat * modelViewMat);
-#endif
         frameCount++;
 
 #ifdef USE_RAY_MARCH_RENDERER
@@ -441,6 +528,8 @@ int main(int argc, char *argv[])
         cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
         */
+
+        DebugDraw_Clear();
 
         FrameMark;
     }
