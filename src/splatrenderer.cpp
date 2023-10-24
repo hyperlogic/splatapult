@@ -44,11 +44,8 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     return true;
 }
 
-void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
-                           const glm::vec4& viewport, const glm::vec2& nearFar)
+void SplatRenderer::Sort(const glm::mat4& cameraMat)
 {
-    ZoneScoped;
-
     const size_t numPoints = posVec.size();
 
     {
@@ -84,6 +81,12 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         glBindBuffer(GL_COPY_WRITE_BUFFER, splatVao->GetElementBuffer()->GetObj());
         glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
     }
+}
+
+void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                           const glm::vec4& viewport, const glm::vec2& nearFar)
+{
+    ZoneScoped;
 
     {
         ZoneScopedNC("draw", tracy::Color::Red4);

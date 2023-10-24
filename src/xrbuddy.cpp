@@ -1598,7 +1598,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
                 iter = colorToDepthMap.insert(std::make_pair(colorTexture, depthTexture)).first;
             }
 
-            RenderView(projectionLayerViews[i], frameBuffer, iter->first, iter->second);
+            RenderView(projectionLayerViews[i], frameBuffer, iter->first, iter->second, i);
 
             XrSwapchainImageReleaseInfo ri;
             ri.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
@@ -1618,8 +1618,8 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
     return true;
 }
 
-void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView,
-                         uint32_t frameBuffer, uint32_t colorTexture, uint32_t depthTexture)
+void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView, uint32_t frameBuffer,
+                         uint32_t colorTexture, uint32_t depthTexture, int32_t viewNum)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
@@ -1647,7 +1647,7 @@ void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView,
     glm::mat4 eyeMat = MakeMat4(eyeRot, eyePos);
     glm::vec4 viewport(layerView.subImage.imageRect.offset.x, layerView.subImage.imageRect.offset.y,
                        layerView.subImage.imageRect.extent.width, layerView.subImage.imageRect.extent.height);
-    renderCallback(projMat, eyeMat, viewport, glm::vec2(nearZ, farZ));
+    renderCallback(projMat, eyeMat, viewport, glm::vec2(nearZ, farZ), viewNum);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

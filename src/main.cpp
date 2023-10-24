@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_OPENXR
     xrBuddy.SetRenderCallback([&splatRenderer, &flyCam](const glm::mat4& projMat, const glm::mat4& eyeMat,
-                                                        const glm::vec4& viewport, const glm::vec2& nearFar)
+                                                        const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
     {
         Clear(false);
 
@@ -375,6 +375,10 @@ int main(int argc, char *argv[])
         // AJT: TODO. sort once, render twice
         glm::mat4 viewMat = glm::inverse(flyCam.GetCameraMat() * eyeMat);
 
+        if (viewNum == 0)
+        {
+            splatRenderer->Sort(flyCam.GetCameraMat() * eyeMat);
+        }
         splatRenderer->Render(flyCam.GetCameraMat() * eyeMat, projMat, viewport, nearFar);
 
         DebugDraw_Render(projMat * viewMat);
@@ -487,6 +491,13 @@ int main(int argc, char *argv[])
         DebugDraw_Transform(m, 10.0f);
 
 #ifdef USE_OPENXR
+        glm::vec3 headPos;
+        glm::quat headRot;
+        bool valid, tracked;
+        xrBuddy.GetActionPosition("head_pose", &headPos, &valid, &tracked);
+        xrBuddy.GetActionOrientation("head_pose", &headRot, &valid, &tracked);
+        glm::mat4 cameraMat = flyCam.GetCameraMat() * MakeMat4(headRot, headPos);
+
         if (!xrBuddy.RenderFrame())
         {
             Log::printf("xrBuddy RenderFrame failed\n");
@@ -494,26 +505,24 @@ int main(int argc, char *argv[])
         }
 #endif
 
+#ifdef USE_RAY_MARCH_RENDERER
+        rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
+#else
+#ifndef USE_OPENXR
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
         glm::mat4 cameraMat = flyCam.GetCameraMat();
         glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
         glm::vec2 nearFar(Z_NEAR, Z_FAR);
-
-        //pointRenderer->Render(cameraMat, viewport, nearFar, FOVY);
-
-#ifdef USE_RAY_MARCH_RENDERER
-        rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
-#else
-#ifdef USE_OPENXR
-        // ? Render desktop
-#else
-        splatRenderer->Render(cameraMat, viewport, nearFar, FOVY);
-#endif
-#endif
-
         glm::mat4 modelViewMat = glm::inverse(cameraMat);
         glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+
+        //pointRenderer->Render(cameraMat, projmat, viewport, nearFar);
+        //splatRenderer->Sort(cameraMat);
+        //splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
+#endif
+#endif
+
 
         frameCount++;
 

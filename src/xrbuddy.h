@@ -31,7 +31,7 @@ public:
     bool PollEvents();
     bool SyncInput();
 
-    using RenderCallback = std::function<void(const glm::mat4& projMat, const glm::mat4& eyeMat, const glm::vec4& viewport, const glm::vec2& nearFar)>;
+    using RenderCallback = std::function<void(const glm::mat4& projMat, const glm::mat4& eyeMat, const glm::vec4& viewport, const glm::vec2& nearFar, int32_t viewNum)>;
     void SetRenderCallback(RenderCallback renderCallbackIn)
     {
         renderCallback = renderCallbackIn;
@@ -85,8 +85,8 @@ protected:
     bool RenderLayer(XrTime predictedDisplayTime,
                      std::vector<XrCompositionLayerProjectionView>& projectionLayerViews,
                      XrCompositionLayerProjection& layer);
-    void RenderView(const XrCompositionLayerProjectionView& layerView,
-                    uint32_t frameBuffer, uint32_t colorTexture, uint32_t depthTexture);
+    void RenderView(const XrCompositionLayerProjectionView& layerView, uint32_t frameBuffer,
+                    uint32_t colorTexture, uint32_t depthTexture, int32_t viewNum);
 
     bool constructorSucceded = false;
     XrSessionState state = XR_SESSION_STATE_UNKNOWN;
