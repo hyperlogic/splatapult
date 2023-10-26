@@ -41,7 +41,7 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 //#define USE_RAY_MARCH_RENDERER
-#define USE_OPENXR
+//#define USE_OPENXR
 
 void Clear(bool setViewport = true)
 {
@@ -258,6 +258,8 @@ int main(int argc, char *argv[])
 
     const int32_t WIDTH = 1024;
     const int32_t HEIGHT = 768;
+    //const int32_t WIDTH = 2160;
+    //const int32_t HEIGHT = 2224;
 
 #ifdef USE_RAY_MARCH_RENDERER
     window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
@@ -475,6 +477,7 @@ int main(int argc, char *argv[])
         Clear();
 #endif
 
+        // DEBUG: draw some transforms
         glm::mat4 m(glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
                     glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
                     glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
@@ -505,31 +508,32 @@ int main(int argc, char *argv[])
         }
 #endif
 
+#ifndef USE_OPENXR
 #ifdef USE_RAY_MARCH_RENDERER
         rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
 #else
-#ifndef USE_OPENXR
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
         glm::mat4 cameraMat = flyCam.GetCameraMat();
         glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
         glm::vec2 nearFar(Z_NEAR, Z_FAR);
-        glm::mat4 modelViewMat = glm::inverse(cameraMat);
         glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
         //pointRenderer->Render(cameraMat, projmat, viewport, nearFar);
-        //splatRenderer->Sort(cameraMat);
-        //splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
+        splatRenderer->Sort(cameraMat);
+        splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
 #endif
 #endif
 
 
         frameCount++;
 
+#ifndef USE_OPENXR
 #ifdef USE_RAY_MARCH_RENDERER
         SDL_RenderPresent(renderer);
 #else
         SDL_GL_SwapWindow(window);
+#endif
 #endif
 
         // cycle camera mat

@@ -4,9 +4,11 @@
 #include <vector>
 
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
 #include <glm/gtc/type_ptr.hpp>
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+#include <tracy/Tracy.hpp>
+
 
 #include "log.h"
 #include "util.h"
@@ -964,6 +966,8 @@ bool XrBuddy::Init()
 
 bool XrBuddy::PollEvents()
 {
+    ZoneScoped;
+
     XrEventDataBuffer xrEvent;
     xrEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
     xrEvent.next = NULL;
@@ -1058,6 +1062,8 @@ bool XrBuddy::PollEvents()
 
 bool XrBuddy::SyncInput()
 {
+    ZoneScoped;
+
     if (state == XR_SESSION_STATE_FOCUSED)
     {
         XrResult result;
@@ -1346,6 +1352,8 @@ uint32_t XrBuddy::GetColorTexture() const
 
 bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)
 {
+    ZoneScoped;
+
     XrResult result;
     if (state == XR_SESSION_STATE_FOCUSED)
     {
@@ -1374,6 +1382,8 @@ bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)
 
 bool XrBuddy::RenderFrame()
 {
+    ZoneScoped;
+
     if (state == XR_SESSION_STATE_READY ||
         state == XR_SESSION_STATE_SYNCHRONIZED ||
         state == XR_SESSION_STATE_VISIBLE ||
@@ -1387,20 +1397,27 @@ bool XrBuddy::RenderFrame()
         fwi.type = XR_TYPE_FRAME_WAIT_INFO;
         fwi.next = NULL;
 
-        XrResult result = xrWaitFrame(session, &fwi, &fs);
-        if (!CheckResult(instance, result, "xrWaitFrame"))
+        XrResult result;
         {
-            return false;
+            ZoneScopedNC("xrWaitFrame", tracy::Color::Red4);
+            result = xrWaitFrame(session, &fwi, &fs);
+            if (!CheckResult(instance, result, "xrWaitFrame"))
+            {
+                return false;
+            }
         }
         lastPredictedDisplayTime = fs.predictedDisplayTime;
 
         XrFrameBeginInfo fbi;
         fbi.type = XR_TYPE_FRAME_BEGIN_INFO;
         fbi.next = NULL;
-        result = xrBeginFrame(session, &fbi);
-        if (!CheckResult(instance, result, "xrBeginFrame"))
         {
-            return false;
+            ZoneScopedNC("xrBeginFrame", tracy::Color::DarkGreen);
+            result = xrBeginFrame(session, &fbi);
+            if (!CheckResult(instance, result, "xrBeginFrame"))
+            {
+                return false;
+            }
         }
 
         std::vector<XrCompositionLayerBaseHeader*> layers;
@@ -1428,10 +1445,15 @@ bool XrBuddy::RenderFrame()
         fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
         fei.layerCount = (uint32_t)layers.size();
         fei.layers = layers.data();
-        result = xrEndFrame(session, &fei);
-        if (!CheckResult(instance, result, "xrEndFrame"))
+
         {
-            return false;
+            ZoneScopedNC("xrEndFrame", tracy::Color::Red4);
+
+            result = xrEndFrame(session, &fei);
+            if (!CheckResult(instance, result, "xrEndFrame"))
+            {
+                return false;
+            }
         }
     }
 
@@ -1513,6 +1535,8 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
                           std::vector<XrCompositionLayerProjectionView>& projectionLayerViews,
                           XrCompositionLayerProjection& layer)
 {
+    ZoneScoped;
+
     XrViewState viewState;
     viewState.type = XR_TYPE_VIEW_STATE;
     viewState.next = NULL;
@@ -1635,7 +1659,7 @@ void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView, uint
     const float tanRight = tanf(layerView.fov.angleRight);
     const float tanDown = tanf(layerView.fov.angleDown);
     const float tanUp = tanf(layerView.fov.angleUp);
-    const float nearZ = 0.05f;
+    const float nearZ = 0.1f;
     const float farZ = 100.0f;
 
     glm::mat4 projMat;

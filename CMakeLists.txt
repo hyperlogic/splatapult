@@ -29,7 +29,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 # tracy
 find_package(Tracy CONFIG REQUIRED)
-add_compile_definitions(TRACY_ENABLE)
+#add_compile_definitions(TRACY_ENABLE)
 
 # openxr-loader
 find_package(OpenXR CONFIG REQUIRED)
