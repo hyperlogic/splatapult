@@ -244,6 +244,11 @@ glm::vec3 XformPoint(const glm::mat4& m, const glm::vec3& p)
     return glm::vec3(result.x / result.w, result.y / result.w, result.z / result.w);
 }
 
+glm::vec3 XformVec(const glm::mat4& m, const glm::vec3& v)
+{
+    return glm::mat3(m) * v;
+}
+
 glm::vec3 RandomColor()
 {
     return glm::vec3(glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f), glm::linearRand(0.0f, 1.0f));

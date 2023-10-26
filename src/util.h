@@ -41,6 +41,7 @@ void Decompose(const glm::mat3& matrix, glm::vec3* scaleOut, glm::quat* rotation
 void DecomposeSwingTwist(const glm::quat& rotation, const glm::vec3& twistAxis, glm::quat* swingOut, glm::quat* twistOut);
 
 glm::vec3 XformPoint(const glm::mat4& m, const glm::vec3& p);
+glm::vec3 XformVec(const glm::mat4& m, const glm::vec3& v);
 
 glm::vec3 RandomColor();
 

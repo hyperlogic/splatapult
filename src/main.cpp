@@ -84,14 +84,13 @@ std::shared_ptr<PointCloud> LoadPointCloud()
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
-    /*
     if (!pointCloud->ImportPly("data/train/input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example pointVec, that contain three lines one for each axis.
     //
@@ -142,6 +141,7 @@ std::shared_ptr<PointCloud> LoadPointCloud()
         p.position[1] += offset.y;
         p.position[2] += offset.z;
     }
+    */
 
     return pointCloud;
 }
@@ -332,11 +332,12 @@ int main(int argc, char *argv[])
 
     auto gaussianCloud = LoadGaussianCloud();
 
-#ifdef USE_OPENXR
-    MagicCarpet magicCarpet(glm::mat4(1.0f));
-#else
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
+
+#ifdef USE_OPENXR
+    MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
+#else
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
 
@@ -369,7 +370,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef USE_OPENXR
-    xrBuddy.SetRenderCallback([&splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
+    xrBuddy.SetRenderCallback([&pointRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
                                                              const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
     {
         Clear(false);
@@ -378,6 +379,8 @@ int main(int argc, char *argv[])
         //PrintVec(viewport, "viewport");
         //PrintMat(eyeMat, "eyeMat");
         glm::mat4 fullEyeMat = magicCarpet.GetRoomMat() * eyeMat;
+
+        pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
 
         /*
         if (viewNum == 0)
@@ -503,22 +506,6 @@ int main(int argc, char *argv[])
 #ifndef USE_RAY_MARCH_RENDERER
         Clear();
 #endif
-
-        // DEBUG: draw some transforms
-        glm::mat4 m(glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
-                    glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
-                    glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
-                    glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-        DebugDraw_Transform(m, 10.0f);
-        m[3][0] = 5.0f;
-        DebugDraw_Transform(m, 10.0f);
-        m[3][0] = -5.0f;
-        DebugDraw_Transform(m, 10.0f);
-        m[3][0] = 0.0f;
-        m[3][2] = 5.0f;
-        DebugDraw_Transform(m, 10.0f);
-        m[3][2] = -5.0f;
-        DebugDraw_Transform(m, 10.0f);
 
 #ifndef USE_OPENXR
 #ifdef USE_RAY_MARCH_RENDERER

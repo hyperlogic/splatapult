@@ -10,7 +10,7 @@
 class MagicCarpet
 {
 public:
-    MagicCarpet(const glm::mat4& roomMatIn);
+    MagicCarpet(const glm::mat4& roomMatIn, float moveSpeedIn);
 
     struct Pose
     {
@@ -41,6 +41,7 @@ public:
     const glm::mat4& GetRoomMat() const { return roomMat; }
     void SetRoomMat(const glm::mat4& roomMatIn);
 protected:
+    float moveSpeed;
     glm::mat4 roomMat;
 };
 
