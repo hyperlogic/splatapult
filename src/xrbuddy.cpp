@@ -409,7 +409,10 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         {"r_aim_pose", XR_ACTION_TYPE_POSE_INPUT},
 
         {"l_haptic", XR_ACTION_TYPE_VIBRATION_OUTPUT},
-        {"r_haptic", XR_ACTION_TYPE_VIBRATION_OUTPUT}
+        {"r_haptic", XR_ACTION_TYPE_VIBRATION_OUTPUT},
+
+        {"l_stick", XR_ACTION_TYPE_VECTOR2F_INPUT},
+        {"r_stick", XR_ACTION_TYPE_VECTOR2F_INPUT}
     };
 
     for (auto& actionPair : actionPairVec)
@@ -504,7 +507,10 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
             {actionMap["l_aim_pose"].action, pathCache["/user/hand/left/input/aim/pose"]},
             {actionMap["r_aim_pose"].action, pathCache["/user/hand/right/input/aim/pose"]},
             {actionMap["l_haptic"].action, pathCache["/user/hand/left/output/haptic"]},
-            {actionMap["r_haptic"].action, pathCache["/user/hand/right/output/haptic"]}
+            {actionMap["r_haptic"].action, pathCache["/user/hand/right/output/haptic"]},
+
+            {actionMap["l_stick"].action, pathCache["/user/hand/left/input/thumbstick"]},
+            {actionMap["r_stick"].action, pathCache["/user/hand/right/input/thumbstick"]}
         };
 
         XrInteractionProfileSuggestedBinding suggestedBindings;

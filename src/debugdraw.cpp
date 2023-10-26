@@ -28,7 +28,7 @@ void DebugDraw_Shutdown()
     ddProg.reset();
 }
 
-void DebugDraw_Line(const glm::vec3& start, const glm::vec3& end, const glm::vec3 color)
+void DebugDraw_Line(const glm::vec3& start, const glm::vec3& end, const glm::vec3& color)
 {
     linePositionVec.push_back(start);
     linePositionVec.push_back(end);

@@ -44,6 +44,7 @@ add_executable(${PROJECT_NAME}
     src/image.cpp
     src/joystick.cpp
     src/log.cpp
+    src/magiccarpet.cpp
     src/main.cpp
     src/pointcloud.cpp
     src/pointrenderer.cpp

@@ -20,6 +20,7 @@
 #include "image.h"
 #include "joystick.h"
 #include "log.h"
+#include "magiccarpet.h"
 #include "pointcloud.h"
 #include "pointrenderer.h"
 #include "program.h"
@@ -41,7 +42,7 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 //#define USE_RAY_MARCH_RENDERER
-//#define USE_OPENXR
+#define USE_OPENXR
 
 void Clear(bool setViewport = true)
 {
@@ -331,6 +332,9 @@ int main(int argc, char *argv[])
 
     auto gaussianCloud = LoadGaussianCloud();
 
+#ifdef USE_OPENXR
+    MagicCarpet magicCarpet(glm::mat4(1.0f));
+#else
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
@@ -338,6 +342,7 @@ int main(int argc, char *argv[])
 
     int cameraIndex = 0;
     flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+#endif
 
     SDL_JoystickEventState(SDL_ENABLE);
 
@@ -364,26 +369,25 @@ int main(int argc, char *argv[])
     }
 
 #ifdef USE_OPENXR
-    xrBuddy.SetRenderCallback([&splatRenderer, &flyCam](const glm::mat4& projMat, const glm::mat4& eyeMat,
-                                                        const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
+    xrBuddy.SetRenderCallback([&splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
+                                                             const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
     {
         Clear(false);
 
         //PrintMat(projMat, "projMat");
         //PrintVec(viewport, "viewport");
         //PrintMat(eyeMat, "eyeMat");
+        glm::mat4 fullEyeMat = magicCarpet.GetRoomMat() * eyeMat;
 
-        // AJT: IF THIS WORKS REMOVE FOVY
-        // AJT: TODO. sort once, render twice
-        glm::mat4 viewMat = glm::inverse(flyCam.GetCameraMat() * eyeMat);
-
+        /*
         if (viewNum == 0)
         {
-            splatRenderer->Sort(flyCam.GetCameraMat() * eyeMat);
+            splatRenderer->Sort(fullEyeMat);
         }
-        splatRenderer->Render(flyCam.GetCameraMat() * eyeMat, projMat, viewport, nearFar);
+        splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
+        */
 
-        DebugDraw_Render(projMat * viewMat);
+        DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
     });
 #endif
 
@@ -454,22 +458,45 @@ int main(int argc, char *argv[])
             }
         }
 
+#ifdef USE_OPENXR
+        if (!xrBuddy.SyncInput())
+        {
+            Log::printf("xrBuddy SyncInput failed\n");
+            return 1;
+        }
+
+        MagicCarpet::Pose headPose, rightPose, leftPose;
+        if (!xrBuddy.GetActionPosition("head_pose", &headPose.pos, &headPose.posValid, &headPose.posTracked))
+        {
+            Log::printf("xrBuddy GetActionPosition(head_pose) failed\n");
+        }
+        if (!xrBuddy.GetActionOrientation("head_pose", &headPose.rot, &headPose.rotValid, &headPose.rotTracked))
+        {
+            Log::printf("xrBuddy GetActionOrientation(head_pose) failed\n");
+        }
+        xrBuddy.GetActionPosition("l_aim_pose", &leftPose.pos, &leftPose.posValid, &leftPose.posTracked);
+        xrBuddy.GetActionOrientation("l_aim_pose", &leftPose.rot, &leftPose.rotValid, &leftPose.rotTracked);
+        xrBuddy.GetActionPosition("r_aim_pose", &rightPose.pos, &rightPose.posValid, &rightPose.posTracked);
+        xrBuddy.GetActionOrientation("r_aim_pose", &rightPose.rot, &rightPose.rotValid, &rightPose.rotTracked);
+        glm::vec2 leftStick, rightStick;
+        bool valid, changed;
+        xrBuddy.GetActionVec2("l_stick", &leftStick, &valid, &changed);
+        xrBuddy.GetActionVec2("r_stick", &rightStick, &valid, &changed);
+        MagicCarpet::ButtonState buttonState;
+        xrBuddy.GetActionBool("l_select_click", &buttonState.leftTrigger, &valid, &changed);
+        xrBuddy.GetActionBool("r_select_click", &buttonState.rightTrigger, &valid, &changed);
+        xrBuddy.GetActionBool("l_squeeze_click", &buttonState.leftGrip, &valid, &changed);
+        xrBuddy.GetActionBool("r_squeeze_click", &buttonState.rightGrip, &valid, &changed);
+        magicCarpet.Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
+#else
         Joystick* joystick = JOYSTICK_GetJoystick();
         if (joystick)
         {
             float roll = 0.0f;
             roll -= (joystick->buttonStateFlags & (1 << Joystick::LeftBumper)) ? 1.0f : 0.0f;
             roll += (joystick->buttonStateFlags & (1 << Joystick::RightBumper)) ? 1.0f : 0.0f;
-            flyCam.SetInput(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
-                            glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]), roll);
-            flyCam.Process(dt);
-        }
-
-#ifdef USE_OPENXR
-        if (!xrBuddy.SyncInput())
-        {
-            Log::printf("xrBuddy SyncInput failed\n");
-            return 1;
+            flyCam.Process(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
+                           glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]), roll, dt);
         }
 #endif
 
@@ -493,21 +520,6 @@ int main(int argc, char *argv[])
         m[3][2] = -5.0f;
         DebugDraw_Transform(m, 10.0f);
 
-#ifdef USE_OPENXR
-        glm::vec3 headPos;
-        glm::quat headRot;
-        bool valid, tracked;
-        xrBuddy.GetActionPosition("head_pose", &headPos, &valid, &tracked);
-        xrBuddy.GetActionOrientation("head_pose", &headRot, &valid, &tracked);
-        glm::mat4 cameraMat = flyCam.GetCameraMat() * MakeMat4(headRot, headPos);
-
-        if (!xrBuddy.RenderFrame())
-        {
-            Log::printf("xrBuddy RenderFrame failed\n");
-            return 1;
-        }
-#endif
-
 #ifndef USE_OPENXR
 #ifdef USE_RAY_MARCH_RENDERER
         rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
@@ -523,8 +535,13 @@ int main(int argc, char *argv[])
         splatRenderer->Sort(cameraMat);
         splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
 #endif
+#else
+        if (!xrBuddy.RenderFrame())
+        {
+            Log::printf("xrBuddy RenderFrame failed\n");
+            return 1;
+        }
 #endif
-
 
         frameCount++;
 

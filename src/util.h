@@ -50,6 +50,7 @@ void PrintMat(const glm::mat2& m2, const std::string& name);
 void PrintVec(const glm::vec4& v4, const std::string& name);
 void PrintVec(const glm::vec3& v3, const std::string& name);
 void PrintVec(const glm::vec2& v2, const std::string& name);
+void PrintQuat(const glm::quat& q, const std::string& name);
 
 const std::string& GetRootPath();
 

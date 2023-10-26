@@ -8,15 +8,12 @@ FlyCam::FlyCam(const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, fl
 
 }
 
-void FlyCam::SetInput(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn)
+void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn, float dt)
 {
-    leftStick = glm::clamp(leftStickIn, -1.0f, 1.0f);
-    rightStick = glm::clamp(rightStickIn, -1.0f, 1.0f);
-    rollAmount = glm::clamp(rollAmountIn, -1.0f, 1.0f);
-}
+    glm::vec2 leftStick = glm::clamp(leftStickIn, -1.0f, 1.0f);
+    glm::vec2 rightStick = glm::clamp(rightStickIn, -1.0f, 1.0f);
+    float rollAmount = glm::clamp(rollAmountIn, -1.0f, 1.0f);
 
-void FlyCam::Process(float dt)
-{
     // left stick controls position
     glm::vec3 ls = glm::vec3(leftStick.x, 0.0f, -leftStick.y);
     glm::vec3 v = ls * speed * dt;

@@ -288,6 +288,11 @@ void PrintVec(const glm::vec2& v2, const std::string& name)
     Log::printf("%s = ( %.5f, %.5f )\n", name.c_str(), v2.x, v2.y);
 }
 
+void PrintQuat(const glm::quat& q, const std::string& name)
+{
+    Log::printf("%s = ( %.5f, ( %.5f, %.5f, %.5f ) )\n", name.c_str(), q.x, q.y, q.z, q.w);
+}
+
 static const std::string ROOT_PATH("../../");
 const std::string& GetRootPath()
 {
