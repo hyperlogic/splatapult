@@ -36,6 +36,7 @@ public:
     {
         renderCallback = renderCallbackIn;
     }
+    bool IsReady() const;
     bool RenderFrame();
     bool Shutdown();
 

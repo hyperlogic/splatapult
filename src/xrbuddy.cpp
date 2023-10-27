@@ -1386,6 +1386,12 @@ bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)
     return true;
 }
 
+bool XrBuddy::IsReady() const
+{
+    return (state == XR_SESSION_STATE_READY || state == XR_SESSION_STATE_SYNCHRONIZED ||
+            state == XR_SESSION_STATE_VISIBLE || state == XR_SESSION_STATE_FOCUSED);
+}
+
 bool XrBuddy::RenderFrame()
 {
     ZoneScoped;

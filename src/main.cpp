@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,6 +12,7 @@
 #include <SDL_opengl.h>
 #include <stdint.h>
 #include <stdlib.h> //rand()
+#include <thread>
 #include <tracy/Tracy.hpp>
 
 #include "cameras.h"
@@ -523,10 +525,17 @@ int main(int argc, char *argv[])
         splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
 #endif
 #else
-        if (!xrBuddy.RenderFrame())
+        if (xrBuddy.IsReady())
         {
-            Log::printf("xrBuddy RenderFrame failed\n");
-            return 1;
+            if (!xrBuddy.RenderFrame())
+            {
+                Log::printf("xrBuddy RenderFrame failed\n");
+                return 1;
+            }
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
 #endif
 

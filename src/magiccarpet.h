@@ -43,6 +43,13 @@ public:
 protected:
     float snapTimer;
     float moveSpeed;
+    enum class State { Normal, Grab };
+    State state;
+
+    glm::vec3 grabPos;
+    glm::quat grabRot;
+    glm::mat4 grabCarpetMat;
+
     glm::mat4 carpetMat;
 };
 
