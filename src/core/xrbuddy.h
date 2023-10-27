@@ -36,7 +36,7 @@ public:
     {
         renderCallback = renderCallbackIn;
     }
-    bool IsReady() const;
+    bool SessionReady() const;
     bool RenderFrame();
     bool Shutdown();
 
@@ -115,6 +115,7 @@ protected:
     XrTime lastPredictedDisplayTime = 0;
     uint32_t prevLastColorTexture = 0;
     uint32_t lastColorTexture = 0;
+    bool sessionReady = false;
 
     RenderCallback renderCallback;
 };

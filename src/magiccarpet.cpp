@@ -87,15 +87,12 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
                           const glm::vec2& leftStick, const glm::vec2& rightStick,
                           const ButtonState& buttonState, float dt)
 {
+    /*
     glm::mat4 leftMat = carpetMat * leftPose.GetMat();
     glm::mat4 rightMat = carpetMat * rightPose.GetMat();
     DebugDraw_Transform(leftMat);
     DebugDraw_Transform(rightMat);
-
-    // debug draw sticks
-    glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
-    DebugDraw_Line(glm::vec3(leftMat[3]), XformPoint(leftMat, glm::vec3(leftStick, 0.0f)), white);
-    DebugDraw_Line(glm::vec3(rightMat[3]), XformPoint(rightMat, glm::vec3(rightStick, 0.0f)), white);
+    */
 
     if (state == State::Normal &&
         (buttonState.leftGrip && buttonState.rightGrip) &&
@@ -104,10 +101,6 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     {
         // enter grab state
         state = State::Grab;
-
-        // capture state of hand controllers
-        //leftGrabPose = leftPose;
-        //rightGrabPose = rightPose;
 
         // capture averge state of hand controllers
         grabPos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
@@ -162,35 +155,16 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     }
     else if (state == State::Grab)
     {
-        // debug draw a line between the hand controllers
-        DebugDraw_Line(XformPoint(carpetMat, leftPose.pos), XformPoint(carpetMat, rightPose.pos), white);
         glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
-        DebugDraw_Transform(carpetMat * grabMat);
 
         // capture averge state of hand controllers
         glm::vec3 pos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
         glm::quat rot = SafeMix(leftPose.rot, rightPose.rot, 0.5f);
         glm::mat4 currMat = MakeMat4(rot, pos);
-        DebugDraw_Transform(carpetMat * currMat);
 
         // adjust the carpet mat
         carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
     }
-
-    // draw the carpet
-    /*
-    std::array<glm::vec3, NUM_CORNERS> worldCorners;
-    for (int i = 0; i < carpetCorners.size(); i++)
-    {
-        worldCorners[i] = XformPoint(carpetMat, carpetCorners[i]);
-    }
-    DebugDraw_Line(worldCorners[0], worldCorners[1], white);
-    DebugDraw_Line(worldCorners[1], worldCorners[2], white);
-    DebugDraw_Line(worldCorners[2], worldCorners[3], white);
-    DebugDraw_Line(worldCorners[3], worldCorners[0], white);
-    DebugDraw_Line(worldCorners[0], worldCorners[2], white);
-    DebugDraw_Line(worldCorners[1], worldCorners[3], white);
-    */
 }
 
 void MagicCarpet::SetCarpetMat(const glm::mat4& carpetMatIn)

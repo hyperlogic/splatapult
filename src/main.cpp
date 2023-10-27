@@ -531,7 +531,7 @@ int main(int argc, char *argv[])
         splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
 #endif
 #else
-        if (xrBuddy.IsReady())
+        if (xrBuddy.SessionReady())
         {
             if (!xrBuddy.RenderFrame())
             {

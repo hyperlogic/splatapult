@@ -1007,6 +1007,7 @@ bool XrBuddy::PollEvents()
                 {
                     return false;
                 }
+                sessionReady = true;
                 break;
             case XR_SESSION_STATE_SYNCHRONIZED:
                 // The application has synced its frame loop with the runtime but is not visible to the user.
@@ -1027,6 +1028,7 @@ bool XrBuddy::PollEvents()
                 {
                     return false;
                 }
+                sessionReady = false;
                 break;
             case XR_SESSION_STATE_LOSS_PENDING:
                 Log::printf("XR_SESSION_STATE_LOSS_PENDING\n");
@@ -1386,10 +1388,9 @@ bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)
     return true;
 }
 
-bool XrBuddy::IsReady() const
+bool XrBuddy::SessionReady() const
 {
-    return (state == XR_SESSION_STATE_READY || state == XR_SESSION_STATE_SYNCHRONIZED ||
-            state == XR_SESSION_STATE_VISIBLE || state == XR_SESSION_STATE_FOCUSED);
+    return sessionReady;
 }
 
 bool XrBuddy::RenderFrame()
