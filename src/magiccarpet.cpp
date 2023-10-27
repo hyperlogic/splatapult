@@ -1,23 +1,19 @@
 #include "magiccarpet.h"
 
 #include <array>
+#include <GL/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "core/debugdraw.h"
+#include "core/image.h"
 #include "core/log.h"
 #include "core/util.h"
 
 const float SNAP_TIME = 1.0f;
 const float SNAP_ANGLE = glm::radians(30.0f);
 
-const float CARPET_RADIUS = 2.0f;
-const size_t NUM_CORNERS = 4;
-static std::array<glm::vec3, NUM_CORNERS> carpetCorners = {
-    glm::vec3(-CARPET_RADIUS, 0.0f, -CARPET_RADIUS),
-    glm::vec3(CARPET_RADIUS, 0.0f, -CARPET_RADIUS),
-    glm::vec3(CARPET_RADIUS, 0.0f, CARPET_RADIUS),
-    glm::vec3(-CARPET_RADIUS, 0.0f, CARPET_RADIUS)
-};
+const float CARPET_RADIUS = 3.0f;
+const float CARPET_TILE_COUNT = 3.0f;
 
 glm::mat4 MagicCarpet::Pose::GetMat() const
 {
@@ -37,6 +33,54 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
     moveSpeed(moveSpeedIn),
     state(State::Normal)
 {
+}
+
+bool MagicCarpet::Init()
+{
+    Image carpetImg;
+    if (!carpetImg.Load("texture/carpet.png"))
+    {
+        Log::printf("Error loading carpet.png\n");
+        return false;
+    }
+    Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::Repeat, WrapType::Repeat};
+    carpetTex = std::make_shared<Texture>(carpetImg, texParams);
+
+    carpetProg = std::make_shared<Program>();
+    if (!carpetProg->LoadVertFrag("shader/carpet_vert.glsl", "shader/carpet_frag.glsl"))
+    {
+        Log::printf("Error loading carpet shaders!\n");
+    }
+
+    carpetVao = std::make_shared<VertexArrayObject>();
+    std::vector<glm::vec3> posVec = {
+        glm::vec3(-CARPET_RADIUS, 0.0f, -CARPET_RADIUS),
+        glm::vec3(CARPET_RADIUS, 0.0f, -CARPET_RADIUS),
+        glm::vec3(CARPET_RADIUS, 0.0f, CARPET_RADIUS),
+        glm::vec3(-CARPET_RADIUS, 0.0f, CARPET_RADIUS)
+    };
+    auto posBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
+    std::vector<glm::vec2> uvVec = {
+        glm::vec2(0.0f, 0.0f),
+        glm::vec2(CARPET_TILE_COUNT, 0.0f),
+        glm::vec2(CARPET_TILE_COUNT, CARPET_TILE_COUNT),
+        glm::vec2(0.0f, CARPET_TILE_COUNT)
+    };
+    auto uvBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, uvVec);
+
+    // build element array
+    std::vector<uint32_t> indexVec = {
+        0, 2, 1,
+        0, 3, 2
+    };
+    auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec);
+
+    // setup vertex array object with buffers
+    carpetVao->SetAttribBuffer(carpetProg->GetAttribLoc("position"), posBuffer);
+    carpetVao->SetAttribBuffer(carpetProg->GetAttribLoc("uv"), uvBuffer);
+    carpetVao->SetElementBuffer(indexBuffer);
+
+    return true;
 }
 
 void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose& rightPose,
@@ -134,6 +178,7 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     }
 
     // draw the carpet
+    /*
     std::array<glm::vec3, NUM_CORNERS> worldCorners;
     for (int i = 0; i < carpetCorners.size(); i++)
     {
@@ -145,9 +190,24 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     DebugDraw_Line(worldCorners[3], worldCorners[0], white);
     DebugDraw_Line(worldCorners[0], worldCorners[2], white);
     DebugDraw_Line(worldCorners[1], worldCorners[3], white);
+    */
 }
 
 void MagicCarpet::SetCarpetMat(const glm::mat4& carpetMatIn)
 {
     carpetMat = carpetMatIn;
 }
+
+void MagicCarpet::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                         const glm::vec4& viewport, const glm::vec2& nearFar)
+{
+    carpetProg->Bind();
+
+    glm::mat4 modelViewMat = glm::inverse(cameraMat) * carpetMat;
+    carpetProg->SetUniform("modelViewProjMat", projMat * modelViewMat);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, carpetTex->texture);
+    carpetProg->SetUniform("colorTex", 0);
+    carpetVao->DrawElements(GL_TRIANGLES);
+}
+

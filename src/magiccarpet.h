@@ -4,13 +4,20 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <memory>
 #include <string>
+
+#include "core/texture.h"
+#include "core/program.h"
+#include "core/vertexbuffer.h"
 
 // VR flycam
 class MagicCarpet
 {
 public:
     MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn);
+
+    bool Init();
 
     struct Pose
     {
@@ -40,6 +47,10 @@ public:
 
     const glm::mat4& GetCarpetMat() const { return carpetMat; }
     void SetCarpetMat(const glm::mat4& carpetMatIn);
+
+    void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                const glm::vec4& viewport, const glm::vec2& nearFar);
+
 protected:
     float snapTimer;
     float moveSpeed;
@@ -51,6 +62,10 @@ protected:
     glm::mat4 grabCarpetMat;
 
     glm::mat4 carpetMat;
+
+    std::shared_ptr<Texture> carpetTex;
+    std::shared_ptr<Program> carpetProg;
+    std::shared_ptr<VertexArrayObject> carpetVao;
 };
 
 #endif

@@ -340,6 +340,10 @@ int main(int argc, char *argv[])
 
 #ifdef USE_OPENXR
     MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
+    if (!magicCarpet.Init())
+    {
+        Log::printf("Error initalizing MagicCarpet\n");
+    }
 #else
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
@@ -383,6 +387,7 @@ int main(int argc, char *argv[])
         //PrintMat(eyeMat, "eyeMat");
         glm::mat4 fullEyeMat = magicCarpet.GetCarpetMat() * eyeMat;
 
+        magicCarpet.Render(fullEyeMat, projMat, viewport, nearFar);
         pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
 
         /*
