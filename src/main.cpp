@@ -378,7 +378,7 @@ int main(int argc, char *argv[])
         //PrintMat(projMat, "projMat");
         //PrintVec(viewport, "viewport");
         //PrintMat(eyeMat, "eyeMat");
-        glm::mat4 fullEyeMat = magicCarpet.GetRoomMat() * eyeMat;
+        glm::mat4 fullEyeMat = magicCarpet.GetCarpetMat() * eyeMat;
 
         pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
 

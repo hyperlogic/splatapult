@@ -10,7 +10,7 @@
 class MagicCarpet
 {
 public:
-    MagicCarpet(const glm::mat4& roomMatIn, float moveSpeedIn);
+    MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn);
 
     struct Pose
     {
@@ -38,11 +38,12 @@ public:
                  const glm::vec2& leftStick, const glm::vec2& rightStick,
                  const ButtonState& buttonState, float dt);
 
-    const glm::mat4& GetRoomMat() const { return roomMat; }
-    void SetRoomMat(const glm::mat4& roomMatIn);
+    const glm::mat4& GetCarpetMat() const { return carpetMat; }
+    void SetCarpetMat(const glm::mat4& carpetMatIn);
 protected:
+    float snapTimer;
     float moveSpeed;
-    glm::mat4 roomMat;
+    glm::mat4 carpetMat;
 };
 
 #endif
