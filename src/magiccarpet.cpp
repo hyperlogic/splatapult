@@ -44,33 +44,36 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     DebugDraw_Transform(leftMat);
     DebugDraw_Transform(rightMat);
 
-    // debug sticks
+    // debug draw sticks
     glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
     DebugDraw_Line(glm::vec3(leftMat[3]), XformPoint(leftMat, glm::vec3(leftStick, 0.0f)), white);
     DebugDraw_Line(glm::vec3(rightMat[3]), XformPoint(rightMat, glm::vec3(rightStick, 0.0f)), white);
 
-    // use leftStick +y to move forward in the horizontal forward direction
-    glm::vec3 forward = headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 right = headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
-    // TODO: safe normalize
-    glm::vec3 hForward = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
-    glm::vec3 hRight = glm::normalize(glm::vec3(right.x, 0.0f, right.z));
-    glm::vec3 carpetVel = hForward * leftStick.y * moveSpeed + hRight * leftStick.x * moveSpeed;
 
+    // get the forward and right vectors of the HMD
+    glm::vec3 headForward = headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 headRight = headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
+
+    // project the HMD forward & right vectors onto the carpet, i.e. make sure they lie in the horizontal plane
+    glm::vec3 horizForward = glm::normalize(glm::vec3(headForward.x, 0.0f, headForward.z));
+    glm::vec3 horizRight = glm::normalize(glm::vec3(headRight.x, 0.0f, headRight.z));
+
+    // use leftStick to move horizontally
+    glm::vec3 horizVel = horizForward * leftStick.y * moveSpeed + horizRight * leftStick.x * moveSpeed;
+
+    // handle snap turns
     snapTimer -= dt;
-    Log::printf("snapTimer = %.5f!\n", snapTimer);
     if (fabs(rightStick.x) > 0.5f && snapTimer < 0.0f)
     {
-        // snap
+        // snap!
         float snapSign = rightStick.x > 0.0f ? -1.0f : 1.0f;
+
+        // Rotate the carpet around the users HMD
         glm::vec3 snapPos = XformPoint(carpetMat, headPose.pos);
         glm::quat snapRot = glm::angleAxis(snapSign * SNAP_ANGLE, XformVec(carpetMat, glm::vec3(0.0f, 1.0f, 0.0f)));
-        glm::mat4 snapPosMat = MakeMat4(glm::quat(), snapPos);
-        glm::mat4 invSnapPosMat = MakeMat4(glm::quat(), -snapPos);
-        glm::mat4 snapRotMat = MakeMat4(snapRot);
-        carpetMat = snapPosMat * snapRotMat * invSnapPosMat * carpetMat;
+        carpetMat = MakeRotateAboutPointMat(snapPos, snapRot) * carpetMat;
+
         snapTimer = SNAP_TIME;
-        Log::printf("SNAP!\n");
     }
     else if (fabs(rightStick.x) < 0.2f)
     {
@@ -79,7 +82,7 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     }
 
     // move the carpet!
-    glm::vec3 vel = XformVec(carpetMat, carpetVel);
+    glm::vec3 vel = XformVec(carpetMat, horizVel);
     carpetMat[3][0] += vel.x * dt;
     carpetMat[3][1] += vel.y * dt;
     carpetMat[3][2] += vel.z * dt;

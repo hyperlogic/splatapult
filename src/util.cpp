@@ -329,3 +329,11 @@ glm::vec4 LinearToSRGB(const glm::vec4& linearColor)
     sRGBColor.a = linearColor.a;
     return sRGBColor;
 }
+
+glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot)
+{
+    glm::mat4 posMat = MakeMat4(glm::quat(), pos);
+    glm::mat4 invPosMat = MakeMat4(glm::quat(), -pos);
+    glm::mat4 rotMat = MakeMat4(rot);
+    return posMat * rotMat * invPosMat;
+}

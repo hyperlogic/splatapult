@@ -58,4 +58,6 @@ const std::string& GetRootPath();
 bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm::vec3& aabbMax);
 glm::vec4 LinearToSRGB(const glm::vec4& linearColor);
 
+glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot);
+
 #endif
