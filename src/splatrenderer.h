@@ -6,9 +6,11 @@
 #include <stdint.h>
 #include <vector>
 
+#include "core/program.h"
+#include "core/vertexbuffer.h"
+
 #include "gaussiancloud.h"
-#include "program.h"
-#include "vertexbuffer.h"
+
 
 namespace rgc::radix_sort
 {

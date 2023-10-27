@@ -15,24 +15,25 @@
 #include <thread>
 #include <tracy/Tracy.hpp>
 
+#include "core/debugdraw.h"
+#include "core/image.h"
+#include "core/joystick.h"
+#include "core/log.h"
+#include "core/program.h"
+#include "core/texture.h"
+#include "core/util.h"
+#include "core/vertexbuffer.h"
+#include "core/xrbuddy.h"
+
 #include "cameras.h"
-#include "debugdraw.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
-#include "image.h"
-#include "joystick.h"
-#include "log.h"
 #include "magiccarpet.h"
 #include "pointcloud.h"
 #include "pointrenderer.h"
-#include "program.h"
 #include "radix_sort.hpp"
 #include "raymarchrenderer.h"
 #include "splatrenderer.h"
-#include "texture.h"
-#include "util.h"
-#include "vertexbuffer.h"
-#include "xrbuddy.h"
 
 static bool quitting = false;
 static SDL_Window *window = NULL;

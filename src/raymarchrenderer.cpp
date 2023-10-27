@@ -4,7 +4,7 @@
 #include <SDL.h>
 #include <tracy/Tracy.hpp>
 
-#include "log.h"
+#include "core/log.h"
 
 RayMarchRenderer::RayMarchRenderer()
 {

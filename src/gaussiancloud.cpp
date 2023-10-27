@@ -6,8 +6,8 @@
 #include <sstream>
 #include <string>
 
-#include "log.h"
-#include "util.h"
+#include "core/log.h"
+#include "core/util.h"
 
 static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {

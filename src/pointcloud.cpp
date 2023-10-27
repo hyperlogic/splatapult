@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include "util.h"
+#include "core/util.h"
 
 static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {

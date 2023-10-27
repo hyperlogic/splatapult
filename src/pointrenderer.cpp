@@ -4,9 +4,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <tracy/Tracy.hpp>
 
-#include "image.h"
-#include "log.h"
-#include "texture.h"
+#include "core/image.h"
+#include "core/log.h"
+#include "core/texture.h"
+
 #include "radix_sort.hpp"
 
 PointRenderer::PointRenderer()

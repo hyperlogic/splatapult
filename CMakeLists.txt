@@ -37,24 +37,25 @@ find_package(OpenXR CONFIG REQUIRED)
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
+    src/core/debugdraw.cpp
+    src/core/image.cpp
+    src/core/joystick.cpp
+    src/core/log.cpp
+    src/core/program.cpp
+    src/core/texture.cpp
+    src/core/util.cpp
+    src/core/vertexbuffer.cpp
+    src/core/xrbuddy.cpp
+
     src/cameras.cpp
-    src/debugdraw.cpp
     src/flycam.cpp
     src/gaussiancloud.cpp
-    src/image.cpp
-    src/joystick.cpp
-    src/log.cpp
     src/magiccarpet.cpp
     src/main.cpp
     src/pointcloud.cpp
     src/pointrenderer.cpp
-    src/program.cpp
     src/raymarchrenderer.cpp
-    src/texture.cpp
     src/splatrenderer.cpp
-    src/util.cpp
-    src/vertexbuffer.cpp
-    src/xrbuddy.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

@@ -3,8 +3,8 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-#include "log.h"
-#include "util.h"
+#include "core/log.h"
+#include "core/util.h"
 
 Cameras::Cameras()
 {

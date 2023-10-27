@@ -1,6 +1,6 @@
 #include "flycam.h"
 
-#include "log.h"
+#include "core/log.h"
 
 FlyCam::FlyCam(const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn) :
     pos(posIn), rot(rotIn), speed(speedIn), rotSpeed(rotSpeedIn)

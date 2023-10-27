@@ -3,9 +3,9 @@
 #include <array>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "debugdraw.h"
-#include "log.h"
-#include "util.h"
+#include "core/debugdraw.h"
+#include "core/log.h"
+#include "core/util.h"
 
 const float SNAP_TIME = 1.0f;
 const float SNAP_ANGLE = glm::radians(30.0f);

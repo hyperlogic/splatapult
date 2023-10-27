@@ -6,10 +6,11 @@
 #include <stdint.h>
 #include <vector>
 
+#include "core/program.h"
+#include "core/texture.h"
+#include "core/vertexbuffer.h"
+
 #include "pointcloud.h"
-#include "program.h"
-#include "texture.h"
-#include "vertexbuffer.h"
 
 namespace rgc::radix_sort
 {
