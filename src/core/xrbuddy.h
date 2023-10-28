@@ -97,6 +97,7 @@ protected:
 
     XrInstance instance = XR_NULL_HANDLE;
     XrSystemId systemId = XR_NULL_SYSTEM_ID;
+    XrSystemProperties systemProperties;
     XrSession session = XR_NULL_HANDLE;
     XrActionSet actionSet = XR_NULL_HANDLE;
 

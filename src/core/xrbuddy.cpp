@@ -137,17 +137,24 @@ static bool EnumerateLayers(std::vector<XrApiLayerProperties>& layerProps)
     return true;
 }
 
-static bool CreateInstance(XrInstance& instance)
+static bool CreateInstance(XrInstance& instance, const std::vector<const char*>& extensionVec)
 {
+    if (printAll)
+    {
+        Log::printf("Attempting to enable the following extensions:\n");
+        for (auto&& ext : extensionVec)
+        {
+            Log::printf("    %s\n", ext);
+        }
+    }
     // create openxr instance
     XrResult result;
-    const char* const enabledExtensions[] = {XR_KHR_OPENGL_ENABLE_EXTENSION_NAME};
     XrInstanceCreateInfo ici;
     ici.type = XR_TYPE_INSTANCE_CREATE_INFO;
     ici.next = NULL;
     ici.createFlags = 0;
     ici.enabledExtensionCount = 1;
-    ici.enabledExtensionNames = enabledExtensions;
+    ici.enabledExtensionNames = extensionVec.data();
     ici.enabledApiLayerCount = 0;
     ici.enabledApiLayerNames = NULL;
     strcpy_s(ici.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE, "xrtoy");
@@ -199,21 +206,26 @@ static bool GetSystemId(XrInstance instance, XrSystemId& systemId)
         return false;
     }
 
+    return true;
+}
+
+static bool GetSystemProperties(XrInstance instance, XrSystemId systemId, XrSystemProperties& sp)
+{
+    XrResult result;
+    sp.type = XR_TYPE_SYSTEM_PROPERTIES;
+    sp.next = NULL;
+    sp.graphicsProperties = {0};
+    sp.trackingProperties = {0};
+
+    result = xrGetSystemProperties(instance, systemId, &sp);
+    if (!CheckResult(instance, result, "xrGetSystemProperties failed"))
+    {
+        return false;
+    }
+
     bool printSystemProperties = false;
     if (printSystemProperties || printAll)
     {
-        XrSystemProperties sp;
-        sp.type = XR_TYPE_SYSTEM_PROPERTIES;
-        sp.next = NULL;
-        sp.graphicsProperties = {0};
-        sp.trackingProperties = {0};
-
-        result = xrGetSystemProperties(instance, systemId, &sp);
-        if (!CheckResult(instance, result, "xrGetSystemProperties failed"))
-        {
-            return false;
-        }
-
         Log::printf("System properties for system \"%s\":\n", sp.systemName);
         Log::printf("    maxLayerCount: %d\n", sp.graphicsProperties.maxLayerCount);
         Log::printf("    maxSwapChainImageHeight: %d\n", sp.graphicsProperties.maxSwapchainImageHeight);
@@ -301,6 +313,38 @@ static bool EnumerateViewConfigs(XrInstance instance, XrSystemId systemId, std::
             Log::printf("        maxImageRectHeight: %d\n", viewConfigs[i].maxImageRectHeight);
             Log::printf("        recommendedSwapchainSampleCount: %d\n", viewConfigs[i].recommendedSwapchainSampleCount);
             Log::printf("        maxSwapchainSampleCount: %d\n", viewConfigs[i].maxSwapchainSampleCount);
+        }
+    }
+
+    return true;
+}
+
+static bool EnumerateColorSpaces(XrInstance instance, XrSession session)
+{
+    PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB = nullptr;
+    xrGetInstanceProcAddr(instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction*)&xrEnumerateColorSpacesFB);
+    if (xrEnumerateColorSpacesFB == nullptr)
+    {
+        Log::printf("bad func\n");
+        return false;
+    }
+
+    XrResult result;
+    XrColorSpaceFB colorSpaces[10];
+    uint32_t numSpaces = 0;
+
+    result = xrEnumerateColorSpacesFB(session, 10, &numSpaces, colorSpaces);
+    if (!CheckResult(instance, result, "xrEnumerateColorSpacesFB"))
+    {
+        return false;
+    }
+
+    if (printAll)
+    {
+        Log::printf("%s colorSpaces:\n", numSpaces);
+        for (uint32_t i = 0; i < numSpaces; i++)
+        {
+            Log::printf("    %d\n", (int)colorSpaces[i]);
         }
     }
 
@@ -895,15 +939,31 @@ inline static void CreateProjection(float* m, GraphicsAPI graphicsApi, const flo
 
 XrBuddy::XrBuddy()
 {
+    std::vector<const char*> requiredExtensionVec = {XR_KHR_OPENGL_ENABLE_EXTENSION_NAME};
+    std::vector<const char*> optionalExtensionVec = {XR_FB_COLOR_SPACE_EXTENSION_NAME};
+    std::vector<const char*> extensionVec;
+
     if (!EnumerateExtensions(extensionProps))
     {
         return;
     }
 
-    if (!ExtensionSupported(extensionProps, XR_KHR_OPENGL_ENABLE_EXTENSION_NAME))
+    for (auto&& ext : requiredExtensionVec)
     {
-        Log::printf("XR_KHR_opengl_enable not supported!\n");
-        return;
+        if (!ExtensionSupported(extensionProps, ext))
+        {
+            Log::printf("required extension \"%s\" not supported!\n", ext);
+            return;
+        }
+        extensionVec.push_back(ext);
+    }
+
+    for (auto&& ext : optionalExtensionVec)
+    {
+        if (ExtensionSupported(extensionProps, ext))
+        {
+            extensionVec.push_back(ext);
+        }
     }
 
     if (!EnumerateLayers(layerProps))
@@ -911,12 +971,17 @@ XrBuddy::XrBuddy()
         return;
     }
 
-    if (!CreateInstance(instance))
+    if (!CreateInstance(instance, extensionVec))
     {
         return;
     }
 
     if (!GetSystemId(instance, systemId))
+    {
+        return;
+    }
+
+    if (!GetSystemProperties(instance, systemId, systemProperties))
     {
         return;
     }
@@ -945,6 +1010,11 @@ bool XrBuddy::Init()
     if (!CreateSession(instance, systemId, session))
     {
         return false;
+    }
+
+    if (ExtensionSupported(extensionProps, XR_FB_COLOR_SPACE_EXTENSION_NAME))
+    {
+        EnumerateColorSpaces(instance, session);
     }
 
     if (!CreateActions(instance, systemId, session, actionSet, actionMap))
