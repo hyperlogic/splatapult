@@ -5,8 +5,6 @@
 
 #version 460
 
-#define OFF_AXIS_PROJECTION
-
 uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
@@ -42,7 +40,6 @@ void main(void)
     // J is the jacobian of the projection and viewport transformations.
     // this is an affine approximation of the real projection.
     // because gaussians are closed under affine transforms.
-#ifdef OFF_AXIS_PROJECTION
     float SX = projMat[0][0];
     float SY = projMat[1][1];
     float WZ =  projMat[3][2];
@@ -52,15 +49,6 @@ void main(void)
     float jtx = (SX * t.x * WIDTH) / (2.0f * tzSq);
     float jty = (SY * t.y * HEIGHT) / (2.0f * tzSq);
     float jtz = ((Z_FAR - Z_NEAR) * WZ) / (2.0f * tzSq);
-#else
-    float SS = projParams.x;
-    float tzSq = t.z * t.z;
-    float jsx = -SS / (2.0f * t.z);
-    float jsy = -SS / (2.0f * t.z);
-    float jtx = (SS * t.x) / (2.0f * tzSq);
-    float jty = (SS * t.y) / (2.0f * tzSq);
-    float jtz = -(Z_FAR * Z_NEAR) / tzSq;
-#endif
     mat3 J = mat3(vec3(jsx, 0.0f, 0.0f),
                   vec3(0.0f, jsy, 0.0f),
                   vec3(jtx, jty, jtz));
@@ -90,7 +78,6 @@ void main(void)
     // compute radiance from sh
     float SH_K0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
     float SH_K1 = 0.4886025119029199f;  // sqrt(3) / (2 sqrt(pi))
-    // AJT: TODO compute proper values for polynomials
     vec3 v = normalize(eye - position.xyz);
     vec3 SH_C1 = vec3(-SH_K1 * v.y, SH_K1 * v.z, -SH_K1 * v.x);
     vec3 radiance = vec3(0.5f + SH_K0 * sh0.x + SH_C1.x * sh0.w + SH_C1.x * sh1.z + SH_C1.x * sh2.y,
