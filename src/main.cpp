@@ -45,7 +45,7 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 //#define USE_RAY_MARCH_RENDERER
-#define USE_OPENXR
+//#define USE_OPENXR
 
 void Clear(bool setViewport = true)
 {
@@ -228,7 +228,9 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud()
     g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
+    */
 
+    /*
     // AJT: move splats by offset.
     glm::vec3 offset(0.0f, 0.0f, -5.0f);
     for (auto&& g : gaussianVec)

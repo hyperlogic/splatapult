@@ -1,5 +1,6 @@
 #include "program.h"
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -252,9 +253,6 @@ bool Program::LoadCompute(const std::string& computeFilename)
         int loc = glGetUniformLocation(program, name);
         v.loc = loc;
         uniforms[name] = v;
-
-        // AJT: REMOVE
-        Log::printf("uniform %s, loc = %d\n", name, v.loc);
     }
 
     // TODO: build reflection info on shader storage blocks
@@ -276,6 +274,8 @@ int Program::GetUniformLoc(const std::string& name) const
     }
     else
     {
+        assert(false);
+        std::cerr << "could not find uniform " << name << " for program " << debugName << std::endl;
         return 0;
     }
 }
@@ -289,6 +289,8 @@ int Program::GetAttribLoc(const std::string& name) const
     }
     else
     {
+        std::cerr << "could not find attrib " << name << " for program " << debugName << std::endl;
+        assert(false);
         return 0;
     }
 }

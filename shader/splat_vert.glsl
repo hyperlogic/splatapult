@@ -12,20 +12,25 @@ uniform mat4 projMat;  // used to project view coordinates into clip coordinates
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 
-in vec4 position;  // center of the gaussian in object coordinates.
-in vec4 color;  // radiance of the splat
+in vec4 position;  // center of the gaussian in object coordinates, (with alpha crammed in to w)
+in vec4 sh0;  // spherical harmonics coeff for radiance of the splat
+in vec4 sh1;
+in vec4 sh2;
 in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
 in vec3 cov3_col2;
 
-out vec4 geom_color;  // radiance of splat
+out vec4 geom_sh0;  // spherical harmonics coeff for radiance of the splat
+out vec4 geom_sh1;
+out vec4 geom_sh2;
 out vec4 geom_cov2;  // 2D screen space covariance matrix of the gaussian
-out vec2 geom_p;  // the 2D screen space center of the gaussian
+out vec3 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
 
 void main(void)
 {
     // t is in view coordinates
-    vec4 t = viewMat * position;
+    float alpha = position.w;
+    vec4 t = viewMat * vec4(position.xyz, 1.0f);
 
     //float X0 = viewport.x;
     float X0 = viewport.x * (0.00001f * projParams.y);  // one weird hack to prevent projParams from being compiled away
@@ -79,11 +84,15 @@ void main(void)
 
     // geom_p is the gaussian center transformed into screen space
     vec4 p4 = projMat * t;
-    geom_p = vec2(p4.x / p4.w, p4.y / p4.w);
+    geom_p.xy = vec2(p4.x / p4.w, p4.y / p4.w);
     geom_p.x = 0.5f * (WIDTH + (geom_p.x * WIDTH) + (2.0f * X0));
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
+    geom_p.z = alpha;
 
-    geom_color = color;
+    // copy sh coeff
+    geom_sh0 = sh0;
+    geom_sh1 = sh1;
+    geom_sh2 = sh2;
 
     // gl_Position is in clip coordinates.
     gl_Position = p4;

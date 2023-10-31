@@ -5,13 +5,17 @@ uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-in vec4 geom_color[];  // radiance of splat
+in vec4 geom_sh0[];  // sh coeff for radiance of splat
+in vec4 geom_sh1[];
+in vec4 geom_sh2[];
 in vec4 geom_cov2[];  // 2D screen space covariance matrix of the gaussian
-in vec2 geom_p[];  // the 2D screen space center of the gaussian
+in vec3 geom_p[];  // the 2D screen space center of the gaussian, (alpha in z)
 
-out vec4 frag_color;  // radiance of splat
+out vec4 frag_sh0;  // sh coeff for radiance of splat
+out vec4 frag_sh1;
+out vec4 frag_sh2;
 out vec4 frag_cov2inv;  // inverse of the 2D screen space covariance matrix of the guassian
-out vec2 frag_p;  // the 2D screen space center of the gaussian
+out vec3 frag_p;  // the 2D screen space center of the gaussian (alpha in z)
 
 // used to invert the 2D screen space covariance matrix
 mat2 inverseMat2(mat2 m)
@@ -55,7 +59,9 @@ void main()
     offset.y *= (2.0f / HEIGHT) * w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color[0];
+    frag_sh0 = geom_sh0[0];
+    frag_sh1 = geom_sh1[0];
+    frag_sh2 = geom_sh2[0];
     frag_cov2inv = cov2Dinv4;
     frag_p = geom_p[0];
 
@@ -75,7 +81,9 @@ void main()
     offset.y *= (2.0f / HEIGHT) * gl_Position.w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color[0];
+    frag_sh0 = geom_sh0[0];
+    frag_sh1 = geom_sh1[0];
+    frag_sh2 = geom_sh2[0];
     frag_cov2inv = cov2Dinv4;
     frag_p = geom_p[0];
 
@@ -95,7 +103,9 @@ void main()
     offset.y *= (2.0f / HEIGHT) * gl_Position.w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color[0];
+    frag_sh0 = geom_sh0[0];
+    frag_sh1 = geom_sh1[0];
+    frag_sh2 = geom_sh2[0];
     frag_cov2inv = cov2Dinv4;
     frag_p = geom_p[0];
 
@@ -113,7 +123,9 @@ void main()
     offset.y *= (2.0f / HEIGHT) * gl_Position.w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color[0];
+    frag_sh0 = geom_sh0[0];
+    frag_sh1 = geom_sh1[0];
+    frag_sh2 = geom_sh2[0];
     frag_cov2inv = cov2Dinv4;
     frag_p = geom_p[0];
 

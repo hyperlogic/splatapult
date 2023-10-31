@@ -114,26 +114,36 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
     size_t numPoints = gaussianCloud->size();
     posVec.reserve(numPoints);
 
-    std::vector<glm::vec4> colorVec;
+    std::vector<glm::vec4> sh0Vec;
+    std::vector<glm::vec4> sh1Vec;
+    std::vector<glm::vec4> sh2Vec;
     std::vector<glm::vec3> cov3_col0Vec;
     std::vector<glm::vec3> cov3_col1Vec;
     std::vector<glm::vec3> cov3_col2Vec;
 
-    colorVec.reserve(numPoints);
+    sh0Vec.reserve(numPoints);
+    sh1Vec.reserve(numPoints);
+    sh2Vec.reserve(numPoints);
     cov3_col0Vec.reserve(numPoints);
     cov3_col1Vec.reserve(numPoints);
     cov3_col2Vec.reserve(numPoints);
 
     for (auto&& g : gaussianCloud->GetGaussianVec())
     {
-        posVec.emplace_back(glm::vec4(g.position[0], g.position[1], g.position[2], 1.0f));
-
-        const float SH_C0 = 0.28209479177387814f;
+        // stick alpha into position.w
         float alpha = 1.0f / (1.0f + expf(-g.opacity));
+        posVec.emplace_back(glm::vec4(g.position[0], g.position[1], g.position[2], alpha));
+
+        /*
+        const float SH_C0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
         glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
                         0.5f + SH_C0 * g.f_dc[1],
                         0.5f + SH_C0 * g.f_dc[2], alpha);
         colorVec.push_back(color);
+        */
+        sh0Vec.emplace_back(glm::vec4(g.f_dc[0], g.f_dc[1], g.f_dc[2], g.f_rest[0]));
+        sh1Vec.emplace_back(glm::vec4(g.f_rest[1], g.f_rest[2], g.f_rest[3], g.f_rest[4]));
+        sh2Vec.emplace_back(glm::vec4(g.f_rest[5], g.f_rest[6], g.f_rest[7], g.f_rest[8]));
 
         glm::mat3 V = g.ComputeCovMat();
 
@@ -142,7 +152,9 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
         cov3_col2Vec.push_back(V[2]);
     }
     auto positionBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
-    auto colorBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
+    auto sh0Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, sh0Vec);
+    auto sh1Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, sh1Vec);
+    auto sh2Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, sh2Vec);
     auto cov3_col0Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col0Vec);
     auto cov3_col1Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col1Vec);
     auto cov3_col2Buffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, cov3_col2Vec);
@@ -158,7 +170,9 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
 
     // setup vertex array object with buffers
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("position"), positionBuffer);
-    splatVao->SetAttribBuffer(splatProg->GetAttribLoc("color"), colorBuffer);
+    splatVao->SetAttribBuffer(splatProg->GetAttribLoc("sh0"), sh0Buffer);
+    splatVao->SetAttribBuffer(splatProg->GetAttribLoc("sh1"), sh1Buffer);
+    splatVao->SetAttribBuffer(splatProg->GetAttribLoc("sh2"), sh2Buffer);
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col0"), cov3_col0Buffer);
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col1"), cov3_col1Buffer);
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col2"), cov3_col2Buffer);
