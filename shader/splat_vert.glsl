@@ -15,6 +15,10 @@ in vec4 position;  // center of the gaussian in object coordinates, (with alpha 
 in vec4 sh0;  // spherical harmonics coeff for radiance of the splat
 in vec4 sh1;
 in vec4 sh2;
+in vec4 sh3;
+in vec4 sh4;
+in vec4 sh5;
+in vec4 sh6;
 in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
 in vec3 cov3_col2;
@@ -25,28 +29,6 @@ out vec2 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
 
 
 // from Efficient Spherical Harmonic Evaluation, Peter-Pike Sloan (2013)
-/*
-void SHNewEval3(const float fX, const float fY, const float fZ, float* __restrict pSH) {
-    float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
-    float fZ2 = fZ * fZ;
-    pSH[0] = 0.2820947917738781f;
-    pSH[2] = 0.4886025119029199f * fZ;
-    pSH[6] = 0.9461746957575601f * fZ2 + -0.3153915652525201f;
-    fC0 = fX;
-    fS0 = fY;
-    fTmpA = -0.48860251190292f;
-    pSH[3] = fTmpA * fC0;
-    pSH[1] = fTmpA * fS0;
-    fTmpB = -1.092548430592079f * fZ;
-    pSH[7] = fTmpB * fC0;
-    pSH[5] = fTmpB * fS0;
-    fC1 = fX*fC0 - fY*fS0;
-    fS1 = fX*fS0 + fY*fC0;
-    fTmpC = 0.5462742152960395f;
-    pSH[8] = fTmpC * fC1;
-    pSH[4] = fTmpC * fS1;
-}
-*/
 vec3 ComputeRadianceFromSH(const vec3 v)
 {
     float pSH[9];
@@ -69,9 +51,9 @@ vec3 ComputeRadianceFromSH(const vec3 v)
     pSH[8] = fTmpC * fC1;
     pSH[4] = fTmpC * fS1;
 
-    return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh0.w + pSH[2] * sh1.z + pSH[3] * sh2.y,
-                0.5f + pSH[0] * sh0.y + pSH[1] * sh1.x + pSH[2] * sh1.w + pSH[3] * sh2.z,
-                0.5f + pSH[0] * sh0.z + pSH[1] * sh1.y + pSH[2] * sh2.x + pSH[3] * sh2.w);
+    return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh0.w + pSH[2] * sh1.z + pSH[3] * sh2.y + pSH[4] * sh3.x + pSH[5] * sh3.w + pSH[6] * sh4.z + pSH[7] * sh5.y + pSH[8] * sh6.x,
+                0.5f + pSH[0] * sh0.y + pSH[1] * sh1.x + pSH[2] * sh1.w + pSH[3] * sh2.z + pSH[4] * sh3.y + pSH[5] * sh4.x + pSH[6] * sh4.w + pSH[7] * sh5.z + pSH[8] * sh6.y,
+                0.5f + pSH[0] * sh0.z + pSH[1] * sh1.y + pSH[2] * sh2.x + pSH[3] * sh2.w + pSH[4] * sh3.z + pSH[5] * sh4.y + pSH[6] * sh5.x + pSH[7] * sh5.w + pSH[8] * sh6.z);
 }
 
 void main(void)
@@ -127,16 +109,6 @@ void main(void)
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
 
     // compute radiance from sh
-    /*
-    float SH_K0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
-    float SH_K1 = 0.4886025119029199f;  // sqrt(3) / (2 sqrt(pi))
-    vec3 v = normalize(eye - position.xyz);
-    vec3 SH_C1 = vec3(-SH_K1 * v.y, SH_K1 * v.z, -SH_K1 * v.x);
-    vec3 radiance = vec3(0.5f + SH_K0 * sh0.x + SH_C1.x * sh0.w + SH_C1.x * sh1.z + SH_C1.x * sh2.y,
-                         0.5f + SH_K0 * sh0.y + SH_C1.y * sh1.x + SH_C1.y * sh1.w + SH_C1.y * sh2.z,
-                         0.5f + SH_K0 * sh0.z + SH_C1.z * sh1.y + SH_C1.z * sh2.x + SH_C1.z * sh2.w);
-    geom_color = vec4(radiance, alpha);
-    */
     vec3 v = normalize(eye - position.xyz);
     geom_color = vec4(ComputeRadianceFromSH(v), alpha);
 
