@@ -95,12 +95,14 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         float height = viewport.w;
         float aspectRatio = width / height;
         glm::mat4 viewMat = glm::inverse(cameraMat);
+        glm::vec3 eye = glm::vec3(cameraMat[3]);
 
         splatProg->Bind();
         splatProg->SetUniform("viewMat", viewMat);
         splatProg->SetUniform("projMat", projMat);
         splatProg->SetUniform("projParams", glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f));
         splatProg->SetUniform("viewport", viewport);
+        splatProg->SetUniform("eye", eye);
 
         splatVao->DrawElements(GL_POINTS);
     }
@@ -134,19 +136,11 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
         float alpha = 1.0f / (1.0f + expf(-g.opacity));
         posVec.emplace_back(glm::vec4(g.position[0], g.position[1], g.position[2], alpha));
 
-        /*
-        const float SH_C0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
-        glm::vec4 color(0.5f + SH_C0 * g.f_dc[0],
-                        0.5f + SH_C0 * g.f_dc[1],
-                        0.5f + SH_C0 * g.f_dc[2], alpha);
-        colorVec.push_back(color);
-        */
         sh0Vec.emplace_back(glm::vec4(g.f_dc[0], g.f_dc[1], g.f_dc[2], g.f_rest[0]));
         sh1Vec.emplace_back(glm::vec4(g.f_rest[1], g.f_rest[2], g.f_rest[3], g.f_rest[4]));
         sh2Vec.emplace_back(glm::vec4(g.f_rest[5], g.f_rest[6], g.f_rest[7], g.f_rest[8]));
 
         glm::mat3 V = g.ComputeCovMat();
-
         cov3_col0Vec.push_back(V[0]);
         cov3_col1Vec.push_back(V[1]);
         cov3_col2Vec.push_back(V[2]);

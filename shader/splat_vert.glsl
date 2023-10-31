@@ -11,6 +11,7 @@ uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
+uniform vec3 eye;
 
 in vec4 position;  // center of the gaussian in object coordinates, (with alpha crammed in to w)
 in vec4 sh0;  // spherical harmonics coeff for radiance of the splat
@@ -87,14 +88,14 @@ void main(void)
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
 
     // compute radiance from sh
-    float SH_C0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
-
+    float SH_K0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
+    float SH_K1 = 0.4886025119029199f;  // sqrt(3) / (2 sqrt(pi))
     // AJT: TODO compute proper values for polynomials
-    vec3 SH_C1 = vec3(0.0001f, 0.0001f, 0.0001f);
-
-    vec3 radiance = vec3(0.5f + SH_C0 * sh0.x + SH_C1.x * sh0.w + SH_C1.x * sh1.z + SH_C1.x * sh2.y,
-                         0.5f + SH_C0 * sh0.y + SH_C1.y * sh1.x + SH_C1.y * sh1.w + SH_C1.y * sh2.z,
-                         0.5f + SH_C0 * sh0.z + SH_C1.z * sh1.y + SH_C1.z * sh2.x + SH_C1.z * sh2.w);
+    vec3 v = normalize(eye - position.xyz);
+    vec3 SH_C1 = vec3(-SH_K1 * v.y, SH_K1 * v.z, -SH_K1 * v.x);
+    vec3 radiance = vec3(0.5f + SH_K0 * sh0.x + SH_C1.x * sh0.w + SH_C1.x * sh1.z + SH_C1.x * sh2.y,
+                         0.5f + SH_K0 * sh0.y + SH_C1.y * sh1.x + SH_C1.y * sh1.w + SH_C1.y * sh2.z,
+                         0.5f + SH_K0 * sh0.z + SH_C1.z * sh1.y + SH_C1.z * sh2.x + SH_C1.z * sh2.w);
     geom_color = vec4(radiance, alpha);
 
     // gl_Position is in clip coordinates.
