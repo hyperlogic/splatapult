@@ -20,11 +20,9 @@ in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
 in vec3 cov3_col2;
 
-out vec4 geom_sh0;  // spherical harmonics coeff for radiance of the splat
-out vec4 geom_sh1;
-out vec4 geom_sh2;
+out vec4 geom_color;  // radiance of splat
 out vec4 geom_cov2;  // 2D screen space covariance matrix of the gaussian
-out vec3 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
+out vec2 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
 
 void main(void)
 {
@@ -84,15 +82,20 @@ void main(void)
 
     // geom_p is the gaussian center transformed into screen space
     vec4 p4 = projMat * t;
-    geom_p.xy = vec2(p4.x / p4.w, p4.y / p4.w);
+    geom_p = vec2(p4.x / p4.w, p4.y / p4.w);
     geom_p.x = 0.5f * (WIDTH + (geom_p.x * WIDTH) + (2.0f * X0));
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
-    geom_p.z = alpha;
 
-    // copy sh coeff
-    geom_sh0 = sh0;
-    geom_sh1 = sh1;
-    geom_sh2 = sh2;
+    // compute radiance from sh
+    float SH_C0 = 0.28209479177387814f; // 1 / (2 sqrt(pi))
+
+    // AJT: TODO compute proper values for polynomials
+    vec3 SH_C1 = vec3(0.0001f, 0.0001f, 0.0001f);
+
+    vec3 radiance = vec3(0.5f + SH_C0 * sh0.x + SH_C1.x * sh0.w + SH_C1.x * sh1.z + SH_C1.x * sh2.y,
+                         0.5f + SH_C0 * sh0.y + SH_C1.y * sh1.x + SH_C1.y * sh1.w + SH_C1.y * sh2.z,
+                         0.5f + SH_C0 * sh0.z + SH_C1.z * sh1.y + SH_C1.z * sh2.x + SH_C1.z * sh2.w);
+    geom_color = vec4(radiance, alpha);
 
     // gl_Position is in clip coordinates.
     gl_Position = p4;
