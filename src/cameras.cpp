@@ -4,7 +4,6 @@
 #include <nlohmann/json.hpp>
 
 #include "core/log.h"
-#include "core/util.h"
 
 Cameras::Cameras()
 {
@@ -12,7 +11,7 @@ Cameras::Cameras()
 
 bool Cameras::ImportJson(const std::string& jsonFilename)
 {
-    std::ifstream f(GetRootPath() + jsonFilename);
+    std::ifstream f(jsonFilename);
     nlohmann::json data = nlohmann::json::parse(f);
 
     try

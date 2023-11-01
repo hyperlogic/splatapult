@@ -21,7 +21,7 @@ GaussianCloud::GaussianCloud()
 
 bool GaussianCloud::ImportPly(const std::string& plyFilename)
 {
-    std::ifstream plyFile(GetRootPath() + plyFilename, std::ios::binary);
+    std::ifstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
         Log::printf("failed to open %s\n", plyFilename.c_str());

@@ -12,6 +12,7 @@
 #include <SDL_opengl.h>
 #include <stdint.h>
 #include <stdlib.h> //rand()
+#include <sys/stat.h>
 #include <thread>
 #include <tracy/Tracy.hpp>
 
@@ -84,11 +85,11 @@ void Resize(int newWidth, int newHeight)
     glViewport(0, 0, newWidth, newHeight);
 }
 
-std::shared_ptr<PointCloud> LoadPointCloud()
+std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
-    if (!pointCloud->ImportPly("data/train/input.ply"))
+    if (!pointCloud->ImportPly(dataDir + "input.ply"))
     {
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
@@ -150,11 +151,13 @@ std::shared_ptr<PointCloud> LoadPointCloud()
     return pointCloud;
 }
 
-std::shared_ptr<GaussianCloud> LoadGaussianCloud()
+std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
-    if (!gaussianCloud->ImportPly("data/train/point_cloud.ply"))
+    // AJT: TODO: find highest iteration_# dir.
+    std::string iterationDir = dataDir + "point_cloud/iteration_30000/";
+    if (!gaussianCloud->ImportPly(iterationDir + "point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
@@ -275,6 +278,19 @@ int main(int argc, char *argv[])
             }
         }
         dataDir = argv[argc - 1];
+
+        // make sure data dir ends with /
+        if (!(dataDir.back() == '/' || dataDir.back() == '\\'))
+        {
+            dataDir += "/";
+        }
+    }
+
+    struct stat sb;
+    if (stat(dataDir.c_str(), &sb))
+    {
+        Log::printf("Invalid directory \"%s\"\n", dataDir.c_str());
+        return 1;
     }
 
     Log::printf("AJT: vrMode = %d, dataDir = %s\n", (int)vrMode, dataDir.c_str());
@@ -332,20 +348,20 @@ int main(int argc, char *argv[])
     SDL_AddEventWatch(Watch, NULL);
 
     auto cameras = std::make_shared<Cameras>();
-    if (!cameras->ImportJson("data/train/cameras.json"))
+    if (!cameras->ImportJson(dataDir + "cameras.json"))
     {
         Log::printf("Error loading cameras.json\n");
         return 1;
     }
 
-    auto pointCloud = LoadPointCloud();
+    auto pointCloud = LoadPointCloud(dataDir);
     if (!pointCloud)
     {
         Log::printf("Error loading PointCloud\n");
         return 1;
     }
 
-    auto gaussianCloud = LoadGaussianCloud();
+    auto gaussianCloud = LoadGaussianCloud(dataDir);
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
@@ -453,6 +469,10 @@ int main(int argc, char *argv[])
                 if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
                 {
                     quitting = true;
+                }
+                else if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_p)
+                {
+                    drawPointCloud = !drawPointCloud;
                 }
                 break;
             case SDL_JOYAXISMOTION:
