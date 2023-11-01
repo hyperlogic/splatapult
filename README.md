@@ -1,28 +1,31 @@
 Toy program to display 3d gaussian splats
 ----------------------------------------------
 
-Windows Build
------------------------
-Install Visual Studio 2022
-Install cmake 3.27.1
-Install (vcpkg)[https://github.com/microsoft/vcpkg#quick-start-windows]
-Use vcpkg to install the following packages:
-* `vcpkg install sdl2:x64-windows`
-* `vcpkg install glew:x64-windows`
-* `vcpkg install glm:x64-windows`
-* `vcpkg install libpng:x64-windows`
-* `vcpkg install nlohmann-json:x64-windows`
-* `vcpkg install tracy:x64-windows`
-* `vcpkg install openxr-loader:x64-windows`
+3dgstoy [OPTION] DIRECTORY
 
-Use cmake to make the visual studio project:
-* `mkdir build`
-* `cd build`
-* `cmake -DCMAKE_TOOLCHAIN_FILE="C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
+Options
+-------------
+-v, --openxr
+    launch app in vr mode, using openxr runtime
 
-Use visual studio to open and build the project, or build from the command line:
-* `cmake --build . --config=Release`
+-f, --fullscreen (TODO)
+    launch window in fullscreen
 
+Runtime options
+-------------
+* joystick - fly around the scene
+* p - toggle between initial colmap point cloud and gaussian splats. (TODO)
 
+Directory
+-------------
+Expects directory structure ready for rendering.
 
+dir/
+    point_cloud/
+	    iteration_#/
+			point_cloud.py
+	cameras.json
+	cfg_args
+	input.ply
 
+By default the iteration_#/point_cloud.py with the highest # is picked.

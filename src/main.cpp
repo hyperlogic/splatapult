@@ -32,7 +32,6 @@
 #include "pointcloud.h"
 #include "pointrenderer.h"
 #include "radix_sort.hpp"
-#include "raymarchrenderer.h"
 #include "splatrenderer.h"
 
 static bool quitting = false;
@@ -44,8 +43,10 @@ const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
-//#define USE_RAY_MARCH_RENDERER
-//#define USE_OPENXR
+static bool vrMode = false;
+static bool drawCarpet = true;
+static bool drawPointCloud = true;
+static bool drawDebug = true;
 
 void Clear(bool setViewport = true)
 {
@@ -256,6 +257,28 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 
 int main(int argc, char *argv[])
 {
+    // parse arguments
+    std::string dataDir;
+    if (argc < 2)
+    {
+        Log::printf("Missing FILENAME argument\n");
+        // AJT: TODO print usage
+        return 1;
+    }
+    else
+    {
+        for (int i = 1; i < (argc - 1); i++)
+        {
+            if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--vr"))
+            {
+                vrMode = true;
+            }
+        }
+        dataDir = argv[argc - 1];
+    }
+
+    Log::printf("AJT: vrMode = %d, dataDir = %s\n", (int)vrMode, dataDir.c_str());
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)
     {
         Log::printf("Failed to initialize SDL: %s\n", SDL_GetError());
@@ -267,20 +290,6 @@ int main(int argc, char *argv[])
     //const int32_t WIDTH = 2160;
     //const int32_t HEIGHT = 2224;
 
-#ifdef USE_RAY_MARCH_RENDERER
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
-                              SDL_WINDOW_RESIZABLE);
-
-    gl_context = nullptr;
-
-    renderer = SDL_CreateRenderer(window, -1, 0);
-	if (!renderer)
-    {
-        Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
-		return 1;
-	}
-
-#else
     window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
@@ -307,15 +316,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-#ifdef USE_OPENXR
-    XrBuddy xrBuddy;
-    if (!xrBuddy.Init())
+    std::shared_ptr<XrBuddy> xrBuddy;
+    if (vrMode)
     {
-        Log::printf("OpenXR Init failed\n");
-        return 1;
+        xrBuddy = std::make_shared<XrBuddy>();
+        if (!xrBuddy->Init())
+        {
+            Log::printf("OpenXR Init failed\n");
+            return 1;
+        }
     }
-#endif
-#endif
 
     JOYSTICK_Init();
 
@@ -340,30 +350,23 @@ int main(int argc, char *argv[])
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
 
-#ifdef USE_OPENXR
-    MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
-    if (!magicCarpet.Init())
-    {
-        Log::printf("Error initalizing MagicCarpet\n");
-    }
-#else
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
     //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
 
+    MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
+    if (vrMode)
+    {
+        if (!magicCarpet.Init())
+        {
+            Log::printf("Error initalizing MagicCarpet\n");
+        }
+    }
+
     int cameraIndex = 0;
     flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-#endif
 
     SDL_JoystickEventState(SDL_ENABLE);
 
-#ifdef USE_RAY_MARCH_RENDERER
-    auto rayMarchRenderer = std::make_shared<RayMarchRenderer>();
-    if (!rayMarchRenderer->Init(gaussianCloud))
-    {
-        Log::printf("Error initializing ray march renderer!\n");
-        return 1;
-    }
-#else
     auto pointRenderer = std::make_shared<PointRenderer>();
     if (!pointRenderer->Init(pointCloud))
     {
@@ -378,34 +381,35 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-#ifdef USE_OPENXR
-    xrBuddy.SetRenderCallback([&pointRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
-                                                             const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
+    if (vrMode)
     {
-        Clear(false);
-
-        //PrintMat(projMat, "projMat");
-        //PrintVec(viewport, "viewport");
-        //PrintMat(eyeMat, "eyeMat");
-        glm::mat4 fullEyeMat = magicCarpet.GetCarpetMat() * eyeMat;
-
-        magicCarpet.Render(fullEyeMat, projMat, viewport, nearFar);
-        pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
-
-        /*
-        if (viewNum == 0)
+        xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
+                                                                                 const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
         {
-            splatRenderer->Sort(fullEyeMat);
-        }
-        splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
-        */
+            Clear(false);
 
-        DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
-    });
-#endif
+            glm::mat4 fullEyeMat = magicCarpet.GetCarpetMat() * eyeMat;
 
+            if (drawCarpet)
+            {
+                magicCarpet.Render(fullEyeMat, projMat, viewport, nearFar);
+            }
+            if (drawPointCloud)
+            {
+                pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
+            }
+            else
+            {
+                splatRenderer->Sort(fullEyeMat);
+                splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
+            }
 
-#endif
+            if (drawDebug)
+            {
+                DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
+            }
+        });
+    }
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -415,13 +419,14 @@ int main(int argc, char *argv[])
         // update dt
         uint32_t ticks = SDL_GetTicks();
 
-#ifdef USE_OPENXR
-        if (!xrBuddy.PollEvents())
+        if (vrMode)
         {
-            Log::printf("xrBuddy PollEvents failed\n");
-            return 1;
+            if (!xrBuddy->PollEvents())
+            {
+                Log::printf("xrBuddy PollEvents failed\n");
+                return 1;
+            }
         }
-#endif
 
         const int FPS_FRAMES = 100;
         if ((frameCount % FPS_FRAMES) == 0)
@@ -471,37 +476,40 @@ int main(int argc, char *argv[])
             }
         }
 
-#ifdef USE_OPENXR
-        if (!xrBuddy.SyncInput())
+        if (vrMode)
         {
-            Log::printf("xrBuddy SyncInput failed\n");
-            return 1;
+            if (!xrBuddy->SyncInput())
+            {
+                Log::printf("xrBuddy SyncInput failed\n");
+                return 1;
+            }
+
+            // copy vr input into MagicCarpet
+            MagicCarpet::Pose headPose, rightPose, leftPose;
+            if (!xrBuddy->GetActionPosition("head_pose", &headPose.pos, &headPose.posValid, &headPose.posTracked))
+            {
+                Log::printf("xrBuddy GetActionPosition(head_pose) failed\n");
+            }
+            if (!xrBuddy->GetActionOrientation("head_pose", &headPose.rot, &headPose.rotValid, &headPose.rotTracked))
+            {
+                Log::printf("xrBuddy GetActionOrientation(head_pose) failed\n");
+            }
+            xrBuddy->GetActionPosition("l_aim_pose", &leftPose.pos, &leftPose.posValid, &leftPose.posTracked);
+            xrBuddy->GetActionOrientation("l_aim_pose", &leftPose.rot, &leftPose.rotValid, &leftPose.rotTracked);
+            xrBuddy->GetActionPosition("r_aim_pose", &rightPose.pos, &rightPose.posValid, &rightPose.posTracked);
+            xrBuddy->GetActionOrientation("r_aim_pose", &rightPose.rot, &rightPose.rotValid, &rightPose.rotTracked);
+            glm::vec2 leftStick, rightStick;
+            bool valid, changed;
+            xrBuddy->GetActionVec2("l_stick", &leftStick, &valid, &changed);
+            xrBuddy->GetActionVec2("r_stick", &rightStick, &valid, &changed);
+            MagicCarpet::ButtonState buttonState;
+            xrBuddy->GetActionBool("l_select_click", &buttonState.leftTrigger, &valid, &changed);
+            xrBuddy->GetActionBool("r_select_click", &buttonState.rightTrigger, &valid, &changed);
+            xrBuddy->GetActionBool("l_squeeze_click", &buttonState.leftGrip, &valid, &changed);
+            xrBuddy->GetActionBool("r_squeeze_click", &buttonState.rightGrip, &valid, &changed);
+            magicCarpet.Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
         }
 
-        MagicCarpet::Pose headPose, rightPose, leftPose;
-        if (!xrBuddy.GetActionPosition("head_pose", &headPose.pos, &headPose.posValid, &headPose.posTracked))
-        {
-            Log::printf("xrBuddy GetActionPosition(head_pose) failed\n");
-        }
-        if (!xrBuddy.GetActionOrientation("head_pose", &headPose.rot, &headPose.rotValid, &headPose.rotTracked))
-        {
-            Log::printf("xrBuddy GetActionOrientation(head_pose) failed\n");
-        }
-        xrBuddy.GetActionPosition("l_aim_pose", &leftPose.pos, &leftPose.posValid, &leftPose.posTracked);
-        xrBuddy.GetActionOrientation("l_aim_pose", &leftPose.rot, &leftPose.rotValid, &leftPose.rotTracked);
-        xrBuddy.GetActionPosition("r_aim_pose", &rightPose.pos, &rightPose.posValid, &rightPose.posTracked);
-        xrBuddy.GetActionOrientation("r_aim_pose", &rightPose.rot, &rightPose.rotValid, &rightPose.rotTracked);
-        glm::vec2 leftStick, rightStick;
-        bool valid, changed;
-        xrBuddy.GetActionVec2("l_stick", &leftStick, &valid, &changed);
-        xrBuddy.GetActionVec2("r_stick", &rightStick, &valid, &changed);
-        MagicCarpet::ButtonState buttonState;
-        xrBuddy.GetActionBool("l_select_click", &buttonState.leftTrigger, &valid, &changed);
-        xrBuddy.GetActionBool("r_select_click", &buttonState.rightTrigger, &valid, &changed);
-        xrBuddy.GetActionBool("l_squeeze_click", &buttonState.leftGrip, &valid, &changed);
-        xrBuddy.GetActionBool("r_squeeze_click", &buttonState.rightGrip, &valid, &changed);
-        magicCarpet.Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
-#else
         Joystick* joystick = JOYSTICK_GetJoystick();
         if (joystick)
         {
@@ -511,51 +519,50 @@ int main(int argc, char *argv[])
             flyCam.Process(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
                            glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]), roll, dt);
         }
-#endif
 
-#ifndef USE_RAY_MARCH_RENDERER
-        Clear();
-#endif
-
-#ifndef USE_OPENXR
-#ifdef USE_RAY_MARCH_RENDERER
-        rayMarchRenderer->Render(cameraMat, viewport, nearFar, FOVY, renderer);
-#else
-        int width, height;
-        SDL_GetWindowSize(window, &width, &height);
-        glm::mat4 cameraMat = flyCam.GetCameraMat();
-        glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
-        glm::vec2 nearFar(Z_NEAR, Z_FAR);
-        glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
-
-        //pointRenderer->Render(cameraMat, projmat, viewport, nearFar);
-        splatRenderer->Sort(cameraMat);
-        splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
-#endif
-#else
-        if (xrBuddy.SessionReady())
+        if (vrMode)
         {
-            if (!xrBuddy.RenderFrame())
+            if (xrBuddy->SessionReady())
             {
-                Log::printf("xrBuddy RenderFrame failed\n");
-                return 1;
+                if (!xrBuddy->RenderFrame())
+                {
+                    Log::printf("xrBuddy RenderFrame failed\n");
+                    return 1;
+                }
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         }
         else
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            Clear(true);
+
+            int width, height;
+            SDL_GetWindowSize(window, &width, &height);
+            glm::mat4 cameraMat = flyCam.GetCameraMat();
+            glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
+            glm::vec2 nearFar(Z_NEAR, Z_FAR);
+            glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+
+            if (drawPointCloud)
+            {
+                pointRenderer->Render(cameraMat, projMat, viewport, nearFar);
+            }
+            else
+            {
+                splatRenderer->Sort(cameraMat);
+                splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
+            }
         }
-#endif
 
         frameCount++;
 
-#ifndef USE_OPENXR
-#ifdef USE_RAY_MARCH_RENDERER
-        SDL_RenderPresent(renderer);
-#else
-        SDL_GL_SwapWindow(window);
-#endif
-#endif
+        if (!vrMode)
+        {
+            SDL_GL_SwapWindow(window);
+        }
 
         // cycle camera mat
         /*
