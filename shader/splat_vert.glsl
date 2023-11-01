@@ -109,7 +109,7 @@ void main(void)
     geom_p.y = 0.5f * (HEIGHT + (geom_p.y * HEIGHT) + (2.0f * Y0));
 
     // compute radiance from sh
-    vec3 v = normalize(eye - position.xyz);
+    vec3 v = normalize(position.xyz - eye);
     geom_color = vec4(ComputeRadianceFromSH(v), alpha);
 
     // gl_Position is in clip coordinates.
