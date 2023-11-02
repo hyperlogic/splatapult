@@ -545,6 +545,10 @@ int main(int argc, char *argv[])
                         cameraIndex = (cameraIndex - 1) % cameras->GetNumCameras();
                         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
                         break;
+                    case SDLK_f:
+                        // TODO: more then one carpet size
+                        drawCarpet = !drawCarpet;
+                        break;
                     }
                 }
                 break;

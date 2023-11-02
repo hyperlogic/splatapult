@@ -6,6 +6,13 @@
 #include <sstream>
 #include <string>
 
+struct DoublePoint
+{
+    double position[3];
+    double normal[3];
+    uint8_t color[3];
+};
+
 static bool GetNextPlyLine(std::ifstream& plyFile, std::string& lineOut)
 {
     while (std::getline(plyFile, lineOut))
@@ -62,38 +69,101 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         return false;
     }
 
-    // AJT: TODO support double properties
-    // validate rest of header
-    if (!CheckLine(plyFile, "property float x") ||
-        !CheckLine(plyFile, "property float y") ||
-        !CheckLine(plyFile, "property float z") ||
-        !CheckLine(plyFile, "property float nx") ||
-        !CheckLine(plyFile, "property float ny") ||
-        !CheckLine(plyFile, "property float nz") ||
-        !CheckLine(plyFile, "property uchar red") ||
-        !CheckLine(plyFile, "property uchar green") ||
-        !CheckLine(plyFile, "property uchar blue") ||
-        !CheckLine(plyFile, "end_header"))
+    bool useDoubles = false;
+
+    if (!GetNextPlyLine(plyFile, line))
     {
-        std::cerr << "Unsupported ply file, unexpected properties" << std::endl;
+        std::cerr << "Invalid ply file, error reading first property" << std::endl;
+        return false;
+    }
+
+    if (line == "property double x")
+    {
+        useDoubles = true;
+        // validate rest of header
+        if (!CheckLine(plyFile, "property double y") ||
+            !CheckLine(plyFile, "property double z") ||
+            !CheckLine(plyFile, "property double nx") ||
+            !CheckLine(plyFile, "property double ny") ||
+            !CheckLine(plyFile, "property double nz") ||
+            !CheckLine(plyFile, "property uchar red") ||
+            !CheckLine(plyFile, "property uchar green") ||
+            !CheckLine(plyFile, "property uchar blue") ||
+            !CheckLine(plyFile, "end_header"))
+        {
+            std::cerr << "Unsupported ply file, unexpected properties" << std::endl;
+            return false;
+        }
+    }
+    else if (line == "property float x")
+    {
+        useDoubles = false;
+        // validate rest of header
+        if (!CheckLine(plyFile, "property float y") ||
+            !CheckLine(plyFile, "property float z") ||
+            !CheckLine(plyFile, "property float nx") ||
+            !CheckLine(plyFile, "property float ny") ||
+            !CheckLine(plyFile, "property float nz") ||
+            !CheckLine(plyFile, "property uchar red") ||
+            !CheckLine(plyFile, "property uchar green") ||
+            !CheckLine(plyFile, "property uchar blue") ||
+            !CheckLine(plyFile, "end_header"))
+        {
+            std::cerr << "Unsupported ply file, unexpected properties" << std::endl;
+            return false;
+        }
+    }
+    else
+    {
+        std::cerr << "Unsupported ply file, first property" << std::endl;
         return false;
     }
 
     // the data in the plyFile is packed
     // so we read it in one Point structure at a time
-    const size_t POINT_SIZE = 27;
-    static_assert(sizeof(Point) >= POINT_SIZE);
-
-    pointVec.resize(numPoints);
-    for (int i = 0; i < numPoints; i++)
+    if (useDoubles)
     {
-        plyFile.read((char*)&pointVec[i], POINT_SIZE);
-        if (plyFile.gcount() != POINT_SIZE)
+        const size_t POINT_SIZE = 51;
+        assert(sizeof(DoublePoint) >= POINT_SIZE);
+        pointVec.resize(numPoints);
+        for (int i = 0; i < numPoints; i++)
         {
-            std::cerr << "Error reading point[" << i << "]" << std::endl;
-            return false;
+            DoublePoint dp;
+            plyFile.read((char*)&dp, POINT_SIZE);
+            if (plyFile.gcount() != POINT_SIZE)
+            {
+                std::cerr << "Error reading point[" << i << "]" << std::endl;
+                return false;
+            }
+            // convert to float and copy into pointVec.
+            pointVec[i].position[0] = (float)dp.position[0];
+            pointVec[i].position[1] = (float)dp.position[1];
+            pointVec[i].position[2] = (float)dp.position[2];
+            pointVec[i].normal[0] = (float)dp.normal[0];
+            pointVec[i].normal[1] = (float)dp.normal[1];
+            pointVec[i].normal[2] = (float)dp.normal[2];
+            pointVec[i].color[0] = dp.color[0];
+            pointVec[i].color[1] = dp.color[1];
+            pointVec[i].color[2] = dp.color[2];
         }
     }
+    else
+    {
+        const size_t POINT_SIZE = 27;
+        assert(sizeof(Point) >= POINT_SIZE);
+        pointVec.resize(numPoints);
+        for (int i = 0; i < numPoints; i++)
+        {
+            // read directly into Point structure
+            plyFile.read((char*)&pointVec[i], POINT_SIZE);
+            if (plyFile.gcount() != POINT_SIZE)
+            {
+                std::cerr << "Error reading point[" << i << "]" << std::endl;
+                return false;
+            }
+        }
+    }
+
 
     return true;
 }
