@@ -15,7 +15,7 @@ public:
     bool ImportJson(const std::string& jsonFilename);
 
     const std::vector<glm::mat4>& GetCameraVec() const { return cameraVec; }
-
+	size_t GetNumCameras() const { return cameraVec.size(); }
 protected:
 
     std::vector<glm::mat4> cameraVec;

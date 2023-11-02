@@ -14,7 +14,9 @@ Options
 Runtime options
 -------------
 * joystick - fly around the scene
-* p - toggle between initial colmap point cloud and gaussian splats.
+* c - toggle between initial colmap point cloud and gaussian splats.
+* n - jump to next camera
+* p - jump to previous camera
 
 Directory
 -------------

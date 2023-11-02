@@ -527,13 +527,25 @@ int main(int argc, char *argv[])
             case SDL_KEYDOWN:
             case SDL_KEYUP:
                 // ESC to quit
-                if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+                if (event.key.type == SDL_KEYDOWN)
                 {
-                    quitting = true;
-                }
-                else if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_p)
-                {
-                    drawPointCloud = !drawPointCloud;
+                    switch (event.key.keysym.sym)
+                    {
+                    case SDLK_ESCAPE:
+                        quitting = true;
+                        break;
+                    case SDLK_c:
+                        drawPointCloud = !drawPointCloud;
+                        break;
+                    case SDLK_n:
+                        cameraIndex = (cameraIndex + 1) % cameras->GetNumCameras();
+                        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+                        break;
+                    case SDLK_p:
+                        cameraIndex = (cameraIndex - 1) % cameras->GetNumCameras();
+                        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+                        break;
+                    }
                 }
                 break;
             case SDL_JOYAXISMOTION:
