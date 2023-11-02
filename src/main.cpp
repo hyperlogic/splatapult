@@ -45,6 +45,7 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 static bool vrMode = false;
+static bool fullscreen = false;
 static bool drawCarpet = true;
 static bool drawPointCloud = true;
 static bool drawDebug = true;
@@ -272,9 +273,13 @@ int main(int argc, char *argv[])
     {
         for (int i = 1; i < (argc - 1); i++)
         {
-            if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--vr"))
+            if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--openxr"))
             {
                 vrMode = true;
+            }
+            else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--fullscreen"))
+            {
+                fullscreen = true;
             }
         }
         dataDir = argv[argc - 1];
@@ -306,8 +311,16 @@ int main(int argc, char *argv[])
     //const int32_t WIDTH = 2160;
     //const int32_t HEIGHT = 2224;
 
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT,
-                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    uint32_t windowFlags = SDL_WINDOW_OPENGL;
+    if (fullscreen)
+    {
+        windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+    else
+    {
+        windowFlags |= SDL_WINDOW_RESIZABLE;
+    }
+    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
 
     gl_context = SDL_GL_CreateContext(window);
 

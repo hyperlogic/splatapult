@@ -1,20 +1,20 @@
 Toy program to display 3d gaussian splats
 ----------------------------------------------
 
-3dgstoy [OPTION] DIRECTORY
+3dgstoy [OPTIONS] DIRECTORY
 
 Options
 -------------
 -v, --openxr
     launch app in vr mode, using openxr runtime
 
--f, --fullscreen (TODO)
+-f, --fullscreen
     launch window in fullscreen
 
 Runtime options
 -------------
 * joystick - fly around the scene
-* p - toggle between initial colmap point cloud and gaussian splats. (TODO)
+* p - toggle between initial colmap point cloud and gaussian splats.
 
 Directory
 -------------
