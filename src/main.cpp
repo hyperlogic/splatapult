@@ -86,6 +86,51 @@ void Resize(int newWidth, int newHeight)
     glViewport(0, 0, newWidth, newHeight);
 }
 
+void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
+{
+    SDL_GL_MakeCurrent(window, gl_context);
+
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+
+    // TODO: convert this to VAO
+    glViewport(0, 0, width, height);
+    glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glm::mat4 projMat = glm::ortho(0.0f, (float)width, 0.0f, (float)height, -10.0f, 10.0f);
+
+    if (colorTexture > 0)
+    {
+        desktopProgram->Bind();
+        desktopProgram->SetUniform("modelViewProjMat", projMat);
+        desktopProgram->SetUniform("color", glm::vec4(1.0f));
+
+        // use texture unit 0 for colorTexture
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorTexture);
+        desktopProgram->SetUniform("colorTexture", 0);
+
+        glm::vec2 xyLowerLeft(0.0f, (height - width) / 2.0f);
+        glm::vec2 xyUpperRight((float)width, (height + width) / 2.0f);
+        glm::vec2 uvLowerLeft(0.0f, 0.0f);
+        glm::vec2 uvUpperRight(1.0f, 1.0f);
+
+        glm::vec3 positions[] = {glm::vec3(xyLowerLeft, 0.0f), glm::vec3(xyUpperRight.x, xyLowerLeft.y, 0.0f),
+                                 glm::vec3(xyUpperRight, 0.0f), glm::vec3(xyLowerLeft.x, xyUpperRight.y, 0.0f)};
+        desktopProgram->SetAttrib("position", positions);
+
+        glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
+                           uvUpperRight, glm::vec2(uvLowerLeft.x, uvUpperRight.y)};
+        desktopProgram->SetAttrib("uv", uvs);
+
+        const size_t NUM_INDICES = 6;
+        uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
+        glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
+    }
+
+}
+
 std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
 {
     auto pointCloud = std::make_shared<PointCloud>();
@@ -291,14 +336,13 @@ int main(int argc, char *argv[])
         }
     }
 
+    // verify dataDir exists
     struct stat sb;
     if (stat(dataDir.c_str(), &sb))
     {
         Log::printf("Invalid directory \"%s\"\n", dataDir.c_str());
         return 1;
     }
-
-    Log::printf("AJT: vrMode = %d, dataDir = %s\n", (int)vrMode, dataDir.c_str());
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)
     {
@@ -378,9 +422,9 @@ int main(int argc, char *argv[])
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
-
-    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 2.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
-    //FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    int cameraIndex = 0;
+    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
     MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
     if (vrMode)
@@ -390,9 +434,6 @@ int main(int argc, char *argv[])
             Log::printf("Error initalizing MagicCarpet\n");
         }
     }
-
-    int cameraIndex = 0;
-    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
     SDL_JoystickEventState(SDL_ENABLE);
 
@@ -410,8 +451,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    auto desktopProgram = std::make_shared<Program>();
     if (vrMode)
     {
+        if (!desktopProgram->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
+        {
+            Log::printf("Error loading desktop shader!\n");
+            return 1;
+        }
+
         xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
                                                                                  const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
         {
@@ -567,6 +615,11 @@ int main(int argc, char *argv[])
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
+
+            // render desktop.
+            Clear(true);
+            RenderDesktop(desktopProgram, xrBuddy->GetColorTexture());
+            SDL_GL_SwapWindow(window);
         }
         else
         {
@@ -588,22 +641,18 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
-        }
-
-        frameCount++;
-
-        if (!vrMode)
-        {
             SDL_GL_SwapWindow(window);
-        }
 
-        // cycle camera mat
-        /*
-        cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
-        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-        */
+            // cycle camera mat
+            /*
+              cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
+              flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+            */
+        }
 
         DebugDraw_Clear();
+
+        frameCount++;
 
         FrameMark;
     }
