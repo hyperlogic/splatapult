@@ -12,6 +12,13 @@ uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 uniform vec3 eye;
 
 in vec4 position;  // center of the gaussian in object coordinates, (with alpha crammed in to w)
+
+// AJT: FUCK efficientcy just get it working
+in vec3 sh0;
+in vec3 sh1;
+in vec3 sh2;
+in vec3 sh3;
+/*
 in vec4 sh0;  // spherical harmonics coeff for radiance of the splat
 in vec4 sh1;
 in vec4 sh2;
@@ -19,6 +26,7 @@ in vec4 sh3;
 in vec4 sh4;
 in vec4 sh5;
 in vec4 sh6;
+*/
 in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col1;
 in vec3 cov3_col2;
@@ -51,9 +59,22 @@ vec3 ComputeRadianceFromSH(const vec3 v)
     pSH[8] = fTmpC * fC1;
     pSH[4] = fTmpC * fS1;
 
+    /*
     return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh0.w + pSH[2] * sh1.z + pSH[3] * sh2.y + pSH[4] * sh3.x + pSH[5] * sh3.w + pSH[6] * sh4.z + pSH[7] * sh5.y + pSH[8] * sh6.x,
                 0.5f + pSH[0] * sh0.y + pSH[1] * sh1.x + pSH[2] * sh1.w + pSH[3] * sh2.z + pSH[4] * sh3.y + pSH[5] * sh4.x + pSH[6] * sh4.w + pSH[7] * sh5.z + pSH[8] * sh6.y,
                 0.5f + pSH[0] * sh0.z + pSH[1] * sh1.y + pSH[2] * sh2.x + pSH[3] * sh2.w + pSH[4] * sh3.z + pSH[5] * sh4.y + pSH[6] * sh5.x + pSH[7] * sh5.w + pSH[8] * sh6.z);
+    */
+    float SH0 = 0.2820947917738781f;
+    float SH1 = 0.48860251190292f;
+    return vec3(0.5f + (SH0 * sh0.x) + (-SH1 * v.y * sh1.x) + (SH1 * v.z * sh2.x) + (-SH1 * v.x * sh3.x),
+                0.5f + (SH0 * sh0.y) + (-SH1 * v.y * sh1.y) + (SH1 * v.z * sh2.y) + (-SH1 * v.x * sh3.y),
+                0.5f + (SH0 * sh0.z) + (-SH1 * v.y * sh1.z) + (SH1 * v.z * sh2.z) + (-SH1 * v.x * sh3.z));
+
+    /*
+    return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh1.x + pSH[2] * sh2.x + pSH[3] * sh3.x,
+                0.5f + pSH[0] * sh0.y + pSH[1] * sh1.y + pSH[2] * sh2.y + pSH[3] * sh3.y,
+                0.5f + pSH[0] * sh0.z + pSH[1] * sh1.z + pSH[2] * sh2.z + pSH[3] * sh3.z);
+    */
 }
 
 void main(void)
