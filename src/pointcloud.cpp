@@ -6,6 +6,8 @@
 #include <sstream>
 #include <string>
 
+#include "core/log.h"
+
 struct DoublePoint
 {
     double position[3];
@@ -164,6 +166,39 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         }
     }
 
+
+    return true;
+}
+
+bool PointCloud::ExportPly(const std::string& plyFilename) const
+{
+    std::ofstream plyFile(plyFilename, std::ios::binary);
+    if (!plyFile.is_open())
+    {
+        Log::printf("failed to open %s\n", plyFilename.c_str());
+        return false;
+    }
+
+    // ply files have unix line endings.
+    plyFile << "ply\n";
+    plyFile << "format binary_little_endian 1.0\n";
+    plyFile << "element vertex " << pointVec.size() << "\n";
+    plyFile << "property float x\n";
+    plyFile << "property float y\n";
+    plyFile << "property float z\n";
+    plyFile << "property float nx\n";
+    plyFile << "property float ny\n";
+    plyFile << "property float nz\n";
+    plyFile << "property uchar red\n";
+    plyFile << "property uchar green\n";
+    plyFile << "property uchar blue\n";
+    plyFile << "end_header\n";
+
+    const size_t POINT_SIZE = 27;
+    for (auto&& p : pointVec)
+    {
+        plyFile.write((char*)&p, POINT_SIZE);
+    }
 
     return true;
 }

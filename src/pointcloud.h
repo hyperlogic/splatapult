@@ -10,6 +10,7 @@ public:
     PointCloud();
 
     bool ImportPly(const std::string& plyFilename);
+    bool ExportPly(const std::string& plyFilename) const;
 
     struct Point
     {

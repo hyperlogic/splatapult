@@ -154,7 +154,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
 bool GaussianCloud::ExportPly(const std::string& plyFilename) const
 {
-    std::ofstream plyFile(GetRootPath() + plyFilename, std::ios::binary);
+    std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
         Log::printf("failed to open %s\n", plyFilename.c_str());

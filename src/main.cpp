@@ -147,7 +147,7 @@ std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
     //
     std::vector<PointCloud::Point>& pointVec = pointCloud->GetPointVec();
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_POINTS = 10;
+    const int NUM_POINTS = 5;
     const float DELTA = (AXIS_LENGTH / (float)NUM_POINTS);
     pointVec.resize(NUM_POINTS * 3);
     // x axis
@@ -182,15 +182,6 @@ std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
         p.color[0] = 0;
         p.color[1] = 0;
         p.color[2] = 255;
-    }
-
-    // AJT: move splats by offset.
-    glm::vec3 offset(0.0f, 0.0f, -5.0f);
-    for (auto&& p : pointVec)
-    {
-        p.position[0] += offset.x;
-        p.position[1] += offset.y;
-        p.position[2] += offset.z;
     }
     */
 
@@ -278,17 +269,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
-    */
-
-    /*
-    // AJT: move splats by offset.
-    glm::vec3 offset(0.0f, 0.0f, -5.0f);
-    for (auto&& g : gaussianVec)
-    {
-        g.position[0] += offset.x;
-        g.position[1] += offset.y;
-        g.position[2] += offset.z;
-    }
     */
 
     return gaussianCloud;
@@ -419,6 +399,19 @@ int main(int argc, char *argv[])
     }
 
     auto gaussianCloud = LoadGaussianCloud(dataDir);
+    if (!gaussianCloud)
+    {
+        Log::printf("Error loading GaussianCloud\n");
+        return 1;
+    }
+
+    /*
+    if (dataDir == "../../data/sh_test/")
+    {
+        pointCloud->ExportPly(dataDir + "input.ply");
+        gaussianCloud->ExportPly(dataDir + "point_cloud/iteration_30000/point_cloud.ply");
+    }
+    */
 
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;

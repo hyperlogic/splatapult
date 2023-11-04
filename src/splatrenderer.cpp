@@ -152,14 +152,22 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
         sh6Vec.emplace_back(glm::vec4(g.f_rest[21], g.f_rest[22], g.f_rest[23], 0.0f));
         */
         sh0Vec.emplace_back(glm::vec3(g.f_dc[0], g.f_dc[1], g.f_dc[2]));
+
         /*
         sh1Vec.emplace_back(glm::vec3(g.f_rest[0], g.f_rest[1], g.f_rest[2]));
         sh2Vec.emplace_back(glm::vec3(g.f_rest[3], g.f_rest[4], g.f_rest[5]));
         sh3Vec.emplace_back(glm::vec3(g.f_rest[6], g.f_rest[7], g.f_rest[8]));
         */
+
+        /*
         sh1Vec.emplace_back(glm::vec3(g.f_rest[0], g.f_rest[3], g.f_rest[6]));
         sh2Vec.emplace_back(glm::vec3(g.f_rest[1], g.f_rest[4], g.f_rest[7]));
         sh3Vec.emplace_back(glm::vec3(g.f_rest[2], g.f_rest[5], g.f_rest[8]));
+        */
+
+        sh1Vec.emplace_back(glm::vec3(g.f_rest[0], g.f_rest[15], g.f_rest[30]));
+        sh2Vec.emplace_back(glm::vec3(g.f_rest[1], g.f_rest[16], g.f_rest[31]));
+        sh3Vec.emplace_back(glm::vec3(g.f_rest[2], g.f_rest[17], g.f_rest[32]));
 
         glm::mat3 V = g.ComputeCovMat();
         cov3_col0Vec.push_back(V[0]);
