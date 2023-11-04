@@ -37,7 +37,7 @@ void main()
     mat2 cov2Dinv = inverseMat2(cov2D);
     vec4 cov2Dinv4 = vec4(cov2Dinv[0], cov2Dinv[1]); // cram it into a vec4
 
-    float FUDGE = 1.0f;  // I bet there's an optimal value for this...
+    float FUDGE = 1.25f;  // I bet there's an optimal value for this...
     vec2 uv, offset;
 
     //

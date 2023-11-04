@@ -147,8 +147,8 @@ void main(void)
 
     // use the fact that the convolution of a gaussian with another gaussian is the sum
     // of their covariance matrices to apply a low-pass filter to anti-alias the splats
-    cov2D[0] += vec2(1.0f, 1.0f);
-    cov2D[1] += vec2(1.0f, 1.0f);
+    cov2D[0][0] += 1.0f;
+    cov2D[1][1] += 1.0f;
     geom_cov2 = vec4(cov2D[0], cov2D[1]); // cram it into a vec4
 
     // geom_p is the gaussian center transformed into screen space
