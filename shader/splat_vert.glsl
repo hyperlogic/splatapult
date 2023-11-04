@@ -13,21 +13,22 @@ uniform vec3 eye;
 
 in vec4 position;  // center of the gaussian in object coordinates, (with alpha crammed in to w)
 
-// AJT: FUCK efficientcy just get it working
-in vec3 sh0;
-in vec3 sh1;
-in vec3 sh2;
-in vec3 sh3;
-/*
-in vec4 sh0;  // spherical harmonics coeff for radiance of the splat
-in vec4 sh1;
-in vec4 sh2;
-in vec4 sh3;
-in vec4 sh4;
-in vec4 sh5;
-in vec4 sh6;
-*/
-in vec3 cov3_col0;  // 3x3 covariance matrix of the splat in object coordinates.
+// spherical harmonics coeff for radiance of the splat
+in vec4 r_sh0;  // sh coeff for red channel (up to third-order)
+in vec4 r_sh1;
+in vec4 r_sh2;
+in vec4 r_sh3;
+in vec4 g_sh0;  // sh coeff for green channel
+in vec4 g_sh1;
+in vec4 g_sh2;
+in vec4 g_sh3;
+in vec4 b_sh0;  // sh coeff for blue channel
+in vec4 b_sh1;
+in vec4 b_sh2;
+in vec4 b_sh3;
+
+// 3x3 covariance matrix of the splat in object coordinates.
+in vec3 cov3_col0;
 in vec3 cov3_col1;
 in vec3 cov3_col2;
 
@@ -35,46 +36,73 @@ out vec4 geom_color;  // radiance of splat
 out vec4 geom_cov2;  // 2D screen space covariance matrix of the gaussian
 out vec2 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
 
-
-// from Efficient Spherical Harmonic Evaluation, Peter-Pike Sloan (2013)
 vec3 ComputeRadianceFromSH(const vec3 v)
 {
-    float pSH[9];
-    float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
+    float b[16];
+
+    float vx2 = v.x * v.x;
+    float vy2 = v.y * v.y;
     float vz2 = v.z * v.z;
-    pSH[0] = 0.2820947917738781f;
-    pSH[2] = 0.4886025119029199f * v.z;
-    pSH[6] = 0.9461746957575601f * vz2 + -0.3153915652525201f;
-    fC0 = v.x;
-    fS0 = v.y;
-    fTmpA = -0.48860251190292f;
-    pSH[3] = fTmpA * fC0;
-    pSH[1] = fTmpA * fS0;
-    fTmpB = -1.092548430592079f * v.z;
-    pSH[7] = fTmpB * fC0;
-    pSH[5] = fTmpB * fS0;
-    fC1 = v.x * fC0 - v.y * fS0;
-    fS1 = v.x * fS0 + v.y * fC0;
-    fTmpC = 0.5462742152960395f;
-    pSH[8] = fTmpC * fC1;
-    pSH[4] = fTmpC * fS1;
 
-    /*
-    return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh0.w + pSH[2] * sh1.z + pSH[3] * sh2.y + pSH[4] * sh3.x + pSH[5] * sh3.w + pSH[6] * sh4.z + pSH[7] * sh5.y + pSH[8] * sh6.x,
-                0.5f + pSH[0] * sh0.y + pSH[1] * sh1.x + pSH[2] * sh1.w + pSH[3] * sh2.z + pSH[4] * sh3.y + pSH[5] * sh4.x + pSH[6] * sh4.w + pSH[7] * sh5.z + pSH[8] * sh6.y,
-                0.5f + pSH[0] * sh0.z + pSH[1] * sh1.y + pSH[2] * sh2.x + pSH[3] * sh2.w + pSH[4] * sh3.z + pSH[5] * sh4.y + pSH[6] * sh5.x + pSH[7] * sh5.w + pSH[8] * sh6.z);
-    */
-    float SH0 = 0.2820947917738781f;
-    float SH1 = 0.48860251190292f;
-    return vec3(0.5f + (SH0 * sh0.x) + (-SH1 * v.y * sh1.x) + (SH1 * v.z * sh2.x) + (-SH1 * v.x * sh3.x),
-                0.5f + (SH0 * sh0.y) + (-SH1 * v.y * sh1.y) + (SH1 * v.z * sh2.y) + (-SH1 * v.x * sh3.y),
-                0.5f + (SH0 * sh0.z) + (-SH1 * v.y * sh1.z) + (SH1 * v.z * sh2.z) + (-SH1 * v.x * sh3.z));
+    // zeroth order
+    // (/ 1.0 (* 2.0 (sqrt pi)))
+    b[0] = 0.28209479177387814f;
 
-    /*
-    return vec3(0.5f + pSH[0] * sh0.x + pSH[1] * sh1.x + pSH[2] * sh2.x + pSH[3] * sh3.x,
-                0.5f + pSH[0] * sh0.y + pSH[1] * sh1.y + pSH[2] * sh2.y + pSH[3] * sh3.y,
-                0.5f + pSH[0] * sh0.z + pSH[1] * sh1.z + pSH[2] * sh2.z + pSH[3] * sh3.z);
-    */
+    // first order
+    // (/ (sqrt 3.0) (* 2 (sqrt pi)))
+    float k1 = 0.4886025119029199f;
+    b[1] = -k1 * v.y;
+    b[2] = k1 * v.z;
+    b[3] = -k1 * v.x;
+
+    // second order
+    // (/ (sqrt 15.0) (* 2 (sqrt pi)))
+    float k2 = 1.0925484305920792f;
+    // (/ (sqrt 5.0) (* 4 (sqrt  pi)))
+    float k3 = 0.31539156525252005f;
+    // (/ (sqrt 15.0) (* 4 (sqrt pi)))
+    float k4 = 0.5462742152960396f;
+    b[4] = k2 * v.y * v.x;
+    b[5] = -k2 * v.y * v.z;
+    b[6] = k3 * (3.0f * vz2 - 1.0f);
+    b[7] = -k2 * v.x * v.z;
+    b[8] = k4 * (vx2 - vy2);
+
+    // third order
+    // (/ (* (sqrt 2) (sqrt 35)) (* 8 (sqrt pi)))
+    float k5 = 0.5900435899266435f;
+    // (/ (sqrt 105) (* 2 (sqrt pi)))
+    float k6 = 2.8906114426405543f;
+    // (/ (* (sqrt 2) (sqrt 21)) (* 8 (sqrt pi)))
+    float k7 = 0.4570457994644658f;
+    // (/ (sqrt 7) (* 4 (sqrt pi)))
+    float k8 = 0.37317633259011546f;
+    // (/ (sqrt 105) (* 4 (sqrt pi)))
+    float k9 = 1.4453057213202771f;
+    b[9] = -k5 * v.y * (3.0f * vx2 - vy2);
+    b[10] = k6 * v.y * v.x * v.z;
+    b[11] = -k7 * v.y * (5.0f * vz2 - 1.0f);
+    b[12] = k8 * v.z * (5.0f * vz2 - 3.0f);
+    b[13] = -k7 * v.x * (5.0f * vz2 - 1.0f);
+    b[14] = k9 * v.z * (vx2 - vy2);
+    b[15] = -k5 * v.x * (vx2 - 3.0f * vy2);
+
+    float re = (b[0] * r_sh0.x + b[1] * r_sh0.y + b[2] * r_sh0.z + b[3] * r_sh0.w +
+                b[4] * r_sh1.x + b[5] * r_sh1.y + b[6] * r_sh1.z + b[7] * r_sh1.w +
+                b[8] * r_sh2.x + b[9] * r_sh2.y + b[10]* r_sh2.z + b[11]* r_sh2.w +
+                b[12]* r_sh3.x + b[13]* r_sh3.y + b[14]* r_sh3.z + b[15]* r_sh3.w);
+
+    float gr = (b[0] * g_sh0.x + b[1] * g_sh0.y + b[2] * g_sh0.z + b[3] * g_sh0.w +
+                b[4] * g_sh1.x + b[5] * g_sh1.y + b[6] * g_sh1.z + b[7] * g_sh1.w +
+                b[8] * g_sh2.x + b[9] * g_sh2.y + b[10]* g_sh2.z + b[11]* g_sh2.w +
+                b[12]* g_sh3.x + b[13]* g_sh3.y + b[14]* g_sh3.z + b[15]* g_sh3.w);
+
+    float bl = (b[0] * b_sh0.x + b[1] * b_sh0.y + b[2] * b_sh0.z + b[3] * b_sh0.w +
+                b[4] * b_sh1.x + b[5] * b_sh1.y + b[6] * b_sh1.z + b[7] * b_sh1.w +
+                b[8] * b_sh2.x + b[9] * b_sh2.y + b[10]* b_sh2.z + b[11]* b_sh2.w +
+                b[12]* b_sh3.x + b[13]* b_sh3.y + b[14]* b_sh3.z + b[15]* b_sh3.w);
+
+    return vec3(0.5f, 0.5f, 0.5f) + vec3(re, gr, bl);
 }
 
 void main(void)

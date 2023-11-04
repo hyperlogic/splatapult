@@ -651,12 +651,6 @@ int main(int argc, char *argv[])
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
             SDL_GL_SwapWindow(window);
-
-            // cycle camera mat
-            /*
-              cameraIndex = (cameraIndex + 1) % cameras->GetCameraVec().size();
-              flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-            */
         }
 
         DebugDraw_Clear();
