@@ -937,8 +937,9 @@ inline static void CreateProjection(float* m, GraphicsAPI graphicsApi, const flo
     }
 }
 
-XrBuddy::XrBuddy()
+XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
 {
+    nearFar = nearFarIn;
     std::vector<const char*> requiredExtensionVec = {XR_KHR_OPENGL_ENABLE_EXTENSION_NAME};
     std::vector<const char*> optionalExtensionVec = {XR_FB_COLOR_SPACE_EXTENSION_NAME};
     std::vector<const char*> extensionVec;
@@ -1742,11 +1743,9 @@ void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView, uint
     const float tanRight = tanf(layerView.fov.angleRight);
     const float tanDown = tanf(layerView.fov.angleDown);
     const float tanUp = tanf(layerView.fov.angleUp);
-    const float nearZ = 0.1f;
-    const float farZ = 100.0f;
 
     glm::mat4 projMat;
-    CreateProjection(glm::value_ptr(projMat), GRAPHICS_OPENGL, tanLeft, tanRight, tanUp, tanDown, nearZ, farZ);
+    CreateProjection(glm::value_ptr(projMat), GRAPHICS_OPENGL, tanLeft, tanRight, tanUp, tanDown, nearFar.x, nearFar.y);
 
     const auto& pose = layerView.pose;
     glm::quat eyeRot(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
@@ -1754,7 +1753,7 @@ void XrBuddy::RenderView(const XrCompositionLayerProjectionView& layerView, uint
     glm::mat4 eyeMat = MakeMat4(eyeRot, eyePos);
     glm::vec4 viewport(layerView.subImage.imageRect.offset.x, layerView.subImage.imageRect.offset.y,
                        layerView.subImage.imageRect.extent.width, layerView.subImage.imageRect.extent.height);
-    renderCallback(projMat, eyeMat, viewport, glm::vec2(nearZ, farZ), viewNum);
+    renderCallback(projMat, eyeMat, viewport, nearFar, viewNum);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

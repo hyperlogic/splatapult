@@ -41,7 +41,7 @@ static SDL_GLContext gl_context;
 static SDL_Renderer *renderer = NULL;
 
 const float Z_NEAR = 0.1f;
-const float Z_FAR = 1000.0f;
+const float Z_FAR = 100.0f;
 const float FOVY = glm::radians(45.0f);
 
 static bool vrMode = false;
@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<XrBuddy> xrBuddy;
     if (vrMode)
     {
-        xrBuddy = std::make_shared<XrBuddy>();
+        xrBuddy = std::make_shared<XrBuddy>(glm::vec2(Z_NEAR, Z_FAR));
         if (!xrBuddy->Init())
         {
             Log::printf("OpenXR Init failed\n");

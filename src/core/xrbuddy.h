@@ -25,7 +25,7 @@
 class XrBuddy
 {
 public:
-    XrBuddy();
+    XrBuddy(const glm::vec2& nearFarIn);
 
     bool Init();
     bool PollEvents();
@@ -119,6 +119,7 @@ protected:
     bool sessionReady = false;
 
     RenderCallback renderCallback;
+    glm::vec2 nearFar;
 };
 
 #endif XR_BUDDY
