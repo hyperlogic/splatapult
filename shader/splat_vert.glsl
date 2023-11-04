@@ -163,14 +163,4 @@ void main(void)
 
     // gl_Position is in clip coordinates.
     gl_Position = p4;
-
-    // discard splats that end up outside of a guard band
-    vec3 ndcP = p4.xyz / p4.w;
-    if (ndcP.z < 0.25f ||
-        ndcP.x > 2.0f || ndcP.x < -2.0f ||
-        ndcP.y > 2.0f || ndcP.y < -2.0f)
-    {
-        // discard this point
-        gl_Position = vec4(0.0f, 0.0f, -2.0f, 1.0f); // Place vertex behind the camera
-    }
 }

@@ -40,6 +40,17 @@ void main()
     float FUDGE = 1.25f;  // I bet there's an optimal value for this...
     vec2 uv, offset;
 
+    // discard splats that end up outside of a guard band
+    vec4 p4 = gl_in[0].gl_Position;
+    vec3 ndcP = p4.xyz / p4.w;
+    if (ndcP.z < 0.25f ||
+        ndcP.x > 2.0f || ndcP.x < -2.0f ||
+        ndcP.y > 2.0f || ndcP.y < -2.0f)
+    {
+        // discard this point
+        return;
+    }
+
     //
 	// bottom-left vertex
     //
