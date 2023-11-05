@@ -15,17 +15,23 @@ in vec4 position;  // center of the gaussian in object coordinates, (with alpha 
 
 // spherical harmonics coeff for radiance of the splat
 in vec4 r_sh0;  // sh coeff for red channel (up to third-order)
+#ifdef FULL_SH
 in vec4 r_sh1;
 in vec4 r_sh2;
 in vec4 r_sh3;
+#endif
 in vec4 g_sh0;  // sh coeff for green channel
+#ifdef FULL_SH
 in vec4 g_sh1;
 in vec4 g_sh2;
 in vec4 g_sh3;
+#endif
 in vec4 b_sh0;  // sh coeff for blue channel
+#ifdef FULL_SH
 in vec4 b_sh1;
 in vec4 b_sh2;
 in vec4 b_sh3;
+#endif
 
 // 3x3 covariance matrix of the splat in object coordinates.
 in vec3 cov3_col0;
@@ -38,7 +44,11 @@ out vec2 geom_p;  // the 2D screen space center of the gaussian, (z is alpha)
 
 vec3 ComputeRadianceFromSH(const vec3 v)
 {
+#ifdef FULL_SH
     float b[16];
+#else
+    float b[4];
+#endif
 
     float vx2 = v.x * v.x;
     float vy2 = v.y * v.y;
@@ -55,6 +65,7 @@ vec3 ComputeRadianceFromSH(const vec3 v)
     b[2] = k1 * v.z;
     b[3] = -k1 * v.x;
 
+#ifdef FULL_SH
     // second order
     // (/ (sqrt 15.0) (* 2 (sqrt pi)))
     float k2 = 1.0925484305920792f;
@@ -101,7 +112,11 @@ vec3 ComputeRadianceFromSH(const vec3 v)
                 b[4] * b_sh1.x + b[5] * b_sh1.y + b[6] * b_sh1.z + b[7] * b_sh1.w +
                 b[8] * b_sh2.x + b[9] * b_sh2.y + b[10]* b_sh2.z + b[11]* b_sh2.w +
                 b[12]* b_sh3.x + b[13]* b_sh3.y + b[14]* b_sh3.z + b[15]* b_sh3.w);
-
+#else
+    float re = (b[0] * r_sh0.x + b[1] * r_sh0.y + b[2] * r_sh0.z + b[3] * r_sh0.w);
+    float gr = (b[0] * g_sh0.x + b[1] * g_sh0.y + b[2] * g_sh0.z + b[3] * g_sh0.w);
+    float bl = (b[0] * b_sh0.x + b[1] * b_sh0.y + b[2] * b_sh0.z + b[3] * b_sh0.w);
+#endif
     return vec3(0.5f, 0.5f, 0.5f) + vec3(re, gr, bl);
 }
 
