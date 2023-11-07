@@ -36,7 +36,7 @@ void main()
 	float cosTheta = depth / len;
 
 	// TODO: cull against actual frustum. (cos (ajt-deg-to-rad 30))
-	if (cosTheta > 0.8660254037844387f)
+	if (depth > 0.0f && cosTheta > 0.8660254037844387f)
 	{
 		uint count = atomicCounterIncrement(output_count);
 		uint fixedPointZ = 0xffffffff - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
