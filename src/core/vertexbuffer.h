@@ -16,7 +16,7 @@ public:
 	BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic = false);
 	BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic = false);
 	BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic = false);
-	BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic = false);
+	BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic = false, bool mapRead = false);
 	BufferObject(const BufferObject& orig) = delete;
     ~BufferObject();
 
@@ -28,6 +28,8 @@ public:
 	void Update(const std::vector<glm::vec3>& data);
 	void Update(const std::vector<glm::vec4>& data);
 	void Update(const std::vector<uint32_t>& data);
+
+	void Read(std::vector<uint32_t>& data);
 
 	uint32_t GetObj() const { return obj; }
 

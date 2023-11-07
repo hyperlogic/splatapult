@@ -7,6 +7,7 @@
 #include "core/image.h"
 #include "core/log.h"
 #include "core/texture.h"
+#include "core/util.h"
 
 #include "radix_sort.hpp"
 
@@ -20,6 +21,8 @@ SplatRenderer::~SplatRenderer()
 
 bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
 {
+    GL_ERROR_CHECK("SplatRenderer::Init() begin");
+
     splatProg = std::make_shared<Program>();
     if (!splatProg->LoadVertGeomFrag("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
@@ -42,15 +45,24 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
 
     sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
 
+    atomicCounterVec.resize(1, 0);
+    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, true, true);
+
+    GL_ERROR_CHECK("SplatRenderer::Init() end");
+
     return true;
 }
 
 void SplatRenderer::Sort(const glm::mat4& cameraMat)
 {
+    ZoneScoped;
+
+    GL_ERROR_CHECK("SplatRenderer::Sort() begin");
+
     const size_t numPoints = posVec.size();
 
     {
-        ZoneScopedNC("depth compute", tracy::Color::Red4);
+        ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
         // transform forward vector into world space
         glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -60,27 +72,49 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat)
         preSortProg->SetUniform("forward", forward);
         preSortProg->SetUniform("eye", eye);
 
+        // reset counter back to zero
+        atomicCounterVec[0] = 0;
+        atomicCounterBuffer->Update(atomicCounterVec);
+
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, posBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
+        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, atomicCounterBuffer->GetObj());
 
         const int LOCAL_SIZE = 256;
         glDispatchCompute(((GLuint)numPoints + (LOCAL_SIZE - 1)) / LOCAL_SIZE, 1, 1); // Assuming LOCAL_SIZE threads per group
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+        GL_ERROR_CHECK("SplatRenderer::Sort() pre-sort");
+    }
+
+    {
+        ZoneScopedNC("get-count", tracy::Color::Green);
+
+        atomicCounterBuffer->Read(atomicCounterVec);
+        sortCount = atomicCounterVec[0];
+
+        assert(sortCount <= (uint32_t)numPoints);
+
+        GL_ERROR_CHECK("SplatRenderer::Render() get-count");
     }
 
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), numPoints);
+        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), sortCount);
+
+        GL_ERROR_CHECK("SplatRenderer::Sort() sort");
     }
 
     {
-        ZoneScopedNC("copy sorted indices", tracy::Color::DarkGreen);
+        ZoneScopedNC("copy-sorted", tracy::Color::DarkGreen);
 
         glBindBuffer(GL_COPY_READ_BUFFER, valBuffer->GetObj());
         glBindBuffer(GL_COPY_WRITE_BUFFER, splatVao->GetElementBuffer()->GetObj());
-        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
+        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sortCount * sizeof(uint32_t));
+
+        GL_ERROR_CHECK("SplatRenderer::Sort() copy-sorted");
     }
 }
 
@@ -88,6 +122,8 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
                            const glm::vec4& viewport, const glm::vec2& nearFar)
 {
     ZoneScoped;
+
+    GL_ERROR_CHECK("SplatRenderer::Render() begin");
 
     {
         ZoneScopedNC("draw", tracy::Color::Red4);
@@ -104,7 +140,11 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         splatProg->SetUniform("projParams", glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f));
         splatProg->SetUniform("eye", eye);
 
-        splatVao->DrawElements(GL_POINTS);
+        splatVao->Bind();
+        glDrawElements(GL_POINTS, sortCount, GL_UNSIGNED_INT, nullptr);
+        splatVao->Unbind();
+
+        GL_ERROR_CHECK("SplatRenderer::Render() draw");
     }
 }
 

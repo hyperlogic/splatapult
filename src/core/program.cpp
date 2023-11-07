@@ -363,16 +363,35 @@ void Program::Delete()
 {
     debugName = "";
 
-    glDeleteShader(vertShader);
-    vertShader = 0;
-    glDeleteShader(geomShader);
-    geomShader = 0;
-    glDeleteShader(fragShader);
-    fragShader = 0;
-    glDeleteShader(computeShader);
-    computeShader = 0;
-    glDeleteProgram(program);
-    program = 0;
+    if (vertShader > 0)
+    {
+        glDeleteShader(vertShader);
+        vertShader = 0;
+    }
+
+    if (geomShader > 0)
+    {
+        glDeleteShader(geomShader);
+        geomShader = 0;
+    }
+
+    if (fragShader > 0)
+    {
+        glDeleteShader(fragShader);
+        fragShader = 0;
+    }
+
+    if (computeShader > 0)
+    {
+        glDeleteShader(computeShader);
+        computeShader = 0;
+    }
+
+    if (program > 0)
+    {
+        glDeleteProgram(program);
+        program = 0;
+    }
 
     uniforms.clear();
     attribs.clear();

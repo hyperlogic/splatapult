@@ -7,6 +7,7 @@
 #include "core/image.h"
 #include "core/log.h"
 #include "core/texture.h"
+#include "core/util.h"
 
 #include "radix_sort.hpp"
 
@@ -20,6 +21,8 @@ PointRenderer::~PointRenderer()
 
 bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
 {
+    GL_ERROR_CHECK("PointRenderer::Init() begin");
+
     Image pointImg;
     if (!pointImg.Load("texture/sphere.png"))
     {
@@ -29,6 +32,7 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
 
     Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
     pointTex = std::make_shared<Texture>(pointImg, texParams);
+
     pointProg = std::make_shared<Program>();
     if (!pointProg->LoadVertGeomFrag("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
     {
@@ -44,11 +48,17 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
     }
 
     BuildVertexArrayObject(pointCloud);
+
     depthVec.resize(pointCloud->size());
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, true);
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
     sorter = std::make_shared<rgc::radix_sort::sorter>(pointCloud->size());
+
+    atomicCounterVec.resize(1, 0);
+    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, true, true);
+
+    GL_ERROR_CHECK("PointRenderer::Init() end");
 
     return true;
 }
@@ -58,10 +68,12 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
 {
     ZoneScoped;
 
+    GL_ERROR_CHECK("PointRenderer::Render() begin");
+
     const size_t numPoints = posVec.size();
 
     {
-        ZoneScopedNC("depth compute", tracy::Color::Red4);
+        ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
         // transform forward vector into world space
         glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -71,31 +83,55 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         preSortProg->SetUniform("forward", forward);
         preSortProg->SetUniform("eye", eye);
 
+        // reset counter back to 0
+        atomicCounterVec[0] = 0;
+        atomicCounterBuffer->Update(atomicCounterVec);
+
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, posBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
+        glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 4, atomicCounterBuffer->GetObj());
 
         const int LOCAL_SIZE = 256;
         glDispatchCompute(((GLuint)numPoints + (LOCAL_SIZE - 1)) / LOCAL_SIZE, 1, 1); // Assuming LOCAL_SIZE threads per group
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
+
+        GL_ERROR_CHECK("PointRenderer::Render() pre-sort");
+    }
+
+    uint32_t sortCount = 0;
+    {
+        ZoneScopedNC("get-count", tracy::Color::Green);
+
+        atomicCounterBuffer->Read(atomicCounterVec);
+        sortCount = atomicCounterVec[0];
+
+        assert(sortCount <= (uint32_t)numPoints);
+
+        GL_ERROR_CHECK("PointRenderer::Render() get-count");
     }
 
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), numPoints);
+        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), sortCount);
+
+        GL_ERROR_CHECK("PointRenderer::Render() sort");
     }
 
     {
-        ZoneScopedNC("copy sorted indices", tracy::Color::DarkGreen);
+        ZoneScopedNC("copy-sorted", tracy::Color::DarkGreen);
 
         glBindBuffer(GL_COPY_READ_BUFFER, valBuffer->GetObj());
         glBindBuffer(GL_COPY_WRITE_BUFFER, pointVao->GetElementBuffer()->GetObj());
-        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numPoints * sizeof(uint32_t));
+        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sortCount * sizeof(uint32_t));
+
+        GL_ERROR_CHECK("PointRenderer::Render() copy-sorted");
     }
 
     {
         ZoneScopedNC("draw", tracy::Color::Red4);
+
         float width = viewport.z;
         float height = viewport.w;
         float aspectRatio = width / height;
@@ -111,7 +147,12 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, pointTex->texture);
         pointProg->SetUniform("colorTex", 0);
-        pointVao->DrawElements(GL_POINTS);
+
+        pointVao->Bind();
+        glDrawElements(GL_POINTS, sortCount, GL_UNSIGNED_INT, nullptr);
+        pointVao->Unbind();
+
+        GL_ERROR_CHECK("PointRenderer::Render() draw");
     }
 }
 

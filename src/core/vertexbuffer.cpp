@@ -10,8 +10,6 @@
 
 BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool isDynamic)
 {
-	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -23,8 +21,6 @@ BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool is
 
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic)
 {
-	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -36,8 +32,6 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, boo
 
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic)
 {
-	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -49,8 +43,6 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, boo
 
 BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic)
 {
-	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
@@ -60,14 +52,21 @@ BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, boo
 	numElements = (int)data.size();
 }
 
-BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic)
+BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic, bool mapRead)
 {
-	// limit the types for safety... these are the only one I actually use.
-	assert(targetIn == GL_ARRAY_BUFFER || targetIn == GL_ELEMENT_ARRAY_BUFFER || targetIn == GL_SHADER_STORAGE_BUFFER);
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+	uint32_t flags = 0;
+	if (isDynamic)
+	{
+		flags |= GL_DYNAMIC_STORAGE_BIT;
+	}
+	if (mapRead)
+	{
+		flags |= GL_MAP_READ_BIT;
+	}
+    glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
@@ -123,6 +122,17 @@ void BufferObject::Update(const std::vector<uint32_t>& data)
 	Unbind();
 }
 
+void BufferObject::Read(std::vector<uint32_t>& data)
+{
+	Bind();
+	void* rawBuffer = glMapBuffer(target, GL_READ_ONLY);
+	if (rawBuffer)
+	{
+		memcpy((void*)data.data(), rawBuffer, sizeof(uint32_t) * data.size());
+	}
+	glUnmapBuffer(target);
+	Unbind();
+}
 
 VertexArrayObject::VertexArrayObject()
 {
@@ -159,8 +169,7 @@ void VertexArrayObject::SetAttribBuffer(int loc, std::shared_ptr<BufferObject> a
 
 void VertexArrayObject::SetElementBuffer(std::shared_ptr<BufferObject> elementBufferIn)
 {
-	//AJT: DISABLED
-	//assert(elementBufferIn->target == GL_ELEMENT_ARRAY_BUFFER);
+	assert(elementBufferIn->target == GL_ELEMENT_ARRAY_BUFFER);
 	elementBuffer = elementBufferIn;
 
 	Bind();

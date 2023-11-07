@@ -39,10 +39,12 @@ protected:
     std::vector<uint32_t> indexVec;
     std::vector<uint32_t> depthVec;
     std::vector<glm::vec4> posVec;
+    std::vector<uint32_t> atomicCounterVec;
 
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> valBuffer;
     std::shared_ptr<BufferObject> posBuffer;
+    std::shared_ptr<BufferObject> atomicCounterBuffer;
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
 };
