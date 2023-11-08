@@ -30,6 +30,7 @@ void main()
 		return;
 	}
 
+	// NOTE: alpha is encoded into the w component of the positions
 	vec4 p = modelViewProj * vec4(positions[idx].xyz, 1.0f);
 	float depth = p.w;
 	float xx = p.x / depth;
