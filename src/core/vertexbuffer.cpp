@@ -8,64 +8,55 @@
 
 #include "util.h"
 
-BufferObject::BufferObject(int targetIn, const std::vector<float>& data, bool isDynamic)
+BufferObject::BufferObject(int targetIn, const std::vector<float>& data, unsigned int flags)
 {
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+    glBufferStorage(target, sizeof(float) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 1;
 	numElements = (int)data.size();
 }
 
-BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, bool isDynamic)
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec2>& data, unsigned int flags)
 {
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+    glBufferStorage(target, sizeof(glm::vec2) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 2;
 	numElements = (int)data.size();
 }
 
-BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, bool isDynamic)
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec3>& data, unsigned int flags)
 {
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+    glBufferStorage(target, sizeof(glm::vec3) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 3;
 	numElements = (int)data.size();
 }
 
-BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, bool isDynamic)
+BufferObject::BufferObject(int targetIn, const std::vector<glm::vec4>& data, unsigned int flags)
 {
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), isDynamic ? GL_DYNAMIC_STORAGE_BIT : 0);
+    glBufferStorage(target, sizeof(glm::vec4) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 4;
 	numElements = (int)data.size();
 }
 
-BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, bool isDynamic, bool mapRead)
+BufferObject::BufferObject(int targetIn, const std::vector<uint32_t>& data, unsigned int flags)
 {
 	target = targetIn;
     glGenBuffers(1, &obj);
 	Bind();
-	uint32_t flags = 0;
-	if (isDynamic)
-	{
-		flags |= GL_DYNAMIC_STORAGE_BIT;
-	}
-	if (mapRead)
-	{
-		flags |= GL_MAP_READ_BIT;
-	}
     glBufferStorage(target, sizeof(uint32_t) * data.size(), (void*)data.data(), flags);
 	Unbind();
 	elementSize = 1;

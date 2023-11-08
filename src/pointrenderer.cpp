@@ -50,13 +50,13 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud)
     BuildVertexArrayObject(pointCloud);
 
     depthVec.resize(pointCloud->size());
-    keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, true);
-    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
+    keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
     sorter = std::make_shared<rgc::radix_sort::sorter>(pointCloud->size());
 
     atomicCounterVec.resize(1, 0);
-    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, true, true);
+    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
 
     GL_ERROR_CHECK("PointRenderer::Init() end");
 
@@ -181,7 +181,7 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     {
         indexVec.push_back(i);
     }
-    auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true); // dynamic
+    auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
 
     // setup vertex array object with buffers
     pointVao->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionBuffer);

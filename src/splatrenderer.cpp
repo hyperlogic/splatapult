@@ -39,14 +39,14 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
 
     BuildVertexArrayObject(gaussianCloud);
     depthVec.resize(gaussianCloud->size());
-    keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, true);
-    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, true);
+    keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
 
     sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
 
     atomicCounterVec.resize(1, 0);
-    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, true, true);
+    atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
 
     GL_ERROR_CHECK("SplatRenderer::Init() end");
 
@@ -244,7 +244,7 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
     {
         indexVec.push_back(i);
     }
-    auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, true); // dynamic
+    auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
 
     // setup vertex array object with buffers
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("position"), positionBuffer);
