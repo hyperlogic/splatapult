@@ -699,12 +699,7 @@ int main(int argc, char *argv[])
             glm::mat4 cameraMat = flyCam.GetCameraMat();
             glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
             glm::vec2 nearFar(Z_NEAR, Z_FAR);
-            //glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
-            glm::mat4 projMat;
-            const float aspect = (float)width / (float)height;
-            const float tw = tanf(aspect * FOVY / 2.0f);
-            const float th = tanf(FOVY / 2.0f);
-            CreateProjection(glm::value_ptr(projMat), GRAPHICS_OPENGL, -tw, tw, th, -th, Z_NEAR, Z_FAR);
+            glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
             if (drawPointCloud)
             {

@@ -80,7 +80,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
         const int LOCAL_SIZE = 256;
         glDispatchCompute(((GLuint)numPoints + (LOCAL_SIZE - 1)) / LOCAL_SIZE, 1, 1); // Assuming LOCAL_SIZE threads per group
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 
         GL_ERROR_CHECK("SplatRenderer::Sort() pre-sort");
     }
