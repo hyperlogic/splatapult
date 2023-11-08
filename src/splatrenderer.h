@@ -25,7 +25,8 @@ public:
 
     bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
 
-    void Sort(const glm::mat4& cameraMat);
+    void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
+              const glm::vec4& viewport, const glm::vec2& nearFar);
 
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,

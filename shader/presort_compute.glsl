@@ -2,8 +2,8 @@
 
 layout(local_size_x = 256) in;
 
-uniform vec3 forward;
-uniform vec3 eye;
+uniform mat4 modelViewProj;
+
 layout(binding = 4, offset = 0) uniform atomic_uint output_count;
 
 layout(std430, binding = 0) readonly buffer PosBuffer
@@ -30,6 +30,26 @@ void main()
 		return;
 	}
 
+	vec4 p = modelViewProj * positions[idx];
+	float depth = p.w;
+	float xx = p.x / depth;
+	float yy = p.y / depth;
+	float zz = p.z / depth;
+
+	if (depth > 0.0f && xx < 1.0f && xx > -1.0f && yy < 1.0f && yy > -1.0f)
+	{
+		uint count = atomicCounterIncrement(output_count);
+		// 16.16 fixed point
+
+		// convert -1, 1 range to 0, 1
+		//float d = ((0.5f * zz) + 0.5f);
+
+		uint fixedPointZ = 0xffffffff - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
+		quantizedZs[count] = fixedPointZ;
+		indices[count] = idx;
+	}
+
+	/*
 	vec3 d = vec3(positions[idx]) - eye;
 	float len = length(d);
     float depth = dot(d, forward);
@@ -43,4 +63,5 @@ void main()
 		quantizedZs[count] = fixedPointZ;
 		indices[count] = idx;
 	}
+	*/
 }

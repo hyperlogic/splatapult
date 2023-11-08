@@ -53,24 +53,21 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     return true;
 }
 
-void SplatRenderer::Sort(const glm::mat4& cameraMat)
+void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                         const glm::vec4& viewport, const glm::vec2& nearFar)
 {
     ZoneScoped;
 
     GL_ERROR_CHECK("SplatRenderer::Sort() begin");
 
     const size_t numPoints = posVec.size();
+    glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
-        // transform forward vector into world space
-        glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
-        glm::vec3 eye = glm::vec3(cameraMat[3]);
-
         preSortProg->Bind();
-        preSortProg->SetUniform("forward", forward);
-        preSortProg->SetUniform("eye", eye);
+        preSortProg->SetUniform("modelViewProj", projMat * modelViewMat);
 
         // reset counter back to zero
         atomicCounterVec[0] = 0;

@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <limits>
 #include <memory>
 #include <SDL.h>
@@ -470,7 +471,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                splatRenderer->Sort(fullEyeMat);
+                splatRenderer->Sort(fullEyeMat, projMat, viewport, nearFar);
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
 
@@ -480,6 +481,9 @@ int main(int argc, char *argv[])
             }
         });
     }
+
+    glm::vec2 virtualLeftStick(0.0f, 0.0f);
+    glm::vec2 virtualRightStick(0.0f, 0.0f);
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -541,6 +545,60 @@ int main(int argc, char *argv[])
                     case SDLK_f:
                         // TODO: more then one carpet size
                         drawCarpet = !drawCarpet;
+                        break;
+                    case SDLK_a:
+                        virtualLeftStick.x -= 1.0f;
+                        break;
+                    case SDLK_d:
+                        virtualLeftStick.x += 1.0f;
+                        break;
+                    case SDLK_w:
+                        virtualLeftStick.y += 1.0f;
+                        break;
+                    case SDLK_s:
+                        virtualLeftStick.y -= 1.0f;
+                        break;
+                    case SDLK_LEFT:
+                        virtualRightStick.x -= 1.0f;
+                        break;
+                    case SDLK_RIGHT:
+                        virtualRightStick.x += 1.0f;
+                        break;
+                    case SDLK_UP:
+                        virtualRightStick.y += 1.0f;
+                        break;
+                    case SDLK_DOWN:
+                        virtualRightStick.y -= 1.0f;
+                        break;
+                    }
+                }
+                else // SDL_KEYUP
+                {
+                    switch (event.key.keysym.sym)
+                    {
+                    case SDLK_a:
+                        virtualLeftStick.x += 1.0f;
+                        break;
+                    case SDLK_d:
+                        virtualLeftStick.x -= 1.0f;
+                        break;
+                    case SDLK_w:
+                        virtualLeftStick.y -= 1.0f;
+                        break;
+                    case SDLK_s:
+                        virtualLeftStick.y += 1.0f;
+                        break;
+                    case SDLK_LEFT:
+                        virtualRightStick.x += 1.0f;
+                        break;
+                    case SDLK_RIGHT:
+                        virtualRightStick.x -= 1.0f;
+                        break;
+                    case SDLK_UP:
+                        virtualRightStick.y -= 1.0f;
+                        break;
+                    case SDLK_DOWN:
+                        virtualRightStick.y += 1.0f;
                         break;
                     }
                 }
@@ -606,8 +664,10 @@ int main(int argc, char *argv[])
             float roll = 0.0f;
             roll -= (joystick->buttonStateFlags & (1 << Joystick::LeftBumper)) ? 1.0f : 0.0f;
             roll += (joystick->buttonStateFlags & (1 << Joystick::RightBumper)) ? 1.0f : 0.0f;
-            flyCam.Process(glm::vec2(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]),
-                           glm::vec2(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]), roll, dt);
+            glm::vec2 leftStick(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]);
+            glm::vec2 rightStick(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]);
+            flyCam.Process(leftStick + virtualLeftStick,
+                           rightStick + virtualRightStick, roll, dt);
         }
 
         if (vrMode)
@@ -639,7 +699,12 @@ int main(int argc, char *argv[])
             glm::mat4 cameraMat = flyCam.GetCameraMat();
             glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
             glm::vec2 nearFar(Z_NEAR, Z_FAR);
-            glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+            //glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+            glm::mat4 projMat;
+            const float aspect = (float)width / (float)height;
+            const float tw = tanf(aspect * FOVY / 2.0f);
+            const float th = tanf(FOVY / 2.0f);
+            CreateProjection(glm::value_ptr(projMat), GRAPHICS_OPENGL, -tw, tw, th, -th, Z_NEAR, Z_FAR);
 
             if (drawPointCloud)
             {
@@ -647,7 +712,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                splatRenderer->Sort(cameraMat);
+                splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
             SDL_GL_SwapWindow(window);

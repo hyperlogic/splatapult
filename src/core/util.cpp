@@ -337,3 +337,73 @@ glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot)
     glm::mat4 rotMat = MakeMat4(rot);
     return posMat * rotMat * invPosMat;
 }
+
+// Creates a projection matrix based on the specified dimensions.
+// The projection matrix transforms -Z=forward, +Y=up, +X=right to the appropriate clip space for the graphics API.
+// The far plane is placed at infinity if farZ <= nearZ.
+// An infinite projection matrix is preferred for rasterization because, except for
+// things *right* up against the near plane, it always provides better precision:
+//              "Tightening the Precision of Perspective Rendering"
+//              Paul Upchurch, Mathieu Desbrun
+//              Journal of Graphics Tools, Volume 16, Issue 1, 2012
+void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLeft,
+                      const float tanAngleRight, const float tanAngleUp, float const tanAngleDown,
+                      const float nearZ, const float farZ)
+{
+    const float tanAngleWidth = tanAngleRight - tanAngleLeft;
+
+    // Set to tanAngleDown - tanAngleUp for a clip space with positive Y down (Vulkan).
+    // Set to tanAngleUp - tanAngleDown for a clip space with positive Y up (OpenGL / D3D / Metal).
+    const float tanAngleHeight = graphicsApi == GRAPHICS_VULKAN ? (tanAngleDown - tanAngleUp) : (tanAngleUp - tanAngleDown);
+
+    // Set to nearZ for a [-1,1] Z clip space (OpenGL / OpenGL ES).
+    // Set to zero for a [0,1] Z clip space (Vulkan / D3D / Metal).
+    const float offsetZ = (graphicsApi == GRAPHICS_OPENGL || graphicsApi == GRAPHICS_OPENGL_ES) ? nearZ : 0;
+
+    if (farZ <= nearZ)
+    {
+        // place the far plane at infinity
+        m[0] = 2 / tanAngleWidth;
+        m[4] = 0;
+        m[8] = (tanAngleRight + tanAngleLeft) / tanAngleWidth;
+        m[12] = 0;
+
+        m[1] = 0;
+        m[5] = 2 / tanAngleHeight;
+        m[9] = (tanAngleUp + tanAngleDown) / tanAngleHeight;
+        m[13] = 0;
+
+        m[2] = 0;
+        m[6] = 0;
+        m[10] = -1;
+        m[14] = -(nearZ + offsetZ);
+
+        m[3] = 0;
+        m[7] = 0;
+        m[11] = -1;
+        m[15] = 0;
+    }
+    else
+    {
+        // normal projection
+        m[0] = 2 / tanAngleWidth;
+        m[4] = 0;
+        m[8] = (tanAngleRight + tanAngleLeft) / tanAngleWidth;
+        m[12] = 0;
+
+        m[1] = 0;
+        m[5] = 2 / tanAngleHeight;
+        m[9] = (tanAngleUp + tanAngleDown) / tanAngleHeight;
+        m[13] = 0;
+
+        m[2] = 0;
+        m[6] = 0;
+        m[10] = -(farZ + offsetZ) / (farZ - nearZ);
+        m[14] = -(farZ * (nearZ + offsetZ)) / (farZ - nearZ);
+
+        m[3] = 0;
+        m[7] = 0;
+        m[11] = -1;
+        m[15] = 0;
+    }
+}

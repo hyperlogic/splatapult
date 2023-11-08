@@ -60,4 +60,9 @@ glm::vec4 LinearToSRGB(const glm::vec4& linearColor);
 
 glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot);
 
+enum GraphicsAPI { GRAPHICS_VULKAN, GRAPHICS_OPENGL, GRAPHICS_OPENGL_ES, GRAPHICS_D3D };
+void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLeft,
+                      const float tanAngleRight, const float tanAngleUp, float const tanAngleDown,
+                      const float nearZ, const float farZ);
+
 #endif

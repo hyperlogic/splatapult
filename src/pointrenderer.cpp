@@ -71,17 +71,15 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     GL_ERROR_CHECK("PointRenderer::Render() begin");
 
     const size_t numPoints = posVec.size();
+    glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
-        // transform forward vector into world space
-        glm::vec3 forward = glm::mat3(cameraMat) * glm::vec3(0.0f, 0.0f, -1.0f);
-        glm::vec3 eye = glm::vec3(cameraMat[3]);
-
         preSortProg->Bind();
-        preSortProg->SetUniform("forward", forward);
-        preSortProg->SetUniform("eye", eye);
+        preSortProg->SetUniform("modelViewProj", projMat * modelViewMat);
+
+        glm::mat4 modelViewProjMat = projMat * modelViewMat;
 
         // reset counter back to 0
         atomicCounterVec[0] = 0;
@@ -135,7 +133,6 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         float width = viewport.z;
         float height = viewport.w;
         float aspectRatio = width / height;
-        glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
         pointProg->Bind();
         pointProg->SetUniform("modelViewMat", modelViewMat);
