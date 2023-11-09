@@ -34,7 +34,10 @@
 #include "pointcloud.h"
 #include "pointrenderer.h"
 #include "radix_sort.hpp"
+#include "softwaresplatrenderer.h"
 #include "splatrenderer.h"
+
+#define SOFTWARE_SPLATS
 
 static bool quitting = false;
 static SDL_Window *window = NULL;
@@ -53,6 +56,10 @@ static bool drawDebug = true;
 
 void Clear(bool setViewport = true)
 {
+#ifdef SOFTWARE_SPLATS
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+#else
     SDL_GL_MakeCurrent(window, gl_context);
 
     if (setViewport)
@@ -78,13 +85,17 @@ void Clear(bool setViewport = true)
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
+#endif
 }
 
 void Resize(int newWidth, int newHeight)
 {
+#ifdef SOFTWARE_SPLATS
+    SDL_RenderSetLogicalSize(renderer, newWidth, newHeight);
+#else
     SDL_GL_MakeCurrent(window, gl_context);
-
     glViewport(0, 0, newWidth, newHeight);
+#endif
 }
 
 void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
@@ -349,7 +360,11 @@ int main(int argc, char *argv[])
 
     gl_context = SDL_GL_CreateContext(window);
 
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+#ifdef SOFTWARE_SPLATS
+	renderer = SDL_CreateRenderer(window, -1, 0);
+#else
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+#endif
 	if (!renderer)
     {
         Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
@@ -438,7 +453,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+#ifdef SOFTWARE_SPLATS
+    auto splatRenderer = std::make_shared<SoftwareSplatRenderer>(renderer);
+#else
     auto splatRenderer = std::make_shared<SplatRenderer>();
+#endif
+
     if (!splatRenderer->Init(gaussianCloud))
     {
         Log::printf("Error initializing splat renderer!\n");
@@ -455,7 +475,7 @@ int main(int argc, char *argv[])
         }
 
         xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
-                                                                                 const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
+                                                                                  const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
         {
             Clear(false);
 
@@ -710,7 +730,11 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
+#ifdef SOFTWARE_SPLATS
+            SDL_RenderPresent(renderer);
+#else
             SDL_GL_SwapWindow(window);
+#endif
         }
 
         DebugDraw_Clear();
