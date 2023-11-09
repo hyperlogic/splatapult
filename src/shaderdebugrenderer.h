@@ -22,7 +22,9 @@ public:
 							const glm::vec4& viewport, const glm::vec2& nearFar) override;
 
 protected:
-
+    std::vector<glm::vec4> posVec;
+    std::vector<glm::vec4> r_sh0Vec, g_sh0Vec, b_sh0Vec;
+    std::vector<glm::vec3> cov3_col0Vec, cov3_col1Vec, cov3_col2Vec;
 };
 
 #endif

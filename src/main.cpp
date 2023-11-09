@@ -207,20 +207,21 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
     // AJT: TODO: find highest iteration_# dir.
+    /*
     std::string iterationDir = dataDir + "point_cloud/iteration_30000/";
     if (!gaussianCloud->ImportPly(iterationDir + "point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
+    */
 
-    /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
     //
     std::vector<GaussianCloud::Gaussian>& gaussianVec = gaussianCloud->GetGaussianVec();
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 5;
+    const int NUM_SPLATS = 1;
     const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
     const float S = logf(0.05f);
     const float SH_C0 = 0.28209479177387814f;
@@ -264,7 +265,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
         memset(&g, 0, sizeof(GaussianCloud::Gaussian));
         g.position[0] = 0.0f;
         g.position[1] = 0.0f;
-        g.position[2] = i * DELTA + DELTA;
+        g.position[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
         // blue
         g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ONE;
         g.opacity = 100.0f;
@@ -283,7 +284,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
-    */
 
     return gaussianCloud;
 }
