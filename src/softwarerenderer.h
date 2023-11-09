@@ -1,5 +1,5 @@
-#ifndef SOFTWARESPLATRENDERER_H
-#define SOFTWARESPLATRENDERER_H
+#ifndef SOFTWARERENDERER_H
+#define SOFTWARERENDERER_H
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -11,25 +11,27 @@
 struct SDL_Renderer;
 struct SDL_Texture;
 
-class SoftwareSplatRenderer
+class SoftwareRenderer
 {
 public:
-    SoftwareSplatRenderer(SDL_Renderer* sdlRendererIn);
-    ~SoftwareSplatRenderer();
-
-    bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
+    SoftwareRenderer(SDL_Renderer* sdlRendererIn);
+    virtual ~SoftwareRenderer();
 
 	// viewport = (x, y, width, height)
 	void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
-              const glm::vec4& viewport, const glm::vec2& nearFar);
+			  const glm::vec4& viewport, const glm::vec2& nearFar);
 
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
-                const glm::vec4& viewport, const glm::vec2& nearFar);
+				const glm::vec4& viewport, const glm::vec2& nearFar);
 
 protected:
+	virtual void RenderImpl(const glm::mat4& cameraMat, const glm::mat4& projMat,
+							const glm::vec4& viewport, const glm::vec2& nearFar);
+
 	void Destroy();
 	void Resize(const glm::vec4& newViewport);
+	void SetPixel(int WIDTH, int HEIGHT, int x, int y, int r, int g, int b);
 
 	SDL_Renderer* sdlRenderer;
 	SDL_Texture* sdlTexture;

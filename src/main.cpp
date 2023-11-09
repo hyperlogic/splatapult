@@ -34,7 +34,7 @@
 #include "pointcloud.h"
 #include "pointrenderer.h"
 #include "radix_sort.hpp"
-#include "softwaresplatrenderer.h"
+#include "softwarerenderer.h"
 #include "splatrenderer.h"
 
 #define SOFTWARE_SPLATS
@@ -454,16 +454,19 @@ int main(int argc, char *argv[])
     }
 
 #ifdef SOFTWARE_SPLATS
-    auto splatRenderer = std::make_shared<SoftwareSplatRenderer>(renderer);
+    auto splatRenderer = std::make_shared<SoftwareRenderer>(renderer);
 #else
     auto splatRenderer = std::make_shared<SplatRenderer>();
 #endif
 
+    // AJ:T FIX ME
+    /*
     if (!splatRenderer->Init(gaussianCloud))
     {
         Log::printf("Error initializing splat renderer!\n");
         return 1;
     }
+    */
 
     auto desktopProgram = std::make_shared<Program>();
     if (vrMode)

@@ -55,7 +55,7 @@ add_executable(${PROJECT_NAME}
     src/pointcloud.cpp
     src/pointrenderer.cpp
     src/raymarchrenderer.cpp
-    src/softwaresplatrenderer.cpp
+    src/softwarerenderer.cpp
     src/splatrenderer.cpp
 )
 
