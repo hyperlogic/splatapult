@@ -41,17 +41,65 @@ glm::vec4 gl_Position2;
 // prototype for geom shader
 void debug_splat_geom();
 
+std::vector<glm::vec2> geomOutVec;
+
 void EmitVertex()
 {
+#ifdef DUMP
     PrintVec(gl_Position2, "    gl_Position2");
     PrintVec(frag_color, "    frag_color");
     PrintVec(frag_cov2inv, "    frag_cov2inv");
     PrintVec(frag_p, "    frag_p");
+#endif
+
+    glm::vec2 p(gl_Position2.x / gl_Position2.w, gl_Position2.y / gl_Position2.w);
+    float w = viewport.z;
+    float h = viewport.w;
+    p.x = p.x * w / 2.0f + w / 2.0f;
+    p.y = p.y * h / 2.0f + h / 2.0f;
+    geomOutVec.push_back(p);
 }
 
 void EndPrimitive()
 {
+#ifdef DUMP
     Log::printf("    --------\n");
+#endif
+}
+
+#ifndef M_ABS
+#define M_ABS(a) (((a) < 0) ? -(a) : (a))
+#endif
+
+static void raster_line(uint8_t *dest, int width, int height, const glm::vec2& p0, const glm::vec2& p1, glm::ivec4& color)
+{
+    uint8_t *data = dest;
+    int x0 = (int)p0.x;
+    int y0 = height - (int)p0.y;
+    int x1 = (int)p1.x;
+    int y1 = height - (int)p1.y;
+    int w = width;
+    int h = height;
+    int dx =  M_ABS(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = -M_ABS(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy, e2;
+
+    int comp = 4;
+    while (1) {
+
+        if (x0 > -1 && y0 > -1 && x0 < w && y0 < h) { /* safe, but should be taken out of the loop for speed (clipping ?) */
+            uint8_t* pixel = data + (y0 * w + x0) * comp;
+            for (int c = 0; c < comp; c++)
+                pixel[c] = color[c];
+        }
+
+        if (x0 == x1 && y0 == y1)
+            break;
+
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
 }
 
 ShaderDebugRenderer::ShaderDebugRenderer(SDL_Renderer* sdlRendererIn) : SoftwareRenderer(sdlRendererIn)
@@ -110,7 +158,8 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
     const int WIDTH = (int)viewport.z;
     const int HEIGHT = (int)viewport.w;
 
-    SoftwareRenderer::RenderImpl(cameraMat, projMat, viewport, nearFar);
+    ClearPixels();
+    //SoftwareRenderer::RenderImpl(cameraMat, projMat, viewport, nearFar);
 
     float width = viewport.z;
     float height = viewport.w;
@@ -125,17 +174,20 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
     ::projParams = glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f);
     ::eye = eye;
 
+#ifdef DUMP
     Log::printf("***************************************\n");
     PrintMat(::viewMat, "viewMat");
     PrintMat(::projMat, "projMat");
     PrintVec(::viewport, "viewport");
     PrintVec(::projParams, "projParams");
     PrintVec(::eye, "eye");
+#endif
 
     for (size_t i = 0; i < posVec.size(); i++)
     {
+#ifdef DUMP
         Log::printf("attribs[%d] =\n", (int)i);
-
+#endif
         position = posVec[i];
         r_sh0 = r_sh0Vec[i];
         g_sh0 = g_sh0Vec[i];
@@ -143,7 +195,7 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
         cov3_col0 = cov3_col0Vec[i];
         cov3_col1 = cov3_col1Vec[i];
         cov3_col2 = cov3_col2Vec[i];
-
+#ifdef DUMP
         PrintVec(position, "    position");
         PrintVec(r_sh0, "    r_sh0");
         PrintVec(g_sh0, "    g_sh0");
@@ -153,15 +205,39 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
         PrintVec(cov3_col2, "    cov3_col2");
 
         Log::printf("debug_splat_vert[%d] =\n", (int)i);
-
+#endif
         debug_splat_vert();
-
+#ifdef DUMP
         PrintVec(geom_color, "    geom_color");
         PrintVec(geom_cov2, "    geom_cov2");
         PrintVec(geom_p, "    geom_p");
         PrintVec(gl_Position, "    gl_Position");
 
         Log::printf("debug_splat_geom[%d] =\n", (int)i);
+#endif
+        geomOutVec.clear();
+
         debug_splat_geom();
+
+        uint8_t r = (uint8_t)(glm::clamp(geom_color.x, 0.0f, 1.0f) * 255.0f);
+        uint8_t g = (uint8_t)(glm::clamp(geom_color.y, 0.0f, 1.0f) * 255.0f);
+        uint8_t b = (uint8_t)(glm::clamp(geom_color.z, 0.0f, 1.0f) * 255.0f);
+
+        SetThickPixel((int)geom_p.x, (int)geom_p.y, r, g, b);
+
+        for (auto& go : geomOutVec)
+        {
+            // so I can see it
+            SetThickPixel((int)go.x, (int)go.y, r, g, b);
+        }
+
+        if (geomOutVec.size() >= 4)
+        {
+            glm::ivec4 color(b, g, r, 255);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0], geomOutVec[1], color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0], geomOutVec[2], color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[2], geomOutVec[3], color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1], geomOutVec[3], color);
+        }
     }
 }

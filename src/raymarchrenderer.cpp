@@ -93,9 +93,6 @@ static float RayIntegral(size_t k, const std::vector<Tau>& tauVec)
 void RayMarchRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4& projMat,
                                   const glm::vec4& viewport, const glm::vec2& nearFar)
 {
-    const int WIDTH = (int)viewport.z;
-    const int HEIGHT = (int)viewport.w;
-
     float width = viewport.z;
     float height = viewport.w;
     float aspect = width / height;
@@ -143,7 +140,7 @@ void RayMarchRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4& p
             {
                 for (int yy = 0; yy < PIXEL_STEP; yy++)
                 {
-                    SetPixel(WIDTH, HEIGHT, x + xx, y + yy, r, g, b);
+                    SetPixel(x + xx, y + yy, r, g, b);
                 }
             }
         }
