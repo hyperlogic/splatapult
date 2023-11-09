@@ -7,20 +7,21 @@
 #include <vector>
 
 #include "gaussiancloud.h"
+#include "softwarerenderer.h"
 
 struct SDL_Renderer;
 
-class RayMarchRenderer
+class RayMarchRenderer : public SoftwareRenderer
 {
 public:
-    RayMarchRenderer();
-    ~RayMarchRenderer();
+    RayMarchRenderer(SDL_Renderer* sdlRendererIn);
+    virtual ~RayMarchRenderer();
 
     bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
 
     // viewport = (x, y, width, height)
-    void Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
-                const glm::vec2& nearFar, float fovy, SDL_Renderer* renderer);
+    virtual void RenderImpl(const glm::mat4& cameraMat, const glm::mat4& projMat,
+							const glm::vec4& viewport, const glm::vec2& nearFar) override;
 
     struct Gaussian
     {

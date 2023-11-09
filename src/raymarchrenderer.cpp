@@ -6,7 +6,7 @@
 
 #include "core/log.h"
 
-RayMarchRenderer::RayMarchRenderer()
+RayMarchRenderer::RayMarchRenderer(SDL_Renderer* sdlRendererIn) : SoftwareRenderer(sdlRendererIn)
 {
 }
 
@@ -33,7 +33,7 @@ bool RayMarchRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
     return true;
 }
 
-const size_t NUM_STEPS = 50;
+const size_t NUM_STEPS = 100;
 struct Tau
 {
     Tau(const glm::vec3& s, const glm::vec3& t, const RayMarchRenderer::Gaussian& g)
@@ -65,8 +65,8 @@ struct Tau
         return integral[i];
     }
 
-    float tau[NUM_STEPS];
-    float integral[NUM_STEPS];
+    std::array<float, NUM_STEPS> tau;
+    std::array<float, NUM_STEPS> integral;
 };
 
 static float RayIntegral(size_t k, const std::vector<Tau>& tauVec)
@@ -90,9 +90,12 @@ static float RayIntegral(size_t k, const std::vector<Tau>& tauVec)
 }
 
 // viewport = (x, y, width, height)
-void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewport,
-                              const glm::vec2& nearFar, float fovy, SDL_Renderer* renderer)
+void RayMarchRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4& projMat,
+                                  const glm::vec4& viewport, const glm::vec2& nearFar)
 {
+    const int WIDTH = (int)viewport.z;
+    const int HEIGHT = (int)viewport.w;
+
     float width = viewport.z;
     float height = viewport.w;
     float aspect = width / height;
@@ -100,23 +103,26 @@ void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewp
     glm::vec3 eye = glm::vec3(cameraMat[3]);
     glm::mat3 cameraMat3 = glm::mat3(cameraMat);
 
-    const int PIXEL_STEP = 4;
+    // AJT: HACK use real proj matrix
+    const float fovy = glm::radians(45.0f);
+
+    const int PIXEL_STEP = 10;
     const float theta0 = fovy / 2.0f;
     const float dTheta = -fovy / (float)height;
 
-    for (int y = 0; y < height; y += PIXEL_STEP)
+    for (int y = 0; y < HEIGHT; y += PIXEL_STEP)
     {
         float theta = theta0 + dTheta * y;
         float phi0 = -fovy * aspect / 2.0f;
         float dPhi = (fovy * aspect) / width;
-        for (int x = 0; x < width; x += PIXEL_STEP)
+        for (int x = 0; x < WIDTH; x += PIXEL_STEP)
         {
             float phi = phi0 + dPhi * x;
             glm::vec3 localRay(sinf(phi), sinf(theta), -cosf(theta));
             glm::vec3 ray = glm::normalize(cameraMat3 * localRay);
 
             // ray march down each gaussian
-            const float RAY_LENGTH = 6.0f;
+            const float RAY_LENGTH = 3.0f;
             std::vector<Tau> tauVec;
             for (auto&& g : gVec)
             {
@@ -133,12 +139,11 @@ void RayMarchRenderer::Render(const glm::mat4& cameraMat, const glm::vec4& viewp
             uint8_t g = (uint8_t)(glm::clamp(I.y, 0.0f, 1.0f) * 255.0f);
             uint8_t b = (uint8_t)(glm::clamp(I.z, 0.0f, 1.0f) * 255.0f);
 
-            SDL_SetRenderDrawColor(renderer, r, g, b, 255);
             for (int xx = 0; xx < PIXEL_STEP; xx++)
             {
                 for (int yy = 0; yy < PIXEL_STEP; yy++)
                 {
-                    SDL_RenderDrawPoint(renderer, x + xx, y + yy);
+                    SetPixel(WIDTH, HEIGHT, x + xx, y + yy, r, g, b);
                 }
             }
         }
