@@ -38,7 +38,7 @@
 #include "splatrenderer.h"
 #include "raymarchrenderer.h"
 
-#define SOFTWARE_SPLATS
+//#define SOFTWARE_SPLATS
 
 static bool quitting = false;
 static SDL_Window *window = NULL;
