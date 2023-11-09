@@ -37,6 +37,7 @@
 #include "softwarerenderer.h"
 #include "splatrenderer.h"
 #include "raymarchrenderer.h"
+#include "shaderdebugrenderer.h"
 
 #define SOFTWARE_SPLATS
 
@@ -455,7 +456,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef SOFTWARE_SPLATS
-    auto splatRenderer = std::make_shared<RayMarchRenderer>(renderer);
+    auto splatRenderer = std::make_shared<ShaderDebugRenderer>(renderer);
 #else
     auto splatRenderer = std::make_shared<SplatRenderer>();
 #endif
