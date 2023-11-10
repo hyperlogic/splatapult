@@ -51,6 +51,7 @@ add_executable(${PROJECT_NAME}
 
     src/debug_splat_vert.cpp
     src/debug_splat_geom.cpp
+    src/debug_splat_frag.cpp
 
     src/flycam.cpp
     src/gaussiancloud.cpp

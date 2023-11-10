@@ -38,10 +38,21 @@ glm::vec4 frag_cov2inv;
 glm::vec2 frag_p;
 glm::vec4 gl_Position2;
 
+struct GeomOut
+{
+    GeomOut(const glm::vec4& frag_colorIn, const glm::vec4& frag_cov2invIn, const glm::vec2& frag_pIn, const glm::vec4& gl_Position2In, const glm::vec2& fragPosIn) :
+        frag_color(frag_colorIn), frag_cov2inv(frag_cov2invIn), frag_p(frag_pIn), gl_Position2(gl_Position2In), fragPos(fragPosIn) {}
+    glm::vec4 frag_color;
+    glm::vec4 frag_cov2inv;
+    glm::vec2 frag_p;
+    glm::vec4 gl_Position2;
+    glm::vec2 fragPos;
+};
+
 // prototype for geom shader
 void debug_splat_geom();
 
-std::vector<glm::vec2> geomOutVec;
+std::vector<GeomOut> geomOutVec;
 
 void EmitVertex()
 {
@@ -52,12 +63,12 @@ void EmitVertex()
     PrintVec(frag_p, "    frag_p");
 #endif
 
-    glm::vec2 p(gl_Position2.x / gl_Position2.w, gl_Position2.y / gl_Position2.w);
+    glm::vec2 fragPos(gl_Position2.x / gl_Position2.w, gl_Position2.y / gl_Position2.w);
     float w = viewport.z;
     float h = viewport.w;
-    p.x = p.x * w / 2.0f + w / 2.0f;
-    p.y = p.y * h / 2.0f + h / 2.0f;
-    geomOutVec.push_back(p);
+    fragPos.x = fragPos.x * w / 2.0f + w / 2.0f;
+    fragPos.y = fragPos.y * h / 2.0f + h / 2.0f;
+    geomOutVec.emplace_back(GeomOut(frag_color, frag_cov2inv, frag_p, gl_Position2, fragPos));
 }
 
 void EndPrimitive()
@@ -66,6 +77,14 @@ void EndPrimitive()
     Log::printf("    --------\n");
 #endif
 }
+
+// frag shader input
+glm::vec2 gl_FragCoord;
+
+// frag shader output
+glm::vec4 out_color;
+
+void debug_splat_frag();
 
 #ifndef M_ABS
 #define M_ABS(a) (((a) < 0) ? -(a) : (a))
@@ -228,16 +247,22 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
         for (auto& go : geomOutVec)
         {
             // so I can see it
-            SetThickPixel((int)go.x, (int)go.y, r, g, b);
+            SetThickPixel((int)go.fragPos.x, (int)go.fragPos.y, r, g, b);
         }
 
         if (geomOutVec.size() >= 4)
         {
             glm::ivec4 color(b, g, r, 255);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0], geomOutVec[1], color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0], geomOutVec[2], color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[2], geomOutVec[3], color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1], geomOutVec[3], color);
+
+            // triangle
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[1].fragPos, color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[2].fragPos, color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
+
+            // triangle
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[3].fragPos, color);
+            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[2].fragPos, geomOutVec[3].fragPos, color);
         }
     }
 }
