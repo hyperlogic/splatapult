@@ -53,7 +53,7 @@ const float FOVY = glm::radians(45.0f);
 static bool vrMode = false;
 static bool fullscreen = false;
 static bool drawCarpet = true;
-static bool drawPointCloud = true;
+static bool drawPointCloud = false;
 static bool drawDebug = true;
 
 void Clear(bool setViewport = true)

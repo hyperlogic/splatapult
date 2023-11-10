@@ -638,7 +638,13 @@ void ShaderDebugRenderer::SampleTri(const GeomOut& p0, const GeomOut& p1, const 
         uint8_t g = (uint8_t)(glm::clamp(out_color.y, 0.0f, 1.0f) * 255.0f);
         uint8_t b = (uint8_t)(glm::clamp(out_color.z, 0.0f, 1.0f) * 255.0f);
 
-        SetThickPixel((int)gl_FragCoord.x, (int)gl_FragCoord.y, r, g, b);
-        //SetThickPixel((int)gl_FragCoord.x, (int)gl_FragCoord.y, 255, 255, 255);
+        if (out_color.w > 0.05f)
+        {
+            SetThickPixel((int)gl_FragCoord.x, (int)gl_FragCoord.y, r, g, b);
+        }
+        else
+        {
+            SetThickPixel((int)gl_FragCoord.x, (int)gl_FragCoord.y, 255, 255, 255);
+        }
     }
 }
