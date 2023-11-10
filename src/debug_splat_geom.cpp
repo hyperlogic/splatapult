@@ -65,8 +65,17 @@ void main()
     }
 
     vec2 offset;
-    float OFFSET = 0.5f;
+    float OFFSET = 10.5f;
     float w = gl_Position.w;
+
+    vec2 scale = vec2(length(cov2D[0]), length(cov2D[1]));
+    cov2D[0] = cov2D[0] / scale.x;
+    cov2D[1] = cov2D[1] / scale.y;
+    scale = sqrt(scale);
+    cov2D[0] = cov2D[0] * scale;
+    cov2D[1] = cov2D[1] * scale;
+
+    //cov2D = transpose(inverseMat2(cov2D));
 
     /*
     // counter out square factor in cov matrix
@@ -76,69 +85,26 @@ void main()
     cov2D[1][1] = sign(cov2D[1][1]) * sqrt(abs(cov2D[1][1]));
     */
 
-    //
-	// bottom-left vertex
-    //
-    offset = cov2D * vec2(-OFFSET, -OFFSET);
+    vec2 offsets[4];
+    offsets[0] = vec2(-OFFSET, -OFFSET);
+    offsets[1] = vec2(OFFSET, -OFFSET);
+    offsets[2] = vec2(-OFFSET, OFFSET);
+    offsets[3] = vec2(OFFSET, OFFSET);
+    for (int i = 0; i < 4; i++)
+    {
+        offset = cov2D * offsets[i];
 
-    // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * w;
-    offset.y *= (2.0f / HEIGHT) * w;
+        // transform that offset back into clip space, and apply it to gl_Position.
+        offset.x *= (2.0f / WIDTH) * w;
+        offset.y *= (2.0f / HEIGHT) * w;
 
-    gl_Position2 = gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color;
-    frag_cov2inv = cov2Dinv4;
-    frag_p = geom_p;
+        gl_Position2 = gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
+        frag_color = geom_color;
+        frag_cov2inv = cov2Dinv4;
+        frag_p = geom_p;
 
-    EmitVertex();
-
-    //
-    // bottom-right vertex
-    //
-    offset = cov2D * vec2(OFFSET, -OFFSET);
-
-    // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * w;
-    offset.y *= (2.0f / HEIGHT) * w;
-
-    gl_Position2 = gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color;
-    frag_cov2inv = cov2Dinv4;
-    frag_p = geom_p;
-
-    EmitVertex();
-
-    //
-    // top-left vertex
-    //
-    offset = cov2D * vec2(-OFFSET, OFFSET);
-
-    // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * w;
-    offset.y *= (2.0f / HEIGHT) * w;
-
-    gl_Position2 = gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color;
-    frag_cov2inv = cov2Dinv4;
-    frag_p = geom_p;
-
-    EmitVertex();
-
-    //
-    // top-right vertex
-    //
-    offset = cov2D * vec2(OFFSET, OFFSET);
-
-    // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * w;
-    offset.y *= (2.0f / HEIGHT) * w;
-
-    gl_Position2 = gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
-    frag_color = geom_color;
-    frag_cov2inv = cov2Dinv4;
-    frag_p = geom_p;
-
-    EmitVertex();
+        EmitVertex();
+    }
 
     EndPrimitive();
 }
