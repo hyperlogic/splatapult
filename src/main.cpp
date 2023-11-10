@@ -85,7 +85,7 @@ void Clear(bool setViewport = true)
     glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
-    glEnable(GL_ALPHA_TEST);
+    //glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 0.01f);
 #endif
 }
@@ -281,7 +281,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     // white
     g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ONE;
     g.opacity = 100.0f;
-    g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
+    g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
 

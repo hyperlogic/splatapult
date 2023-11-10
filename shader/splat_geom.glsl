@@ -37,9 +37,6 @@ void main()
     mat2 cov2Dinv = inverseMat2(cov2D);
     vec4 cov2Dinv4 = vec4(cov2Dinv[0], cov2Dinv[1]); // cram it into a vec4
 
-    float FUDGE = 1.25f;  // I bet there's an optimal value for this...
-    vec2 uv, offset;
-
     // discard splats that end up outside of a guard band
     vec4 p4 = gl_in[0].gl_Position;
     vec3 ndcP = p4.xyz / p4.w;
@@ -51,17 +48,24 @@ void main()
         return;
     }
 
+    vec2 offset;
+    float OFFSET = 0.5f;
+    float w = gl_in[0].gl_Position.w;
+
+    /*
+    // counter out square factor in cov matrix
+    cov2D[0][0] = sign(cov2D[0][0]) * sqrt(abs(cov2D[0][0]));
+    cov2D[0][1] = sign(cov2D[0][1]) * sqrt(abs(cov2D[0][1]));
+    cov2D[1][0] = sign(cov2D[1][0]) * sqrt(abs(cov2D[1][0]));
+    cov2D[1][1] = sign(cov2D[1][1]) * sqrt(abs(cov2D[1][1]));
+    */
+
     //
 	// bottom-left vertex
     //
-    uv = vec2(0.0, 0.0);
-
-    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
-    // this is used to embiggen the splat to fit the actual gaussian
-    offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
+    offset = cov2D * vec2(-OFFSET, -OFFSET);
 
     // transform that offset back into clip space, and apply it to gl_Position.
-    float w = gl_in[0].gl_Position.w;
     offset.x *= (2.0f / WIDTH) * w;
     offset.y *= (2.0f / HEIGHT) * w;
 
@@ -75,15 +79,11 @@ void main()
     //
     // bottom-right vertex
     //
-    uv = vec2(1.0, 0.0);
-
-    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
-    // this is used to embiggen the splat to fit the actual gaussian
-    offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
+    offset = cov2D * vec2(OFFSET, -OFFSET);
 
     // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * gl_Position.w;
-    offset.y *= (2.0f / HEIGHT) * gl_Position.w;
+    offset.x *= (2.0f / WIDTH) * w;
+    offset.y *= (2.0f / HEIGHT) * w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
     frag_color = geom_color[0];
@@ -95,15 +95,11 @@ void main()
     //
     // top-left vertex
     //
-    uv = vec2(0.0, 1.0);
-
-    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
-    // this is used to embiggen the splat to fit the actual gaussian
-    offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
+    offset = cov2D * vec2(-OFFSET, OFFSET);
 
     // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * gl_Position.w;
-    offset.y *= (2.0f / HEIGHT) * gl_Position.w;
+    offset.x *= (2.0f / WIDTH) * w;
+    offset.y *= (2.0f / HEIGHT) * w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
     frag_color = geom_color[0];
@@ -112,16 +108,14 @@ void main()
 
     EmitVertex();
 
+    //
     // top-right vertex
-    uv = vec2(1.0, 1.0);
-
-    // in viewport coords use cov2 to compute an offset vector for this vertex using the uv parameter.
-    // this is used to embiggen the splat to fit the actual gaussian
-    offset = (cov2D * (uv - vec2(0.5f, 0.5f))) * FUDGE;
+    //
+    offset = cov2D * vec2(OFFSET, OFFSET);
 
     // transform that offset back into clip space, and apply it to gl_Position.
-    offset.x *= (2.0f / WIDTH) * gl_Position.w;
-    offset.y *= (2.0f / HEIGHT) * gl_Position.w;
+    offset.x *= (2.0f / WIDTH) * w;
+    offset.y *= (2.0f / HEIGHT) * w;
 
     gl_Position = gl_in[0].gl_Position + vec4(offset.x, offset.y, 0.0, 0.0);
     frag_color = geom_color[0];

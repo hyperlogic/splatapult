@@ -610,15 +610,15 @@ void ShaderDebugRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4
 
             // triangle
             SampleTri(geomOutVec[0], geomOutVec[1], geomOutVec[2]);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[1].fragPos, color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[2].fragPos, color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[1].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[0].fragPos, geomOutVec[2].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
 
             // triangle
             SampleTri(geomOutVec[1], geomOutVec[2], geomOutVec[3]);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[3].fragPos, color);
-            raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[2].fragPos, geomOutVec[3].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[2].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[1].fragPos, geomOutVec[3].fragPos, color);
+            //raster_line((uint8_t*)rawPixels, WIDTH, HEIGHT, geomOutVec[2].fragPos, geomOutVec[3].fragPos, color);
         }
     }
 }

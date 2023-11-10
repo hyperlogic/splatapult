@@ -20,5 +20,6 @@ void main()
 
     // premultiplied alpha blending
     out_color.rgb = g * frag_color.a * frag_color.rgb;
+    out_color.g = 1.0f;
     out_color.a = g * frag_color.a;
 }
