@@ -7,6 +7,8 @@
 #include "core/log.h"
 #include "core/util.h"
 
+//#define DUMP
+
 // uniforms
 glm::mat4 viewMat;  // used to project position into view coordinates.
 glm::mat4 projMat;  // used to project view coordinates into clip coordinates.

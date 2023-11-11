@@ -65,34 +65,18 @@ void main()
     }
 
     vec2 offset;
-    float OFFSET = 10.5f;
+    float C = 10;
     float w = gl_Position.w;
 
-    vec2 scale = vec2(length(cov2D[0]), length(cov2D[1]));
-    cov2D[0] = cov2D[0] / scale.x;
-    cov2D[1] = cov2D[1] / scale.y;
-    scale = sqrt(scale);
-    cov2D[0] = cov2D[0] * scale;
-    cov2D[1] = cov2D[1] * scale;
-
-    //cov2D = transpose(inverseMat2(cov2D));
-
-    /*
-    // counter out square factor in cov matrix
-    cov2D[0][0] = sign(cov2D[0][0]) * sqrt(abs(cov2D[0][0]));
-    cov2D[0][1] = sign(cov2D[0][1]) * sqrt(abs(cov2D[0][1]));
-    cov2D[1][0] = sign(cov2D[1][0]) * sqrt(abs(cov2D[1][0]));
-    cov2D[1][1] = sign(cov2D[1][1]) * sqrt(abs(cov2D[1][1]));
-    */
-
+    vec2 o(sqrt(C) / sqrt(cov2Dinv[0][0]), sqrt(C) / sqrt(cov2Dinv[1][1]));
     vec2 offsets[4];
-    offsets[0] = vec2(-OFFSET, -OFFSET);
-    offsets[1] = vec2(OFFSET, -OFFSET);
-    offsets[2] = vec2(-OFFSET, OFFSET);
-    offsets[3] = vec2(OFFSET, OFFSET);
+    offsets[0] = vec2(-o.x, -o.y);
+    offsets[1] = vec2(o.x, -o.y);
+    offsets[2] = vec2(-o.x, o.y);
+    offsets[3] = vec2(o.x, o.y);
     for (int i = 0; i < 4; i++)
     {
-        offset = cov2D * offsets[i];
+        offset = offsets[i];
 
         // transform that offset back into clip space, and apply it to gl_Position.
         offset.x *= (2.0f / WIDTH) * w;

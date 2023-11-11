@@ -273,6 +273,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
         g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
         gaussianVec.push_back(g);
     }
+
     GaussianCloud::Gaussian g;
     memset(&g, 0, sizeof(GaussianCloud::Gaussian));
     g.position[0] = 0.0f;
