@@ -39,7 +39,7 @@
 #include "raymarchrenderer.h"
 #include "shaderdebugrenderer.h"
 
-#define SOFTWARE_SPLATS
+//#define SOFTWARE_SPLATS
 
 static bool quitting = false;
 static SDL_Window *window = NULL;
@@ -207,15 +207,14 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
     // AJT: TODO: find highest iteration_# dir.
-    /*
     std::string iterationDir = dataDir + "point_cloud/iteration_30000/";
     if (!gaussianCloud->ImportPly(iterationDir + "point_cloud.ply"))
     {
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
-    */
 
+    /*
     //
     // make an example GaussianClound, that contain red, green and blue axes.
     //
@@ -285,6 +284,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
+    */
 
     return gaussianCloud;
 }
