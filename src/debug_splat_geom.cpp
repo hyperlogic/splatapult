@@ -86,7 +86,6 @@ void main()
     float xx = 2.0f * sqrt(d) * sqrt(k) / denom;
     float yy = 2.0f * sqrt(a) * sqrt(k) / denom;
     vec2 o[4];
-    float padding = 20.0f;
     o[0] = vec2(xx, (-(b * xx) - (c * xx)) / (2.0f * d));
     o[1] = vec2(((-b * yy) - (c * yy)) / (2.0f * a), yy);
     o[3] = -o[0];
