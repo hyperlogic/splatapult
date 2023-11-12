@@ -494,7 +494,10 @@ int main(int argc, char *argv[])
             }
             else
             {
-                splatRenderer->Sort(fullEyeMat, projMat, viewport, nearFar);
+                if (viewNum == 0)
+                {
+                    splatRenderer->Sort(fullEyeMat, projMat, viewport, nearFar);
+                }
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
 

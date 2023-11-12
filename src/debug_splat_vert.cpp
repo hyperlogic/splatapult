@@ -1,5 +1,4 @@
 #include <glm/glm.hpp>
-#include "core/util.h"
 
 #define uniform extern
 #define in extern
