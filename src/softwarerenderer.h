@@ -31,12 +31,15 @@ protected:
 
 	void Destroy();
 	void Resize(const glm::vec4& newViewport);
-	void SetPixel(int WIDTH, int HEIGHT, int x, int y, int r, int g, int b);
+	void SetPixel(int x, int y, int r, int g, int b);
+	void SetThickPixel(int x, int y, int r, int g, int b);
+	void ClearPixels();
 
 	SDL_Renderer* sdlRenderer;
 	SDL_Texture* sdlTexture;
 	uint32_t* rawPixels;
-	glm::vec4 prevViewport;
+	int WIDTH;
+	int HEIGHT;
 };
 
 #endif

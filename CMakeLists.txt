@@ -48,6 +48,11 @@ add_executable(${PROJECT_NAME}
     src/core/xrbuddy.cpp
 
     src/cameras.cpp
+
+    src/debug_splat_vert.cpp
+    src/debug_splat_geom.cpp
+    src/debug_splat_frag.cpp
+
     src/flycam.cpp
     src/gaussiancloud.cpp
     src/magiccarpet.cpp
@@ -55,6 +60,7 @@ add_executable(${PROJECT_NAME}
     src/pointcloud.cpp
     src/pointrenderer.cpp
     src/raymarchrenderer.cpp
+    src/shaderdebugrenderer.cpp
     src/softwarerenderer.cpp
     src/splatrenderer.cpp
 )
