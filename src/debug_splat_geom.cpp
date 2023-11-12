@@ -65,18 +65,44 @@ void main()
     }
 
     vec2 offset;
-    float C = 10;
     float w = gl_Position.w;
 
+    /*
+    float C = 10;
     vec2 o(sqrt(C) / sqrt(cov2Dinv[0][0]), sqrt(C) / sqrt(cov2Dinv[1][1]));
     vec2 offsets[4];
     offsets[0] = vec2(-o.x, -o.y);
     offsets[1] = vec2(o.x, -o.y);
     offsets[2] = vec2(-o.x, o.y);
     offsets[3] = vec2(o.x, o.y);
+    */
+
+    float k = 10;
+    float a = cov2Dinv4.x;
+    float b = cov2Dinv4.z;
+    float c = cov2Dinv4.y;
+    float d = cov2Dinv4.w;
+    float denom = sqrt(-(b * b) - 2 * b * c - (c * c) + 4 * a * d);
+    float xx = 2.0f * sqrt(d) * sqrt(k) / denom;
+    float yy = 2.0f * sqrt(a) * sqrt(k) / denom;
+    vec2 o[4];
+    float padding = 20.0f;
+    o[0] = vec2(xx, (-(b * xx) - (c * xx)) / (2.0f * d));
+    o[1] = vec2(((-b * yy) - (c * yy)) / (2.0f * a), yy);
+    o[3] = -o[0];
+    o[2] = -o[1];
+
+    /*
+    vec2 offsets[4];
+    offsets[0] = o[0] + o[1];
+    offsets[1] = o[1] + o[2];
+    offsets[3] = o[2] + o[3];
+    offsets[2] = o[3] + o[0];
+    */
+
     for (int i = 0; i < 4; i++)
     {
-        offset = offsets[i];
+        offset = o[i];
 
         // transform that offset back into clip space, and apply it to gl_Position.
         offset.x *= (2.0f / WIDTH) * w;
