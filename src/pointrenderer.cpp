@@ -166,7 +166,7 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     for (auto&& p : pointCloud->GetPointVec())
     {
         posVec.emplace_back(glm::vec4(p.position[0], p.position[1], p.position[2], 1.0f));
-        colorVec.emplace_back(glm::vec4(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f));
+        colorVec.emplace_back(SRGBToLinear(glm::vec4(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f)));
     }
     auto positionBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
     auto colorBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);

@@ -152,7 +152,7 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
     ici.type = XR_TYPE_INSTANCE_CREATE_INFO;
     ici.next = NULL;
     ici.createFlags = 0;
-    ici.enabledExtensionCount = 1;
+    ici.enabledExtensionCount = (uint32_t)extensionVec.size();
     ici.enabledExtensionNames = extensionVec.data();
     ici.enabledApiLayerCount = 0;
     ici.enabledApiLayerNames = NULL;
@@ -318,33 +318,23 @@ static bool EnumerateViewConfigs(XrInstance instance, XrSystemId systemId, std::
     return true;
 }
 
-static bool EnumerateColorSpaces(XrInstance instance, XrSession session)
+static bool SetColorSpace(XrInstance instance, XrSession session, XrColorSpaceFB colorSpace)
 {
-    PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB = nullptr;
-    xrGetInstanceProcAddr(instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction*)&xrEnumerateColorSpacesFB);
-    if (xrEnumerateColorSpacesFB == nullptr)
-    {
-        Log::printf("bad func\n");
-        return false;
-    }
-
     XrResult result;
-    XrColorSpaceFB colorSpaces[10];
-    uint32_t numSpaces = 0;
 
-    result = xrEnumerateColorSpacesFB(session, 10, &numSpaces, colorSpaces);
-    if (!CheckResult(instance, result, "xrEnumerateColorSpacesFB"))
+    PFN_xrSetColorSpaceFB xrSetColorSpaceFB = nullptr;
+    result = xrGetInstanceProcAddr(instance, "xrSetColorSpaceFB", (PFN_xrVoidFunction*)&xrSetColorSpaceFB);
+    if (!CheckResult(instance, result, "xrGetInstanceProcAddr(xrSetColorSpaceFB)") || !xrSetColorSpaceFB)
     {
+        Log::printf("get proc addr xrSetColorSpaceFB() failed\n");
         return false;
     }
 
-    if (printAll)
+    result = xrSetColorSpaceFB(session, colorSpace);
+    if (!CheckResult(instance, result, "xrSetColorSpaceFB"))
     {
-        Log::printf("%s colorSpaces:\n", numSpaces);
-        for (uint32_t i = 0; i < numSpaces; i++)
-        {
-            Log::printf("    %d\n", (int)colorSpaces[i]);
-        }
+        Log::printf("xrSetColorSpaceFB(XR_COLOR_SPACE_REC2020_FB) failed\n");
+        return false;
     }
 
     return true;
@@ -943,7 +933,7 @@ bool XrBuddy::Init()
 
     if (ExtensionSupported(extensionProps, XR_FB_COLOR_SPACE_EXTENSION_NAME))
     {
-        EnumerateColorSpaces(instance, session);
+        SetColorSpace(instance, session, XR_COLOR_SPACE_REC709_FB);
     }
 
     if (!CreateActions(instance, systemId, session, actionSet, actionMap))
@@ -1355,6 +1345,14 @@ bool XrBuddy::GetActionAngularVelocity(const std::string& actionName, glm::vec3*
 uint32_t XrBuddy::GetColorTexture() const
 {
     return prevLastColorTexture;
+}
+
+void XrBuddy::CycleColorSpace()
+{
+    static int i = 0;
+    Log::printf("SETTING COLOR SPACE -> %d\n", i);
+    SetColorSpace(instance, session, (XrColorSpaceFB)i);
+    i = (i + 1) % (XR_COLOR_SPACE_ADOBE_RGB_FB + 1);
 }
 
 bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)

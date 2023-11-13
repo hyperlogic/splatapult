@@ -20,6 +20,7 @@ struct Image {
     uint32_t width;
     uint32_t height;
     PixelFormat pixelFormat;
+    bool isSRGB;
     std::vector<uint8_t> data;
 };
 

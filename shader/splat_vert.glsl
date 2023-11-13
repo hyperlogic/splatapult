@@ -120,6 +120,28 @@ vec3 ComputeRadianceFromSH(const vec3 v)
     return vec3(0.5f, 0.5f, 0.5f) + vec3(re, gr, bl);
 }
 
+float SRGBToLinearF(float srgb)
+{
+    if (srgb <= 0.04045f)
+    {
+        return srgb / 12.92f;
+    }
+    else
+    {
+        return pow((srgb + 0.055f) / 1.055f, 2.4f);
+    }
+}
+
+vec3 SRGBToLinear(const vec3 srgbColor)
+{
+    vec3 linearColor;
+    for (int i = 0; i < 3; ++i) // Convert RGB, leave A unchanged
+    {
+        linearColor[i] = SRGBToLinearF(srgbColor[i]);
+    }
+    return linearColor;
+}
+
 void main(void)
 {
     // t is in view coordinates
@@ -162,8 +184,8 @@ void main(void)
 
     // use the fact that the convolution of a gaussian with another gaussian is the sum
     // of their covariance matrices to apply a low-pass filter to anti-alias the splats
-    cov2D[0][0] += 1.0f;
-    cov2D[1][1] += 1.0f;
+    cov2D[0][0] += 0.3f;
+    cov2D[1][1] += 0.3f;
     geom_cov2 = vec4(cov2D[0], cov2D[1]); // cram it into a vec4
 
     // geom_p is the gaussian center transformed into screen space
@@ -174,7 +196,7 @@ void main(void)
 
     // compute radiance from sh
     vec3 v = normalize(position.xyz - eye);
-    geom_color = vec4(ComputeRadianceFromSH(v), alpha);
+    geom_color = vec4(SRGBToLinear(ComputeRadianceFromSH(v)), alpha);
 
     // gl_Position is in clip coordinates.
     gl_Position = p4;

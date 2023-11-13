@@ -43,7 +43,18 @@ Texture::Texture(const Image& image, const Params& params)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     GLenum pf = pixelFormatToGL[(int)image.pixelFormat];
+
     int internalFormat = pf;
+
+    if (image.isSRGB && pf == GL_RGB)
+    {
+        internalFormat = GL_SRGB8;
+    }
+    else if (image.isSRGB && pf == GL_RGBA)
+    {
+        internalFormat = GL_SRGB8_ALPHA8;
+    }
+
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.width, image.height, 0, pf, GL_UNSIGNED_BYTE, &image.data[0]);
 
     if ((int)params.minFilter >= (int)FilterType::NearestMipmapNearest)

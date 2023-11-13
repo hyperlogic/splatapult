@@ -350,6 +350,8 @@ int main(int argc, char *argv[])
     //const int32_t WIDTH = 2160;
     //const int32_t HEIGHT = 2224;
 
+    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+
     uint32_t windowFlags = SDL_WINDOW_OPENGL;
     if (fullscreen)
     {
@@ -362,6 +364,9 @@ int main(int argc, char *argv[])
     window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
 
     gl_context = SDL_GL_CreateContext(window);
+
+    SDL_GL_MakeCurrent(window, gl_context);
+    glEnable(GL_FRAMEBUFFER_SRGB);
 
 #ifdef SOFTWARE_SPLATS
 	renderer = SDL_CreateRenderer(window, -1, 0);
@@ -439,7 +444,8 @@ int main(int argc, char *argv[])
     flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
     MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
-    if (vrMode)
+    // AJT: TEMP ENABLE carpet
+    //if (vrMode)
     {
         if (!magicCarpet.Init())
         {
@@ -559,6 +565,9 @@ int main(int argc, char *argv[])
                         break;
                     case SDLK_c:
                         drawPointCloud = !drawPointCloud;
+                        break;
+                    case SDLK_x:
+                        xrBuddy->CycleColorSpace();
                         break;
                     case SDLK_n:
                         cameraIndex = (cameraIndex + 1) % cameras->GetNumCameras();
@@ -727,6 +736,11 @@ int main(int argc, char *argv[])
             glm::vec2 nearFar(Z_NEAR, Z_FAR);
             glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
+            // AJT: hack draw carpet
+            if (drawCarpet)
+            {
+                magicCarpet.Render(cameraMat, projMat, viewport, nearFar);
+            }
             if (drawPointCloud)
             {
                 pointRenderer->Render(cameraMat, projMat, viewport, nearFar);

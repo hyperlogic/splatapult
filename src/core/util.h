@@ -56,7 +56,10 @@ void PrintQuat(const glm::quat& q, const std::string& name);
 const std::string& GetRootPath();
 
 bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm::vec3& aabbMax);
+float LinearToSRGB(float linear);
+float SRGBToLinear(float srgb);
 glm::vec4 LinearToSRGB(const glm::vec4& linearColor);
+glm::vec4 SRGBToLinear(const glm::vec4& srgbColor);
 
 glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot);
 

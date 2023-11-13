@@ -19,7 +19,7 @@ public:
     {
         float position[3];  // in world space
         float normal[3];  // unused
-        float f_dc[3];  // first order spherical harmonics coeff
+        float f_dc[3];  // first order spherical harmonics coeff (sRGB color space)
         float f_rest[45];  // more spherical harminics coeff
         float opacity;  // alpha = 1 / (1 + exp(-opacity));
         float scale[3];

@@ -81,6 +81,8 @@ public:
 
     uint32_t GetColorTexture() const;
 
+    void CycleColorSpace();
+
 protected:
     bool LocateSpaces(XrTime predictedDisplayTime);
     bool RenderLayer(XrTime predictedDisplayTime,

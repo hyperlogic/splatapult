@@ -10,7 +10,7 @@ extern "C" {
 
 #include "util.h"
 
-Image::Image() : width(0), height(0), pixelFormat(PixelFormat::R)
+Image::Image() : width(0), height(0), pixelFormat(PixelFormat::R), isSRGB(false)
 {
 }
 
@@ -113,6 +113,9 @@ bool Image::Load(const std::string& filenameIn)
 
     png_destroy_info_struct(png_ptr, &info_ptr);
     png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
+
+    // TODO: should probably check if the sRGB color space chunk is present
+    isSRGB = true;
 
     return loaded;
 }

@@ -311,23 +311,51 @@ bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm
            (point.z >= aabbMin.z && point.z <= aabbMax.z);
 }
 
+float LinearToSRGB(float linear)
+{
+    if (linear <= 0.0031308f)
+    {
+        return 12.92f * linear;
+    }
+    else
+    {
+        return 1.055f * glm::pow(linear, 1.0f / 2.4f) - 0.055f;
+    }
+}
+
+float SRGBToLinear(float srgb)
+{
+    if (srgb <= 0.04045f)
+    {
+        return srgb / 12.92f;
+    }
+    else
+    {
+        return glm::pow((srgb + 0.055f) / 1.055f, 2.4f);
+    }
+}
+
 glm::vec4 LinearToSRGB(const glm::vec4& linearColor)
 {
     glm::vec4 sRGBColor;
 
     for (int i = 0; i < 3; ++i)
     {
-        if (linearColor[i] <= 0.0031308f)
-        {
-            sRGBColor[i] = 12.92f * linearColor[i];
-        }
-        else
-        {
-            sRGBColor[i] = 1.055f * std::pow(linearColor[i], 1.0f / 2.4f) - 0.055f;
-        }
+        sRGBColor[i] = LinearToSRGB(linearColor[i]);
     }
     sRGBColor.a = linearColor.a;
     return sRGBColor;
+}
+
+glm::vec4 SRGBToLinear(const glm::vec4& srgbColor)
+{
+    glm::vec4 linearColor;
+    for (int i = 0; i < 3; ++i) // Convert RGB, leave A unchanged
+    {
+        linearColor[i] = SRGBToLinear(srgbColor[i]);
+    }
+    linearColor.a = srgbColor.a; // Copy alpha channel directly
+    return linearColor;
 }
 
 glm::mat4 MakeRotateAboutPointMat(const glm::vec3& pos, const glm::quat& rot)
