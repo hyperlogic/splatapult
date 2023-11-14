@@ -48,35 +48,38 @@ void main()
         return;
     }
 
-    // k is the desired value we want to bound.
-    // where k = dot(d, conv2Dinv * d);
-    // or k = x (a*x + c*y) + y (b*x + d*y)
-    // We solve for the x that will give us one y solution.
-    // and solve for the y that will give us one x solution.
-    // we use these x & y's to build an axis aligned bounding box
-    // that is guarrenteed to enclose k = 12.
-    float k = 12.0f;
-    float a = cov2Dinv4.x;
-    float b = cov2Dinv4.z;
-    float c = cov2Dinv4.y;
-    float d = cov2Dinv4.w;
-    float denom = sqrt(-(b * b) - 2 * b * c - (c * c) + 4 * a * d);
-    float sqrtk = sqrt(k);
-    float xx = 2.0f * sqrt(d) * sqrtk / denom;
-    float yy = 2.0f * sqrt(a) * sqrtk / denom;
-    vec2 o[4];
-    o[0] = vec2(xx, (-(b * xx) - (c * xx)) / (2.0f * d));
-    o[1] = vec2(((-b * yy) - (c * yy)) / (2.0f * a), yy);
-    o[2] = -o[0];
-    o[3] = -o[1];
+    // compute 2d extents for the splat, using covariance matrix ellipse
+    // see https://cookierobotics.com/007/
+    float k = 3.5f;
+    float a = cov2D[0][0];
+    float b = cov2D[0][1];
+    float c = cov2D[1][1];
+    float apco2 = (a + c) / 2.0f;
+    float amco2 = (a - c) / 2.0f;
+    float term = sqrt(amco2 * amco2 + b * b);
+    float maj = apco2 + term;
+    float min = apco2 - term;
+
+    float theta;
+    if (b == 0.0f)
+    {
+        theta = (a >= c) ? 0.0f : radians(90.0f);
+    }
+    else
+    {
+        theta = atan(maj - a, b);
+    }
+
+    float r1 = k * sqrt(maj);
+    float r2 = k * sqrt(min);
+    vec2 majAxis = vec2(r1 * cos(theta), r1 * sin(theta));
+    vec2 minAxis = vec2(r2 * cos(theta + radians(90.0f)), r2 * sin(theta + radians(90.0f)));
 
     vec2 offsets[4];
-    vec2 omax = max(max(o[0], o[1]), max(o[2], o[3]));
-    vec2 omin = min(min(o[0], o[1]), min(o[2], o[3]));
-    offsets[0] = vec2(omax.x, omax.y);
-    offsets[1] = vec2(omin.x, omax.y);
-    offsets[3] = vec2(omin.x, omin.y);
-    offsets[2] = vec2(omax.x, omin.y);
+    offsets[0] = majAxis + minAxis;
+    offsets[1] = -majAxis + minAxis;
+    offsets[3] = -majAxis - minAxis;
+    offsets[2] = majAxis - minAxis;
 
     vec2 offset;
     float w = gl_in[0].gl_Position.w;

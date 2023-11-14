@@ -83,7 +83,7 @@ void Clear(bool setViewport = true)
 
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.005f);
+    glAlphaFunc(GL_GREATER, 1.0f / 256.0f);
 #endif
 }
 
@@ -164,6 +164,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
+
     return gaussianCloud;
 }
 
