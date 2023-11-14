@@ -12,7 +12,6 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <stdint.h>
-#include <stdlib.h> //rand()
 #include <sys/stat.h>
 #include <thread>
 #include <tracy/Tracy.hpp>
@@ -76,17 +75,15 @@ void Clear(bool setViewport = true)
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    glm::vec4 clearColor(0.0f, 0.0f, 0.1f, 1.0f);
-    //clearColor.r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // enable writes to depth buffer
     glEnable(GL_DEPTH_TEST);
 
     // enable alpha test
-    //glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.01f);
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.005f);
 #endif
 }
 
@@ -100,6 +97,7 @@ void Resize(int newWidth, int newHeight)
 #endif
 }
 
+// Draw a textured quad over the entire screen.
 void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
 {
     SDL_GL_MakeCurrent(window, gl_context);
@@ -107,7 +105,6 @@ void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTextur
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
 
-    // TODO: convert this to VAO
     glViewport(0, 0, width, height);
     glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
@@ -142,7 +139,6 @@ void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTextur
         uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
         glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
     }
-
 }
 
 std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
@@ -154,51 +150,6 @@ std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
         Log::printf("Error loading PointCloud!\n");
         return nullptr;
     }
-
-    /*
-    //
-    // make an example pointVec, that contain three lines one for each axis.
-    //
-    std::vector<PointCloud::Point>& pointVec = pointCloud->GetPointVec();
-    const float AXIS_LENGTH = 1.0f;
-    const int NUM_POINTS = 5;
-    const float DELTA = (AXIS_LENGTH / (float)NUM_POINTS);
-    pointVec.resize(NUM_POINTS * 3);
-    // x axis
-    for (int i = 0; i < NUM_POINTS; i++)
-    {
-        PointCloud::Point& p = pointVec[i];
-        p.position[0] = i * DELTA;
-        p.position[1] = 0.0f;
-        p.position[2] = 0.0f;
-        p.color[0] = 255;
-        p.color[1] = 0;
-        p.color[2] = 0;
-    }
-    // y axis
-    for (int i = 0; i < NUM_POINTS; i++)
-    {
-        PointCloud::Point& p = pointVec[i + NUM_POINTS];
-        p.position[0] = 0.0f;
-        p.position[1] = i * DELTA;
-        p.position[2] = 0.0f;
-        p.color[0] = 0;
-        p.color[1] = 255;
-        p.color[2] = 0;
-    }
-    // z axis
-    for (int i = 0; i < NUM_POINTS; i++)
-    {
-        PointCloud::Point& p = pointVec[i + 2 * NUM_POINTS];
-        p.position[0] = 0.0f;
-        p.position[1] = 0.0f;
-        p.position[2] = i * DELTA;
-        p.color[0] = 0;
-        p.color[1] = 0;
-        p.color[2] = 255;
-    }
-    */
-
     return pointCloud;
 }
 
@@ -213,79 +164,6 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
         Log::printf("Error loading GaussianCloud!\n");
         return nullptr;
     }
-
-    /*
-    //
-    // make an example GaussianClound, that contain red, green and blue axes.
-    //
-    std::vector<GaussianCloud::Gaussian>& gaussianVec = gaussianCloud->GetGaussianVec();
-    const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 1;
-    const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
-    const float S = logf(0.05f);
-    const float SH_C0 = 0.28209479177387814f;
-    const float SH_ONE = 1.0f / (2.0f * SH_C0);
-    const float SH_ZERO = -1.0f / (2.0f * SH_C0);
-
-    // x axis
-    for (int i = 0; i < NUM_SPLATS; i++)
-    {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = i * DELTA + DELTA;
-        g.position[1] = 0.0f;
-        g.position[2] = 0.0f;
-        // red
-        g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ZERO;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
-    }
-    // y axis
-    for (int i = 0; i < NUM_SPLATS; i++)
-    {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = 0.0f;
-        g.position[1] = i * DELTA + DELTA;
-        g.position[2] = 0.0f;
-        // green
-        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ZERO;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
-    }
-    // z axis
-    for (int i = 0; i < NUM_SPLATS; i++)
-    {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = 0.0f;
-        g.position[1] = 0.0f;
-        g.position[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
-        // blue
-        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ONE;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
-    }
-
-    GaussianCloud::Gaussian g;
-    memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-    g.position[0] = 0.0f;
-    g.position[1] = 0.0f;
-    g.position[2] = 0.0f;
-    // white
-    g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ONE;
-    g.opacity = 100.0f;
-    g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
-    g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-    gaussianVec.push_back(g);
-    */
-
     return gaussianCloud;
 }
 
@@ -347,9 +225,8 @@ int main(int argc, char *argv[])
 
     const int32_t WIDTH = 1024;
     const int32_t HEIGHT = 768;
-    //const int32_t WIDTH = 2160;
-    //const int32_t HEIGHT = 2224;
 
+    // We render in linear space and use opengl to convert linear back into sRGB.
     SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
 
     uint32_t windowFlags = SDL_WINDOW_OPENGL;
@@ -429,14 +306,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /*
-    if (dataDir == "../../data/sh_test/")
-    {
-        pointCloud->ExportPly(dataDir + "input.ply");
-        gaussianCloud->ExportPly(dataDir + "point_cloud/iteration_30000/point_cloud.ply");
-    }
-    */
-
     const float MOVE_SPEED = 2.5f;
     const float ROT_SPEED = 1.0f;
     FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
@@ -444,8 +313,7 @@ int main(int argc, char *argv[])
     flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
     MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
-    // AJT: TEMP ENABLE carpet
-    //if (vrMode)
+    if (vrMode)
     {
         if (!magicCarpet.Init())
         {
@@ -566,9 +434,6 @@ int main(int argc, char *argv[])
                     case SDLK_c:
                         drawPointCloud = !drawPointCloud;
                         break;
-                    case SDLK_x:
-                        xrBuddy->CycleColorSpace();
-                        break;
                     case SDLK_n:
                         cameraIndex = (cameraIndex + 1) % cameras->GetNumCameras();
                         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
@@ -578,7 +443,6 @@ int main(int argc, char *argv[])
                         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
                         break;
                     case SDLK_f:
-                        // TODO: more then one carpet size
                         drawCarpet = !drawCarpet;
                         break;
                     case SDLK_a:
@@ -736,11 +600,6 @@ int main(int argc, char *argv[])
             glm::vec2 nearFar(Z_NEAR, Z_FAR);
             glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-            // AJT: hack draw carpet
-            if (drawCarpet)
-            {
-                magicCarpet.Render(cameraMat, projMat, viewport, nearFar);
-            }
             if (drawPointCloud)
             {
                 pointRenderer->Render(cameraMat, projMat, viewport, nearFar);

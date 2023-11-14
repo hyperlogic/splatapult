@@ -100,7 +100,7 @@ void RayMarchRenderer::RenderImpl(const glm::mat4& cameraMat, const glm::mat4& p
     glm::vec3 eye = glm::vec3(cameraMat[3]);
     glm::mat3 cameraMat3 = glm::mat3(cameraMat);
 
-    // AJT: HACK use real proj matrix
+    // AJT: TODO use real proj matrix
     const float fovy = glm::radians(45.0f);
 
     const int PIXEL_STEP = 10;

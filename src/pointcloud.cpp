@@ -202,3 +202,49 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
 
     return true;
 }
+
+void PointCloud::InitDebugCloud()
+{
+    pointVec.clear();
+
+    //
+    // make an debug pointVec, that contains three lines one for each axis.
+    //
+    const float AXIS_LENGTH = 1.0f;
+    const int NUM_POINTS = 5;
+    const float DELTA = (AXIS_LENGTH / (float)NUM_POINTS);
+    pointVec.resize(NUM_POINTS * 3);
+    // x axis
+    for (int i = 0; i < NUM_POINTS; i++)
+    {
+        PointCloud::Point& p = pointVec[i];
+        p.position[0] = i * DELTA;
+        p.position[1] = 0.0f;
+        p.position[2] = 0.0f;
+        p.color[0] = 255;
+        p.color[1] = 0;
+        p.color[2] = 0;
+    }
+    // y axis
+    for (int i = 0; i < NUM_POINTS; i++)
+    {
+        PointCloud::Point& p = pointVec[i + NUM_POINTS];
+        p.position[0] = 0.0f;
+        p.position[1] = i * DELTA;
+        p.position[2] = 0.0f;
+        p.color[0] = 0;
+        p.color[1] = 255;
+        p.color[2] = 0;
+    }
+    // z axis
+    for (int i = 0; i < NUM_POINTS; i++)
+    {
+        PointCloud::Point& p = pointVec[i + 2 * NUM_POINTS];
+        p.position[0] = 0.0f;
+        p.position[1] = 0.0f;
+        p.position[2] = i * DELTA;
+        p.color[0] = 0;
+        p.color[1] = 0;
+        p.color[2] = 255;
+    }
+}

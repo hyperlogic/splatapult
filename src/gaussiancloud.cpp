@@ -239,3 +239,77 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename) const
 
     return true;
 }
+
+void GaussianCloud::InitDebugCloud()
+{
+    gaussianVec.clear();
+
+    //
+    // make an debug GaussianClound, that contain red, green and blue axes.
+    //
+    const float AXIS_LENGTH = 1.0f;
+    const int NUM_SPLATS = 1;
+    const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
+    const float S = logf(0.05f);
+    const float SH_C0 = 0.28209479177387814f;
+    const float SH_ONE = 1.0f / (2.0f * SH_C0);
+    const float SH_ZERO = -1.0f / (2.0f * SH_C0);
+
+    // x axis
+    for (int i = 0; i < NUM_SPLATS; i++)
+    {
+        GaussianCloud::Gaussian g;
+        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
+        g.position[0] = i * DELTA + DELTA;
+        g.position[1] = 0.0f;
+        g.position[2] = 0.0f;
+        // red
+        g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ZERO;
+        g.opacity = 100.0f;
+        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
+        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
+    }
+    // y axis
+    for (int i = 0; i < NUM_SPLATS; i++)
+    {
+        GaussianCloud::Gaussian g;
+        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
+        g.position[0] = 0.0f;
+        g.position[1] = i * DELTA + DELTA;
+        g.position[2] = 0.0f;
+        // green
+        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ZERO;
+        g.opacity = 100.0f;
+        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
+        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
+    }
+    // z axis
+    for (int i = 0; i < NUM_SPLATS; i++)
+    {
+        GaussianCloud::Gaussian g;
+        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
+        g.position[0] = 0.0f;
+        g.position[1] = 0.0f;
+        g.position[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
+        // blue
+        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ONE;
+        g.opacity = 100.0f;
+        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
+        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+        gaussianVec.push_back(g);
+    }
+
+    GaussianCloud::Gaussian g;
+    memset(&g, 0, sizeof(GaussianCloud::Gaussian));
+    g.position[0] = 0.0f;
+    g.position[1] = 0.0f;
+    g.position[2] = 0.0f;
+    // white
+    g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ONE;
+    g.opacity = 100.0f;
+    g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
+    g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
+    gaussianVec.push_back(g);
+}

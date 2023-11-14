@@ -54,8 +54,8 @@ void main()
     // We solve for the x that will give us one y solution.
     // and solve for the y that will give us one x solution.
     // we use these x & y's to build an axis aligned bounding box
-    // that is guarrenteed to enclose k = 8.
-    float k = 8.0f;
+    // that is guarrenteed to enclose k = 12.
+    float k = 12.0f;
     float a = cov2Dinv4.x;
     float b = cov2Dinv4.z;
     float c = cov2Dinv4.y;
