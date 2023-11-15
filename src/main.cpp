@@ -610,6 +610,15 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
+
+            // Debug draw the floor?
+            DebugDraw_Line(cameras->GetCarpetPos(), cameras->GetCarpetPos() + cameras->GetCarpetNormal(), glm::vec4(1.0f));
+            DebugDraw_Transform(glm::mat4(1.0f), 1.0f);
+
+            if (drawDebug)
+            {
+                DebugDraw_Render(projMat * glm::inverse(cameraMat));
+            }
 #ifdef SOFTWARE_SPLATS
             SDL_RenderPresent(renderer);
 #else

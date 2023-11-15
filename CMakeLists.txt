@@ -34,6 +34,9 @@ find_package(Tracy CONFIG REQUIRED)
 # openxr-loader
 find_package(OpenXR CONFIG REQUIRED)
 
+# eigen3
+find_package(Eigen3 CONFIG REQUIRED)
+
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
@@ -83,6 +86,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Tracy::TracyClient
     OpenXR::headers
     OpenXR::openxr_loader
+    Eigen3::Eigen
 )
 
 
