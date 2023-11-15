@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
             float delta = (ticks - frameTicks) / 1000.0f;
             float fps = (float)FPS_FRAMES / delta;
             frameTicks = ticks;
-            Log::printf("fps = %.2f\n", fps);
+            //Log::printf("fps = %.2f\n", fps);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;

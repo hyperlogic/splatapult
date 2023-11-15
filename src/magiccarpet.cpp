@@ -12,6 +12,8 @@
 const float SNAP_TIME = 1.0f;
 const float SNAP_ANGLE = glm::radians(30.0f);
 
+const float GRAB_SWITCH_TIME = 1.0f;
+
 const float CARPET_RADIUS = 3.0f;
 const float CARPET_TILE_COUNT = 3.0f;
 
@@ -29,10 +31,61 @@ void MagicCarpet::Pose::Dump(const std::string& name) const
 }
 
 MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
+    sm(State::Normal),
     carpetMat(carpetMatIn),
-    moveSpeed(moveSpeedIn),
-    state(State::Normal)
+    moveSpeed(moveSpeedIn)
 {
+    // Normal state
+    sm.AddState(State::Normal, "Normal",
+                [this]() { snapTimer = 0.0f; },  // enter
+                [this]() {}, // exit
+                [this](float dt) { NormalProcess(dt); });  // process
+    sm.AddTransition(State::Normal, State::LeftGrip, "leftGrip down", [this]()
+    {
+        return in.buttonState.leftGrip;
+    });
+    sm.AddTransition(State::Normal, State::RightGrip, "rightGrip down", [this]()
+    {
+        return in.buttonState.rightGrip;
+    });
+
+    // Left Grip
+    sm.AddState(State::LeftGrip, "LeftGrip",
+                [this]() { grabRot = in.leftPose.rot; grabPos = in.leftPose.pos; grabCarpetMat = carpetMat; },
+                [this]() {},
+                [this](float dt)
+                {
+                    glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
+                    glm::vec3 pos = in.leftPose.pos;
+                    glm::quat rot = grabRot;
+                    glm::mat4 currMat = MakeMat4(rot, pos);
+
+                    // adjust the carpet mat
+                    carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
+                });
+    sm.AddTransition(State::LeftGrip, State::Normal, "leftGrip up", [this]()
+    {
+        return !in.buttonState.leftGrip;
+    });
+
+    // Right Grip
+    sm.AddState(State::RightGrip, "RightGrip",
+                [this]() { grabRot = in.rightPose.rot; grabPos = in.rightPose.pos; grabCarpetMat = carpetMat; },
+                [this]() {},
+                [this](float dt)
+                {
+                    glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
+                    glm::vec3 pos = in.rightPose.pos;
+                    glm::quat rot = grabRot;
+                    glm::mat4 currMat = MakeMat4(rot, pos);
+
+                    // adjust the carpet mat
+                    carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
+                });
+    sm.AddTransition(State::RightGrip, State::Normal, "rightGrip up", [this]()
+    {
+        return !in.buttonState.rightGrip;
+    });
 }
 
 bool MagicCarpet::Init()
@@ -94,77 +147,14 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
     DebugDraw_Transform(rightMat);
     */
 
-    if (state == State::Normal &&
-        (buttonState.leftGrip && buttonState.rightGrip) &&
-        leftPose.posValid && leftPose.rotValid &&
-        rightPose.posValid && leftPose.rotValid)
-    {
-        // enter move/rot grab state
-        state = State::MoveGrab;
+    in.headPose = headPose;
+    in.leftPose = leftPose;
+    in.rightPose = rightPose;
+    in.leftStick = leftStick;
+    in.rightStick = rightStick;
+    in.buttonState = buttonState;
 
-        // capture averge state of hand controllers
-        grabPos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
-        grabRot = SafeMix(leftPose.rot, rightPose.rot, 0.5f);
-        grabCarpetMat = carpetMat;
-    }
-    else if (state == State::MoveGrab && (!buttonState.leftGrip || !buttonState.rightGrip))
-    {
-        // exit grab state
-        state = State::Normal;
-    }
-
-    if (state == State::Normal)
-    {
-        // get the forward and right vectors of the HMD
-        glm::vec3 headForward = headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
-        glm::vec3 headRight = headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
-
-        // project the HMD forward & right vectors onto the carpet, i.e. make sure they lie in the horizontal plane
-        // AJT: TODO: Handle bad normalize
-        glm::vec3 horizForward = glm::normalize(glm::vec3(headForward.x, 0.0f, headForward.z));
-        glm::vec3 horizRight = glm::normalize(glm::vec3(headRight.x, 0.0f, headRight.z));
-
-        // use leftStick to move horizontally
-        glm::vec3 horizVel = horizForward * leftStick.y * moveSpeed + horizRight * leftStick.x * moveSpeed;
-
-        // handle snap turns
-        snapTimer -= dt;
-        if (fabs(rightStick.x) > 0.5f && snapTimer < 0.0f)
-        {
-            // snap!
-            float snapSign = rightStick.x > 0.0f ? -1.0f : 1.0f;
-
-            // Rotate the carpet around the users HMD
-            glm::vec3 snapPos = XformPoint(carpetMat, headPose.pos);
-            glm::quat snapRot = glm::angleAxis(snapSign * SNAP_ANGLE, XformVec(carpetMat, glm::vec3(0.0f, 1.0f, 0.0f)));
-            carpetMat = MakeRotateAboutPointMat(snapPos, snapRot) * carpetMat;
-
-            snapTimer = SNAP_TIME;
-        }
-        else if (fabs(rightStick.x) < 0.2f)
-        {
-            // reset snap
-            snapTimer = 0.0f;
-        }
-
-        // move the carpet!
-        glm::vec3 vel = XformVec(carpetMat, horizVel);
-        carpetMat[3][0] += vel.x * dt;
-        carpetMat[3][1] += vel.y * dt;
-        carpetMat[3][2] += vel.z * dt;
-    }
-    else if (state == State::MoveGrab)
-    {
-        glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
-
-        // capture averge state of hand controllers
-        glm::vec3 pos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
-        glm::quat rot = grabRot; //SafeMix(leftPose.rot, rightPose.rot, 0.5f);
-        glm::mat4 currMat = MakeMat4(rot, pos);
-
-        // adjust the carpet mat
-        carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
-    }
+    sm.Process(dt);
 }
 
 void MagicCarpet::SetCarpetMat(const glm::mat4& carpetMatIn)
@@ -185,3 +175,43 @@ void MagicCarpet::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     carpetVao->DrawElements(GL_TRIANGLES);
 }
 
+void MagicCarpet::NormalProcess(float dt)
+{
+    // get the forward and right vectors of the HMD
+    glm::vec3 headForward = in.headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 headRight = in.headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
+
+    // project the HMD forward & right vectors onto the carpet, i.e. make sure they lie in the horizontal plane
+    // AJT: TODO: Handle bad normalize
+    glm::vec3 horizForward = glm::normalize(glm::vec3(headForward.x, 0.0f, headForward.z));
+    glm::vec3 horizRight = glm::normalize(glm::vec3(headRight.x, 0.0f, headRight.z));
+
+    // use leftStick to move horizontally
+    glm::vec3 horizVel = horizForward * in.leftStick.y * moveSpeed + horizRight * in.leftStick.x * moveSpeed;
+
+    // handle snap turns
+    snapTimer -= dt;
+    if (fabs(in.rightStick.x) > 0.5f && snapTimer < 0.0f)
+    {
+        // snap!
+        float snapSign = in.rightStick.x > 0.0f ? -1.0f : 1.0f;
+
+        // Rotate the carpet around the users HMD
+        glm::vec3 snapPos = XformPoint(carpetMat, in.headPose.pos);
+        glm::quat snapRot = glm::angleAxis(snapSign * SNAP_ANGLE, XformVec(carpetMat, glm::vec3(0.0f, 1.0f, 0.0f)));
+        carpetMat = MakeRotateAboutPointMat(snapPos, snapRot) * carpetMat;
+
+        snapTimer = SNAP_TIME;
+    }
+    else if (fabs(in.rightStick.x) < 0.2f)
+    {
+        // reset snap
+        snapTimer = 0.0f;
+    }
+
+    // move the carpet!
+    glm::vec3 vel = XformVec(carpetMat, horizVel);
+    carpetMat[3][0] += vel.x * dt;
+    carpetMat[3][1] += vel.y * dt;
+    carpetMat[3][2] += vel.z * dt;
+}

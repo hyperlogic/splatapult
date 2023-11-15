@@ -7,8 +7,9 @@
 #include <memory>
 #include <string>
 
-#include "core/texture.h"
 #include "core/program.h"
+#include "core/statemachine.h"
+#include "core/texture.h"
 #include "core/vertexbuffer.h"
 
 // VR flycam
@@ -52,11 +53,30 @@ public:
                 const glm::vec4& viewport, const glm::vec2& nearFar);
 
 protected:
-    float snapTimer;
-    float moveSpeed;
-    enum class State { Normal, MoveGrab };
-    State state;
+    void MagicCarpet::NormalProcess(float dt);
 
+    enum class State { Normal, LeftGrip, RightGrip, DoubleGrip };
+
+    struct InputContext
+    {
+        Pose headPose;
+        Pose leftPose;
+        Pose rightPose;
+        glm::vec2 leftStick;
+        glm::vec2 rightStick;
+        ButtonState buttonState;
+    };
+
+    float moveSpeed;
+
+    StateMachine<State> sm;
+
+    InputContext in;
+
+    // used in normal state to perform snap turns
+    float snapTimer;
+
+    // used in grab states to store the pos/rot of controllers on entry into the state.
     glm::vec3 grabPos;
     glm::quat grabRot;
     glm::mat4 grabCarpetMat;
