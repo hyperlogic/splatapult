@@ -23,6 +23,7 @@ void GLErrorCheck(const char* message);
 #define GL_ERROR_CHECK(x)
 #endif
 
+glm::vec3 SafeNormalize(const glm::vec3& v, const glm::vec3& ifZero);
 glm::quat SafeMix(const glm::quat& a, const glm::quat& b, float alpha);
 
 glm::mat3 MakeMat3(const glm::quat& rotation);

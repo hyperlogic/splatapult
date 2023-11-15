@@ -99,15 +99,15 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
         leftPose.posValid && leftPose.rotValid &&
         rightPose.posValid && leftPose.rotValid)
     {
-        // enter grab state
-        state = State::Grab;
+        // enter move/rot grab state
+        state = State::MoveGrab;
 
         // capture averge state of hand controllers
         grabPos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
         grabRot = SafeMix(leftPose.rot, rightPose.rot, 0.5f);
         grabCarpetMat = carpetMat;
     }
-    else if (state == State::Grab && (!buttonState.leftGrip || !buttonState.rightGrip))
+    else if (state == State::MoveGrab && (!buttonState.leftGrip || !buttonState.rightGrip))
     {
         // exit grab state
         state = State::Normal;
@@ -153,13 +153,13 @@ void MagicCarpet::Process(const Pose& headPose, const Pose& leftPose, const Pose
         carpetMat[3][1] += vel.y * dt;
         carpetMat[3][2] += vel.z * dt;
     }
-    else if (state == State::Grab)
+    else if (state == State::MoveGrab)
     {
         glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
 
         // capture averge state of hand controllers
         glm::vec3 pos = glm::mix(leftPose.pos, rightPose.pos, 0.5f);
-        glm::quat rot = SafeMix(leftPose.rot, rightPose.rot, 0.5f);
+        glm::quat rot = grabRot; //SafeMix(leftPose.rot, rightPose.rot, 0.5f);
         glm::mat4 currMat = MakeMat4(rot, pos);
 
         // adjust the carpet mat

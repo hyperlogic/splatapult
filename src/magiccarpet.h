@@ -54,7 +54,7 @@ public:
 protected:
     float snapTimer;
     float moveSpeed;
-    enum class State { Normal, Grab };
+    enum class State { Normal, MoveGrab };
     State state;
 
     glm::vec3 grabPos;

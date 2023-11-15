@@ -313,7 +313,24 @@ int main(int argc, char *argv[])
     int cameraIndex = 0;
     flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
 
-    MagicCarpet magicCarpet(glm::mat4(1.0f), MOVE_SPEED);
+    // initialize magicCarpet from first camera and estimated floor position.
+    glm::mat4 estimatedFloorMat(1.0f);
+    if (cameras->GetNumCameras() > 0)
+    {
+        glm::vec3 floorNormal, floorPos;
+        cameras->EstimateFloorPlane(floorNormal, floorPos);
+        glm::vec3 floorZ = cameras->GetCameraVec()[0][2];
+        glm::vec3 floorY = floorNormal;
+        glm::vec3 floorX = glm::cross(floorY, floorZ);
+        floorZ = glm::cross(floorX, floorY);
+
+        estimatedFloorMat = glm::mat4(glm::vec4(floorX, 0.0f),
+                                      glm::vec4(floorY, 0.0f),
+                                      glm::vec4(floorZ, 0.0f),
+                                      glm::vec4(floorPos, 1.0f));
+    }
+
+    MagicCarpet magicCarpet(estimatedFloorMat, MOVE_SPEED);
     if (vrMode)
     {
         if (!magicCarpet.Init())
@@ -570,6 +587,11 @@ int main(int argc, char *argv[])
                            rightStick + virtualRightStick, roll, dt);
         }
 
+        // Debug draw the estimated floor
+        DebugDraw_Transform(estimatedFloorMat, 1.0f);
+        // Draw the origin
+        DebugDraw_Transform(glm::mat4(1.0f), 1.0f);
+
         if (vrMode)
         {
             if (xrBuddy->SessionReady())
@@ -610,10 +632,6 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
-
-            // Debug draw the floor?
-            DebugDraw_Line(cameras->GetCarpetPos(), cameras->GetCarpetPos() + cameras->GetCarpetNormal(), glm::vec4(1.0f));
-            DebugDraw_Transform(glm::mat4(1.0f), 1.0f);
 
             if (drawDebug)
             {

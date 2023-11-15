@@ -111,6 +111,19 @@ void GLErrorCheck(const char* message)
 }
 #endif
 
+glm::vec3 SafeNormalize(const glm::vec3& v, const glm::vec3& ifZero)
+{
+    float len = glm::length(v);
+    if (len > 0.0f)
+    {
+        return glm::normalize(v);
+    }
+    else
+    {
+        return ifZero;
+    }
+}
+
 glm::quat SafeMix(const glm::quat& a, const glm::quat& b, float alpha)
 {
     // adjust signs if necessary
