@@ -40,33 +40,43 @@
 
 //#define SOFTWARE_SPLATS
 
-static bool quitting = false;
-static SDL_Window *window = NULL;
-static SDL_GLContext gl_context;
-static SDL_Renderer *renderer = NULL;
+struct GlobalContext
+{
+    bool quitting = false;
+    SDL_Window* window = NULL;
+    SDL_GLContext gl_context;
+    SDL_Renderer* renderer = NULL;
+};
+
+GlobalContext ctx;
+
+struct Options
+{
+    bool vrMode = false;
+    bool fullscreen = false;
+    bool drawCarpet = true;
+    bool drawPointCloud = false;
+    bool drawDebug = true;
+};
+
+Options opt;
 
 const float Z_NEAR = 0.1f;
 const float Z_FAR = 100.0f;
 const float FOVY = glm::radians(45.0f);
 
-static bool vrMode = false;
-static bool fullscreen = false;
-static bool drawCarpet = true;
-static bool drawPointCloud = false;
-static bool drawDebug = true;
-
 void Clear(bool setViewport = true)
 {
 #ifdef SOFTWARE_SPLATS
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(ctx.renderer, 0, 0, 0, 0);
+    SDL_RenderClear(ctx.renderer);
 #else
-    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
 
     if (setViewport)
     {
         int width, height;
-        SDL_GetWindowSize(window, &width, &height);
+        SDL_GetWindowSize(ctx.window, &width, &height);
         glViewport(0, 0, width, height);
     }
 
@@ -89,21 +99,20 @@ void Clear(bool setViewport = true)
 
 void Resize(int newWidth, int newHeight)
 {
-#ifdef SOFTWARE_SPLATS
-    SDL_RenderSetLogicalSize(renderer, newWidth, newHeight);
-#else
-    SDL_GL_MakeCurrent(window, gl_context);
+#ifndef SOFTWARE_SPLATS
+    SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
     glViewport(0, 0, newWidth, newHeight);
 #endif
+    SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
 }
 
 // Draw a textured quad over the entire screen.
 void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
 {
-    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
 
     int width, height;
-    SDL_GetWindowSize(window, &width, &height);
+    SDL_GetWindowSize(ctx.window, &width, &height);
 
     glViewport(0, 0, width, height);
     glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -172,7 +181,7 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 {
     if (event->type == SDL_APP_WILLENTERBACKGROUND)
     {
-        quitting = true;
+        ctx.quitting = true;
     }
 
     return 1;
@@ -194,11 +203,11 @@ int main(int argc, char *argv[])
         {
             if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--openxr"))
             {
-                vrMode = true;
+                opt.vrMode = true;
             }
             else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--fullscreen"))
             {
-                fullscreen = true;
+                opt.fullscreen = true;
             }
         }
         dataDir = argv[argc - 1];
@@ -231,7 +240,7 @@ int main(int argc, char *argv[])
     SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
 
     uint32_t windowFlags = SDL_WINDOW_OPENGL;
-    if (fullscreen)
+    if (opt.fullscreen)
     {
         windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
@@ -239,19 +248,19 @@ int main(int argc, char *argv[])
     {
         windowFlags |= SDL_WINDOW_RESIZABLE;
     }
-    window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
+    ctx.window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
 
-    gl_context = SDL_GL_CreateContext(window);
+    ctx.gl_context = SDL_GL_CreateContext(ctx.window);
 
-    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
     glEnable(GL_FRAMEBUFFER_SRGB);
 
 #ifdef SOFTWARE_SPLATS
-	renderer = SDL_CreateRenderer(window, -1, 0);
+	ctx.renderer = SDL_CreateRenderer(ctx.window, -1, 0);
 #else
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    ctx.renderer = SDL_CreateRenderer(ctx.window, -1, SDL_RENDERER_ACCELERATED);
 #endif
-	if (!renderer)
+	if (!ctx.renderer)
     {
         Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
 		return 1;
@@ -264,7 +273,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    SDL_GL_MakeCurrent(window, gl_context);
     if (!DebugDraw_Init())
     {
         Log::printf("DebugDraw Init failed\n");
@@ -272,7 +280,7 @@ int main(int argc, char *argv[])
     }
 
     std::shared_ptr<XrBuddy> xrBuddy;
-    if (vrMode)
+    if (opt.vrMode)
     {
         xrBuddy = std::make_shared<XrBuddy>(glm::vec2(Z_NEAR, Z_FAR));
         if (!xrBuddy->Init())
@@ -331,7 +339,7 @@ int main(int argc, char *argv[])
     }
 
     MagicCarpet magicCarpet(estimatedFloorMat, MOVE_SPEED);
-    if (vrMode)
+    if (opt.vrMode)
     {
         if (!magicCarpet.Init())
         {
@@ -349,7 +357,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef SOFTWARE_SPLATS
-    auto splatRenderer = std::make_shared<ShaderDebugRenderer>(renderer);
+    auto splatRenderer = std::make_shared<ShaderDebugRenderer>(ctx.renderer);
 #else
     auto splatRenderer = std::make_shared<SplatRenderer>();
 #endif
@@ -361,7 +369,7 @@ int main(int argc, char *argv[])
     }
 
     auto desktopProgram = std::make_shared<Program>();
-    if (vrMode)
+    if (opt.vrMode)
     {
         if (!desktopProgram->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
         {
@@ -376,11 +384,17 @@ int main(int argc, char *argv[])
 
             glm::mat4 fullEyeMat = magicCarpet.GetCarpetMat() * eyeMat;
 
-            if (drawCarpet)
+            if (opt.drawDebug)
+            {
+                DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
+            }
+
+            if (opt.drawCarpet)
             {
                 magicCarpet.Render(fullEyeMat, projMat, viewport, nearFar);
             }
-            if (drawPointCloud)
+
+            if (opt.drawPointCloud)
             {
                 pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
@@ -392,11 +406,6 @@ int main(int argc, char *argv[])
                 }
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
-
-            if (drawDebug)
-            {
-                DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
-            }
         });
     }
 
@@ -406,12 +415,12 @@ int main(int argc, char *argv[])
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
-    while (!quitting)
+    while (!ctx.quitting)
     {
         // update dt
         uint32_t ticks = SDL_GetTicks();
 
-        if (vrMode)
+        if (opt.vrMode)
         {
             if (!xrBuddy->PollEvents())
             {
@@ -437,7 +446,7 @@ int main(int argc, char *argv[])
             switch (event.type)
             {
             case SDL_QUIT:
-                quitting = true;
+                ctx.quitting = true;
                 break;
             case SDL_KEYDOWN:
             case SDL_KEYUP:
@@ -447,10 +456,10 @@ int main(int argc, char *argv[])
                     switch (event.key.keysym.sym)
                     {
                     case SDLK_ESCAPE:
-                        quitting = true;
+                        ctx.quitting = true;
                         break;
                     case SDLK_c:
-                        drawPointCloud = !drawPointCloud;
+                        opt.drawPointCloud = !opt.drawPointCloud;
                         break;
                     case SDLK_n:
                         cameraIndex = (cameraIndex + 1) % cameras->GetNumCameras();
@@ -461,7 +470,7 @@ int main(int argc, char *argv[])
                         flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
                         break;
                     case SDLK_f:
-                        drawCarpet = !drawCarpet;
+                        opt.drawCarpet = !opt.drawCarpet;
                         break;
                     case SDLK_a:
                         virtualLeftStick.x -= 1.0f;
@@ -535,13 +544,12 @@ int main(int argc, char *argv[])
                     int newHeight = event.window.data2;
                     // Handle the resize event, e.g., adjust your viewport, etc.
                     Resize(newWidth, newHeight);
-                    SDL_RenderSetLogicalSize(renderer, newWidth, newHeight);
                 }
                 break;
             }
         }
 
-        if (vrMode)
+        if (opt.vrMode)
         {
             if (!xrBuddy->SyncInput())
             {
@@ -592,7 +600,7 @@ int main(int argc, char *argv[])
         // Draw the origin
         DebugDraw_Transform(glm::mat4(1.0f), 1.0f);
 
-        if (vrMode)
+        if (opt.vrMode)
         {
             if (xrBuddy->SessionReady())
             {
@@ -610,20 +618,25 @@ int main(int argc, char *argv[])
             // render desktop.
             Clear(true);
             RenderDesktop(desktopProgram, xrBuddy->GetColorTexture());
-            SDL_GL_SwapWindow(window);
+            SDL_GL_SwapWindow(ctx.window);
         }
         else
         {
             Clear(true);
 
             int width, height;
-            SDL_GetWindowSize(window, &width, &height);
+            SDL_GetWindowSize(ctx.window, &width, &height);
             glm::mat4 cameraMat = flyCam.GetCameraMat();
             glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
             glm::vec2 nearFar(Z_NEAR, Z_FAR);
             glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
 
-            if (drawPointCloud)
+            if (opt.drawDebug)
+            {
+                DebugDraw_Render(projMat * glm::inverse(cameraMat));
+            }
+
+            if (opt.drawPointCloud)
             {
                 pointRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
@@ -633,14 +646,10 @@ int main(int argc, char *argv[])
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
 
-            if (drawDebug)
-            {
-                DebugDraw_Render(projMat * glm::inverse(cameraMat));
-            }
 #ifdef SOFTWARE_SPLATS
-            SDL_RenderPresent(renderer);
+            SDL_RenderPresent(ctx.renderer);
 #else
-            SDL_GL_SwapWindow(window);
+            SDL_GL_SwapWindow(ctx.window);
 #endif
         }
 
@@ -654,9 +663,9 @@ int main(int argc, char *argv[])
     DebugDraw_Shutdown();
     JOYSTICK_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
-    SDL_GL_DeleteContext(gl_context);
+    SDL_GL_DeleteContext(ctx.gl_context);
 
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(ctx.window);
     SDL_Quit();
 
     return 0;
