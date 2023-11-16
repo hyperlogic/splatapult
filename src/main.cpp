@@ -59,8 +59,6 @@ struct Options
     bool drawDebug = true;
 };
 
-Options opt;
-
 const float Z_NEAR = 0.1f;
 const float Z_FAR = 100.0f;
 const float FOVY = glm::radians(45.0f);
@@ -189,6 +187,8 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 
 int main(int argc, char *argv[])
 {
+    Options opt;
+
     // parse arguments
     std::string dataDir;
     if (argc < 2)
@@ -377,8 +377,9 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet](const glm::mat4& projMat, const glm::mat4& eyeMat,
-                                                                                  const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
+        xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet, &opt](
+            const glm::mat4& projMat, const glm::mat4& eyeMat,
+            const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
         {
             Clear(false);
 
