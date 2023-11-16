@@ -111,19 +111,23 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
                 [this]() {},
                 [this](float dt)
                 {
+                    glm::vec3 d0 = grabRightPose.pos - grabLeftPose.pos;
                     glm::vec3 p0 = glm::mix(grabLeftPose.pos, grabRightPose.pos, 0.5f);
-                    glm::vec3 x0 = SafeNormalize(grabRightPose.pos - grabLeftPose.pos, glm::vec3(1.0f, 0.0f, 0.0f));
+                    glm::vec3 x0 = SafeNormalize(d0, glm::vec3(1.0f, 0.0f, 0.0f));
                     glm::vec3 y0 =  glm::vec3(0.0f, 1.0f, 0.0f);
                     glm::vec3 z0 = glm::normalize(glm::cross(x0, y0));
                     y0 = glm::normalize(glm::cross(z0, x0));
                     glm::mat4 grabMat(glm::vec4(x0, 0.0f), glm::vec4(y0, 0.0f), glm::vec4(z0, 0.0f), glm::vec4(p0, 1.0f));
 
+                    glm::vec3 d1 = in.rightPose.pos - in.leftPose.pos;
                     glm::vec3 p1 = glm::mix(in.leftPose.pos, in.rightPose.pos, 0.5f);
-                    glm::vec3 x1 = SafeNormalize(in.rightPose.pos - in.leftPose.pos, glm::vec3(1.0f, 0.0f, 0.0f));
+                    glm::vec3 x1 = SafeNormalize(d1, glm::vec3(1.0f, 0.0f, 0.0f));
                     glm::vec3 y1 = glm::vec3(0.0f, 1.0f, 0.0f);
                     glm::vec3 z1 = glm::normalize(glm::cross(x1, y1));
                     y1 = glm::normalize(glm::cross(z1, x1));
                     glm::mat4 currMat(glm::vec4(x1, 0.0f), glm::vec4(y1, 0.0f), glm::vec4(z1, 0.0f), glm::vec4(p1, 1.0f));
+                    float s1 = glm::length(d1) / glm::length(d0);
+                    currMat = currMat * MakeMat4(s1, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
                     // adjust the carpet mat
                     carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
@@ -252,7 +256,7 @@ void MagicCarpet::NormalProcess(float dt)
 
         // Rotate the carpet around the users HMD
         glm::vec3 snapPos = XformPoint(carpetMat, in.headPose.pos);
-        glm::quat snapRot = glm::angleAxis(snapSign * SNAP_ANGLE, XformVec(carpetMat, glm::vec3(0.0f, 1.0f, 0.0f)));
+        glm::quat snapRot = glm::angleAxis(snapSign * SNAP_ANGLE, glm::normalize(XformVec(carpetMat, glm::vec3(0.0f, 1.0f, 0.0f))));
         carpetMat = MakeRotateAboutPointMat(snapPos, snapRot) * carpetMat;
 
         snapTimer = SNAP_TIME;
