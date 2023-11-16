@@ -53,7 +53,9 @@ public:
                 const glm::vec4& viewport, const glm::vec2& nearFar);
 
 protected:
-    void MagicCarpet::NormalProcess(float dt);
+    void NormalProcess(float dt);
+    void GrabPoses();
+    int GripCount() const;
 
     enum class State { Normal, LeftGrip, RightGrip, DoubleGrip };
 
@@ -76,9 +78,12 @@ protected:
     // used in normal state to perform snap turns
     float snapTimer;
 
+    // used in grip states
+    float gripTimer;
+
     // used in grab states to store the pos/rot of controllers on entry into the state.
-    glm::vec3 grabPos;
-    glm::quat grabRot;
+    Pose grabLeftPose;
+    Pose grabRightPose;
     glm::mat4 grabCarpetMat;
 
     glm::mat4 carpetMat;

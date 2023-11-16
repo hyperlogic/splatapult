@@ -12,7 +12,7 @@
 const float SNAP_TIME = 1.0f;
 const float SNAP_ANGLE = glm::radians(30.0f);
 
-const float GRAB_SWITCH_TIME = 1.0f;
+const float DOUBLE_GRIP_TIME = 0.1f;
 
 const float CARPET_RADIUS = 3.0f;
 const float CARPET_TILE_COUNT = 3.0f;
@@ -35,7 +35,7 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
     carpetMat(carpetMatIn),
     moveSpeed(moveSpeedIn)
 {
-    // Normal state
+    // Normal
     sm.AddState(State::Normal, "Normal",
                 [this]() { snapTimer = 0.0f; },  // enter
                 [this]() {}, // exit
@@ -49,15 +49,20 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
         return in.buttonState.rightGrip;
     });
 
-    // Left Grip
+    // LeftGrip
     sm.AddState(State::LeftGrip, "LeftGrip",
-                [this]() { grabRot = in.leftPose.rot; grabPos = in.leftPose.pos; grabCarpetMat = carpetMat; },
+                [this]() { GrabPoses(); },
                 [this]() {},
                 [this](float dt)
                 {
-                    glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
+                    if (GripCount() == 1)
+                    {
+                        gripTimer = DOUBLE_GRIP_TIME;
+                    }
+                    gripTimer -= dt;
+                    glm::mat4 grabMat = MakeMat4(grabLeftPose.rot, grabLeftPose.pos);
                     glm::vec3 pos = in.leftPose.pos;
-                    glm::quat rot = grabRot;
+                    glm::quat rot = grabLeftPose.rot;
                     glm::mat4 currMat = MakeMat4(rot, pos);
 
                     // adjust the carpet mat
@@ -67,16 +72,25 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
     {
         return !in.buttonState.leftGrip;
     });
+    sm.AddTransition(State::LeftGrip, State::DoubleGrip, "double grip", [this]()
+    {
+        return GripCount() == 2 && gripTimer < 0.0f;
+    });
 
-    // Right Grip
+    // RightGrip
     sm.AddState(State::RightGrip, "RightGrip",
-                [this]() { grabRot = in.rightPose.rot; grabPos = in.rightPose.pos; grabCarpetMat = carpetMat; },
+                [this]() { GrabPoses(); },
                 [this]() {},
                 [this](float dt)
                 {
-                    glm::mat4 grabMat = MakeMat4(grabRot, grabPos);
+                    if (GripCount() == 1)
+                    {
+                        gripTimer = DOUBLE_GRIP_TIME;
+                    }
+                    gripTimer -= dt;
+                    glm::mat4 grabMat = MakeMat4(grabRightPose.rot, grabRightPose.pos);
                     glm::vec3 pos = in.rightPose.pos;
-                    glm::quat rot = grabRot;
+                    glm::quat rot = grabRightPose.rot;
                     glm::mat4 currMat = MakeMat4(rot, pos);
 
                     // adjust the carpet mat
@@ -85,6 +99,46 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
     sm.AddTransition(State::RightGrip, State::Normal, "rightGrip up", [this]()
     {
         return !in.buttonState.rightGrip;
+    });
+    sm.AddTransition(State::RightGrip, State::DoubleGrip, "double grip", [this]()
+    {
+        return GripCount() == 2 && gripTimer < 0.0f;
+    });
+
+    // DoubleGrip
+    sm.AddState(State::DoubleGrip, "DoubleGrip",
+                [this]() { GrabPoses(); },
+                [this]() {},
+                [this](float dt)
+                {
+                    glm::vec3 p0 = glm::mix(grabLeftPose.pos, grabRightPose.pos, 0.5f);
+                    glm::vec3 x0 = SafeNormalize(grabRightPose.pos - grabLeftPose.pos, glm::vec3(1.0f, 0.0f, 0.0f));
+                    glm::vec3 y0 =  glm::vec3(0.0f, 1.0f, 0.0f);
+                    glm::vec3 z0 = glm::normalize(glm::cross(x0, y0));
+                    y0 = glm::normalize(glm::cross(z0, x0));
+                    glm::mat4 grabMat(glm::vec4(x0, 0.0f), glm::vec4(y0, 0.0f), glm::vec4(z0, 0.0f), glm::vec4(p0, 1.0f));
+
+                    glm::vec3 p1 = glm::mix(in.leftPose.pos, in.rightPose.pos, 0.5f);
+                    glm::vec3 x1 = SafeNormalize(in.rightPose.pos - in.leftPose.pos, glm::vec3(1.0f, 0.0f, 0.0f));
+                    glm::vec3 y1 = glm::vec3(0.0f, 1.0f, 0.0f);
+                    glm::vec3 z1 = glm::normalize(glm::cross(x1, y1));
+                    y1 = glm::normalize(glm::cross(z1, x1));
+                    glm::mat4 currMat(glm::vec4(x1, 0.0f), glm::vec4(y1, 0.0f), glm::vec4(z1, 0.0f), glm::vec4(p1, 1.0f));
+
+                    // adjust the carpet mat
+                    carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
+                });
+    sm.AddTransition(State::DoubleGrip, State::LeftGrip, "grip count 1", [this]()
+    {
+        return GripCount() == 1 && !in.buttonState.rightGrip;
+    });
+    sm.AddTransition(State::DoubleGrip, State::RightGrip, "grip count 1", [this]()
+    {
+        return GripCount() == 1 && !in.buttonState.leftGrip;
+    });
+    sm.AddTransition(State::DoubleGrip, State::Normal, "grip count 0", [this]()
+    {
+        return GripCount() == 0;
     });
 }
 
@@ -214,4 +268,19 @@ void MagicCarpet::NormalProcess(float dt)
     carpetMat[3][0] += vel.x * dt;
     carpetMat[3][1] += vel.y * dt;
     carpetMat[3][2] += vel.z * dt;
+}
+
+void MagicCarpet::GrabPoses()
+{
+    grabLeftPose = in.leftPose;
+    grabRightPose = in.rightPose;
+    grabCarpetMat = carpetMat;
+}
+
+int MagicCarpet::GripCount() const
+{
+    int count = 0;
+    count += (in.buttonState.leftGrip) ? 1 : 0;
+    count += (in.buttonState.rightGrip) ? 1 : 0;
+    return count;
 }
