@@ -107,7 +107,7 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
 
     // DoubleGrip
     sm.AddState(State::DoubleGrip, "DoubleGrip",
-                [this]() { GrabPoses(); },
+                [this]() { GrabPoses(); scaleMode = (TriggerCount() > 0); },
                 [this]() {},
                 [this](float dt)
                 {
@@ -127,7 +127,11 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
                     y1 = glm::normalize(glm::cross(z1, x1));
                     glm::mat4 currMat(glm::vec4(x1, 0.0f), glm::vec4(y1, 0.0f), glm::vec4(z1, 0.0f), glm::vec4(p1, 1.0f));
                     float s1 = glm::length(d1) / glm::length(d0);
-                    currMat = currMat * MakeMat4(s1, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+
+                    if (scaleMode)
+                    {
+                        currMat *= MakeMat4(s1, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+                    }
 
                     // adjust the carpet mat
                     carpetMat = grabCarpetMat * grabMat * glm::inverse(currMat);
@@ -286,5 +290,13 @@ int MagicCarpet::GripCount() const
     int count = 0;
     count += (in.buttonState.leftGrip) ? 1 : 0;
     count += (in.buttonState.rightGrip) ? 1 : 0;
+    return count;
+}
+
+int MagicCarpet::TriggerCount() const
+{
+    int count = 0;
+    count += (in.buttonState.leftTrigger) ? 1 : 0;
+    count += (in.buttonState.rightTrigger) ? 1 : 0;
     return count;
 }

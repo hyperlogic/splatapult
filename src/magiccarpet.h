@@ -56,6 +56,7 @@ protected:
     void NormalProcess(float dt);
     void GrabPoses();
     int GripCount() const;
+    int TriggerCount() const;
 
     enum class State { Normal, LeftGrip, RightGrip, DoubleGrip };
 
@@ -80,6 +81,9 @@ protected:
 
     // used in grip states
     float gripTimer;
+
+    // used in double grip state
+    bool scaleMode;
 
     // used in grab states to store the pos/rot of controllers on entry into the state.
     Pose grabLeftPose;
