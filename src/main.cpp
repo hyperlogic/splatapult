@@ -26,7 +26,7 @@
 #include "core/vertexbuffer.h"
 #include "core/xrbuddy.h"
 
-#include "cameras.h"
+#include "camerasconfig.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
 #include "magiccarpet.h"
@@ -37,6 +37,7 @@
 #include "splatrenderer.h"
 #include "raymarchrenderer.h"
 #include "shaderdebugrenderer.h"
+#include "vrconfig.h"
 
 //#define SOFTWARE_SPLATS
 
@@ -54,7 +55,7 @@ struct Options
 {
     bool vrMode = false;
     bool fullscreen = false;
-    bool drawCarpet = true;
+    bool drawCarpet = false;
     bool drawPointCloud = false;
     bool drawDebug = true;
 };
@@ -291,14 +292,73 @@ int main(int argc, char *argv[])
     }
 
     JOYSTICK_Init();
+    SDL_JoystickEventState(SDL_ENABLE);
 
     SDL_AddEventWatch(Watch, NULL);
 
-    auto cameras = std::make_shared<Cameras>();
-    if (!cameras->ImportJson(dataDir + "cameras.json"))
+    bool camerasConfigLoaded = false;
+    auto camerasConfig = std::make_shared<CamerasConfig>();
+    if (!camerasConfig->ImportJson(dataDir + "cameras.json"))
     {
         Log::printf("Error loading cameras.json\n");
-        return 1;
+    }
+    else
+    {
+        camerasConfigLoaded = true;
+    }
+
+    bool vrConfigLoaded = false;
+    std::shared_ptr<VrConfig> vrConfig = std::make_shared<VrConfig>();
+    if (!vrConfig->ImportJson(dataDir + "vr.json"))
+    {
+        Log::printf("Could not load vr.json\n");
+    }
+    else
+    {
+        vrConfigLoaded = true;
+        PrintMat(vrConfig->GetFloorMat(), "floorMat");
+    }
+
+    const float MOVE_SPEED = 2.5f;
+    const float ROT_SPEED = 1.0f;
+    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+
+    glm::mat4 floorMat(1.0f);
+
+    int cameraIndex = 0;
+    if (camerasConfigLoaded)
+    {
+        flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+
+        // initialize magicCarpet from first camera and estimated floor position.
+        if (camerasConfig->GetNumCameras() > 0)
+        {
+            glm::vec3 floorNormal, floorPos;
+            camerasConfig->EstimateFloorPlane(floorNormal, floorPos);
+            glm::vec3 floorZ = camerasConfig->GetCameraVec()[0][2];
+            glm::vec3 floorY = floorNormal;
+            glm::vec3 floorX = glm::cross(floorY, floorZ);
+            floorZ = glm::cross(floorX, floorY);
+
+            floorMat = glm::mat4(glm::vec4(floorX, 0.0f),
+                                 glm::vec4(floorY, 0.0f),
+                                 glm::vec4(floorZ, 0.0f),
+                                 glm::vec4(floorPos, 1.0f));
+        }
+    }
+
+    if (vrConfigLoaded)
+    {
+        floorMat = vrConfig->GetFloorMat();
+    }
+
+    MagicCarpet magicCarpet(floorMat, MOVE_SPEED);
+    if (opt.vrMode)
+    {
+        if (!magicCarpet.Init())
+        {
+            Log::printf("Error initalizing MagicCarpet\n");
+        }
     }
 
     auto pointCloud = LoadPointCloud(dataDir);
@@ -314,40 +374,6 @@ int main(int argc, char *argv[])
         Log::printf("Error loading GaussianCloud\n");
         return 1;
     }
-
-    const float MOVE_SPEED = 2.5f;
-    const float ROT_SPEED = 1.0f;
-    FlyCam flyCam(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
-    int cameraIndex = 0;
-    flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
-
-    // initialize magicCarpet from first camera and estimated floor position.
-    glm::mat4 estimatedFloorMat(1.0f);
-    if (cameras->GetNumCameras() > 0)
-    {
-        glm::vec3 floorNormal, floorPos;
-        cameras->EstimateFloorPlane(floorNormal, floorPos);
-        glm::vec3 floorZ = cameras->GetCameraVec()[0][2];
-        glm::vec3 floorY = floorNormal;
-        glm::vec3 floorX = glm::cross(floorY, floorZ);
-        floorZ = glm::cross(floorX, floorY);
-
-        estimatedFloorMat = glm::mat4(glm::vec4(floorX, 0.0f),
-                                      glm::vec4(floorY, 0.0f),
-                                      glm::vec4(floorZ, 0.0f),
-                                      glm::vec4(floorPos, 1.0f));
-    }
-
-    MagicCarpet magicCarpet(estimatedFloorMat, MOVE_SPEED);
-    if (opt.vrMode)
-    {
-        if (!magicCarpet.Init())
-        {
-            Log::printf("Error initalizing MagicCarpet\n");
-        }
-    }
-
-    SDL_JoystickEventState(SDL_ENABLE);
 
     auto pointRenderer = std::make_shared<PointRenderer>();
     if (!pointRenderer->Init(pointCloud))
@@ -463,15 +489,31 @@ int main(int argc, char *argv[])
                         opt.drawPointCloud = !opt.drawPointCloud;
                         break;
                     case SDLK_n:
-                        cameraIndex = (cameraIndex + 1) % cameras->GetNumCameras();
-                        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+                        if (camerasConfigLoaded)
+                        {
+                            cameraIndex = (cameraIndex + 1) % camerasConfig->GetNumCameras();
+                            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+                        }
                         break;
                     case SDLK_p:
-                        cameraIndex = (cameraIndex - 1) % cameras->GetNumCameras();
-                        flyCam.SetCameraMat(cameras->GetCameraVec()[cameraIndex]);
+                        if (camerasConfigLoaded)
+                        {
+                            cameraIndex = (cameraIndex - 1) % camerasConfig->GetNumCameras();
+                            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+                        }
                         break;
                     case SDLK_f:
                         opt.drawCarpet = !opt.drawCarpet;
+                        break;
+                    case SDLK_RETURN:
+                        if (opt.vrMode)
+                        {
+                            vrConfig->SetFloorMat(magicCarpet.GetCarpetMat());
+                            if (vrConfig->ExportJson(dataDir + "vr.json"))
+                            {
+                                Log::printf("wrote %s", (dataDir + "vr.json").c_str());
+                            }
+                        }
                         break;
                     case SDLK_a:
                         virtualLeftStick.x -= 1.0f;
@@ -596,11 +638,6 @@ int main(int argc, char *argv[])
                            rightStick + virtualRightStick, roll, dt);
         }
 
-        // Debug draw the estimated floor
-        DebugDraw_Transform(estimatedFloorMat, 1.0f);
-        // Draw the origin
-        DebugDraw_Transform(glm::mat4(1.0f), 1.0f);
-
         if (opt.vrMode)
         {
             if (xrBuddy->SessionReady())
@@ -635,6 +672,11 @@ int main(int argc, char *argv[])
             if (opt.drawDebug)
             {
                 DebugDraw_Render(projMat * glm::inverse(cameraMat));
+            }
+
+            if (opt.drawCarpet)
+            {
+                magicCarpet.Render(cameraMat, projMat, viewport, nearFar);
             }
 
             if (opt.drawPointCloud)

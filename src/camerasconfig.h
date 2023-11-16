@@ -1,5 +1,4 @@
-#ifndef CAMERAS_H
-#define CAMERAS_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -7,10 +6,10 @@
 #include <string>
 #include <vector>
 
-class Cameras
+class CamerasConfig
 {
 public:
-    Cameras();
+    CamerasConfig();
 
     bool ImportJson(const std::string& jsonFilename);
 
@@ -22,5 +21,3 @@ protected:
 
     std::vector<glm::mat4> cameraVec;
 };
-
-#endif

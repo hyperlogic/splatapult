@@ -1,4 +1,4 @@
-#include "cameras.h"
+#include "camerasconfig.h"
 
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -7,27 +7,22 @@
 #include "core/log.h"
 #include "core/util.h"
 
-Cameras::Cameras()
+CamerasConfig::CamerasConfig()
 {
-    // unit test EstimateFloorPlane
-    cameraVec.push_back(MakeMat4(glm::quat(), glm::vec3(0.0f, 0.0f, 0.0f)));
-    cameraVec.push_back(MakeMat4(glm::quat(), glm::vec3(1.0f, 0.0f, 0.0f)));
-    cameraVec.push_back(MakeMat4(glm::quat(), glm::vec3(0.0f, 0.0f, 1.0f)));
-    cameraVec.push_back(MakeMat4(glm::quat(), glm::vec3(1.0f, 0.0f, 1.0f)));
-    glm::vec3 floorNormal, floorPos;
-    EstimateFloorPlane(floorNormal, floorPos);
-    assert(glm::length(floorNormal - glm::vec3(0.0f, 1.0f, 0.0)) < 0.0001f);
-    assert(glm::length(floorPos - glm::vec3(0.0f, 0.0f, 0.0)) < 0.0001f);
-    cameraVec.clear();
+
 }
 
-bool Cameras::ImportJson(const std::string& jsonFilename)
+bool CamerasConfig::ImportJson(const std::string& jsonFilename)
 {
     std::ifstream f(jsonFilename);
-    nlohmann::json data = nlohmann::json::parse(f);
+    if (f.fail())
+    {
+        return false;
+    }
 
     try
     {
+        nlohmann::json data = nlohmann::json::parse(f);
         for (auto&& o : data)
         {
             int id = o["id"].template get<int>();
@@ -50,15 +45,21 @@ bool Cameras::ImportJson(const std::string& jsonFilename)
     catch (const nlohmann::json::exception& e)
     {
         std::string s = e.what();
-        Log::printf("ImportJson exception: %s\n", s.c_str());
+        Log::printf("CamerasConfig::ImportJson exception: %s\n", s.c_str());
         return false;
     }
 
     return true;
 }
 
-void Cameras::EstimateFloorPlane(glm::vec3& normalOut, glm::vec3& posOut) const
+void CamerasConfig::EstimateFloorPlane(glm::vec3& normalOut, glm::vec3& posOut) const
 {
+    if (cameraVec.empty())
+    {
+        normalOut = glm::vec3(0.0f, 1.0f, 0.0f);
+        posOut = glm::vec3(0.0f, 0.0f, 0.0f);
+    }
+
     glm::vec3 avgUp(0.0f, 0.0f, 0.0f);
     float weight = 1.0f / (float)cameraVec.size();
     for (auto&& c : cameraVec)

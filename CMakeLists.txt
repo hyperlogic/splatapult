@@ -47,12 +47,10 @@ add_executable(${PROJECT_NAME}
     src/core/vertexbuffer.cpp
     src/core/xrbuddy.cpp
 
-    src/cameras.cpp
-
+    src/camerasconfig.cpp
     src/debug_splat_vert.cpp
     src/debug_splat_geom.cpp
     src/debug_splat_frag.cpp
-
     src/flycam.cpp
     src/gaussiancloud.cpp
     src/magiccarpet.cpp
@@ -63,6 +61,7 @@ add_executable(${PROJECT_NAME}
     src/shaderdebugrenderer.cpp
     src/softwarerenderer.cpp
     src/splatrenderer.cpp
+    src/vrconfig.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
