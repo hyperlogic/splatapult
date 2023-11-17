@@ -486,12 +486,12 @@ int main(int argc, char *argv[])
 
     inputBuddy.OnKey(SDLK_RETURN, [&opt, &vrConfig, &magicCarpet, &dataDir](bool down, uint16_t mod)
     {
-        if (opt.vrMode)
+        if (down && opt.vrMode)
         {
             vrConfig->SetFloorMat(magicCarpet.GetCarpetMat());
             if (vrConfig->ExportJson(dataDir + "vr.json"))
             {
-                Log::printf("wrote %s", (dataDir + "vr.json").c_str());
+                Log::printf("Wrote \"%s\"\n", (dataDir + "vr.json").c_str());
             }
         }
     });
