@@ -18,7 +18,7 @@
 
 #include "core/debugdraw.h"
 #include "core/image.h"
-#include "core/joystick.h"
+#include "core/inputbuddy.h"
 #include "core/log.h"
 #include "core/program.h"
 #include "core/texture.h"
@@ -291,9 +291,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    JOYSTICK_Init();
-    SDL_JoystickEventState(SDL_ENABLE);
-
     SDL_AddEventWatch(Watch, NULL);
 
     bool camerasConfigLoaded = false;
@@ -353,12 +350,9 @@ int main(int argc, char *argv[])
     }
 
     MagicCarpet magicCarpet(floorMat, MOVE_SPEED);
-    if (opt.vrMode)
+    if (!magicCarpet.Init())
     {
-        if (!magicCarpet.Init())
-        {
-            Log::printf("Error initalizing MagicCarpet\n");
-        }
+        Log::printf("Error initalizing MagicCarpet\n");
     }
 
     auto pointCloud = LoadPointCloud(dataDir);
@@ -436,6 +430,70 @@ int main(int argc, char *argv[])
         });
     }
 
+    InputBuddy inputBuddy;
+
+    inputBuddy.OnQuit([]()
+    {
+        ctx.quitting = true;
+    });
+
+    inputBuddy.OnResize([](int newWidth, int newHeight)
+    {
+        // Handle the resize event, e.g., adjust your viewport, etc.
+        Resize(newWidth, newHeight);
+    });
+
+    inputBuddy.OnKey(SDLK_ESCAPE, [](bool down, uint16_t mod)
+    {
+        ctx.quitting = true;
+    });
+
+    inputBuddy.OnKey(SDLK_c, [&opt](bool down, uint16_t mod)
+    {
+        if (down)
+        {
+            opt.drawPointCloud = !opt.drawPointCloud;
+        }
+    });
+
+    inputBuddy.OnKey(SDLK_n, [&camerasConfigLoaded, &camerasConfig, &cameraIndex, &flyCam](bool down, uint16_t mod)
+    {
+        if (down && camerasConfigLoaded)
+        {
+            cameraIndex = (cameraIndex + 1) % camerasConfig->GetNumCameras();
+            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+        }
+    });
+
+    inputBuddy.OnKey(SDLK_p, [&camerasConfigLoaded, &camerasConfig, &cameraIndex, &flyCam](bool down, uint16_t mod)
+    {
+        if (down && camerasConfigLoaded)
+        {
+            cameraIndex = (cameraIndex - 1) % camerasConfig->GetNumCameras();
+            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+        }
+    });
+
+    inputBuddy.OnKey(SDLK_f, [&opt](bool down, uint16_t mod)
+    {
+        if (down)
+        {
+            opt.drawCarpet = !opt.drawCarpet;
+        }
+    });
+
+    inputBuddy.OnKey(SDLK_RETURN, [&opt, &vrConfig, &magicCarpet, &dataDir](bool down, uint16_t mod)
+    {
+        if (opt.vrMode)
+        {
+            vrConfig->SetFloorMat(magicCarpet.GetCarpetMat());
+            if (vrConfig->ExportJson(dataDir + "vr.json"))
+            {
+                Log::printf("wrote %s", (dataDir + "vr.json").c_str());
+            }
+        }
+    });
+
     glm::vec2 virtualLeftStick(0.0f, 0.0f);
     glm::vec2 virtualRightStick(0.0f, 0.0f);
 
@@ -470,126 +528,7 @@ int main(int argc, char *argv[])
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            switch (event.type)
-            {
-            case SDL_QUIT:
-                ctx.quitting = true;
-                break;
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                // ESC to quit
-                if (event.key.type == SDL_KEYDOWN)
-                {
-                    switch (event.key.keysym.sym)
-                    {
-                    case SDLK_ESCAPE:
-                        ctx.quitting = true;
-                        break;
-                    case SDLK_c:
-                        opt.drawPointCloud = !opt.drawPointCloud;
-                        break;
-                    case SDLK_n:
-                        if (camerasConfigLoaded)
-                        {
-                            cameraIndex = (cameraIndex + 1) % camerasConfig->GetNumCameras();
-                            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
-                        }
-                        break;
-                    case SDLK_p:
-                        if (camerasConfigLoaded)
-                        {
-                            cameraIndex = (cameraIndex - 1) % camerasConfig->GetNumCameras();
-                            flyCam.SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
-                        }
-                        break;
-                    case SDLK_f:
-                        opt.drawCarpet = !opt.drawCarpet;
-                        break;
-                    case SDLK_RETURN:
-                        if (opt.vrMode)
-                        {
-                            vrConfig->SetFloorMat(magicCarpet.GetCarpetMat());
-                            if (vrConfig->ExportJson(dataDir + "vr.json"))
-                            {
-                                Log::printf("wrote %s", (dataDir + "vr.json").c_str());
-                            }
-                        }
-                        break;
-                    case SDLK_a:
-                        virtualLeftStick.x -= 1.0f;
-                        break;
-                    case SDLK_d:
-                        virtualLeftStick.x += 1.0f;
-                        break;
-                    case SDLK_w:
-                        virtualLeftStick.y += 1.0f;
-                        break;
-                    case SDLK_s:
-                        virtualLeftStick.y -= 1.0f;
-                        break;
-                    case SDLK_LEFT:
-                        virtualRightStick.x -= 1.0f;
-                        break;
-                    case SDLK_RIGHT:
-                        virtualRightStick.x += 1.0f;
-                        break;
-                    case SDLK_UP:
-                        virtualRightStick.y += 1.0f;
-                        break;
-                    case SDLK_DOWN:
-                        virtualRightStick.y -= 1.0f;
-                        break;
-                    }
-                }
-                else // SDL_KEYUP
-                {
-                    switch (event.key.keysym.sym)
-                    {
-                    case SDLK_a:
-                        virtualLeftStick.x += 1.0f;
-                        break;
-                    case SDLK_d:
-                        virtualLeftStick.x -= 1.0f;
-                        break;
-                    case SDLK_w:
-                        virtualLeftStick.y -= 1.0f;
-                        break;
-                    case SDLK_s:
-                        virtualLeftStick.y += 1.0f;
-                        break;
-                    case SDLK_LEFT:
-                        virtualRightStick.x += 1.0f;
-                        break;
-                    case SDLK_RIGHT:
-                        virtualRightStick.x -= 1.0f;
-                        break;
-                    case SDLK_UP:
-                        virtualRightStick.y -= 1.0f;
-                        break;
-                    case SDLK_DOWN:
-                        virtualRightStick.y += 1.0f;
-                        break;
-                    }
-                }
-                break;
-            case SDL_JOYAXISMOTION:
-				JOYSTICK_UpdateMotion(&event.jaxis);
-				break;
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
-				JOYSTICK_UpdateButton(&event.jbutton);
-				break;
-            case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-                {
-                    // The window was resized
-                    int newWidth = event.window.data1;
-                    int newHeight = event.window.data2;
-                    // Handle the resize event, e.g., adjust your viewport, etc.
-                    Resize(newWidth, newHeight);
-                }
-                break;
-            }
+            inputBuddy.ProcessEvent(event);
         }
 
         if (opt.vrMode)
@@ -626,17 +565,11 @@ int main(int argc, char *argv[])
             magicCarpet.Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
         }
 
-        Joystick* joystick = JOYSTICK_GetJoystick();
-        if (joystick)
-        {
-            float roll = 0.0f;
-            roll -= (joystick->buttonStateFlags & (1 << Joystick::LeftBumper)) ? 1.0f : 0.0f;
-            roll += (joystick->buttonStateFlags & (1 << Joystick::RightBumper)) ? 1.0f : 0.0f;
-            glm::vec2 leftStick(joystick->axes[Joystick::LeftStickX], joystick->axes[Joystick::LeftStickY]);
-            glm::vec2 rightStick(joystick->axes[Joystick::RightStickX], joystick->axes[Joystick::RightStickY]);
-            flyCam.Process(leftStick + virtualLeftStick,
-                           rightStick + virtualRightStick, roll, dt);
-        }
+        InputBuddy::Joypad joypad = inputBuddy.GetJoypad();
+        float roll = 0.0f;
+        roll -= joypad.lb ? 1.0f : 0.0f;
+        roll += joypad.rb ? 1.0f : 0.0f;
+        flyCam.Process(joypad.leftStick, joypad.rightStick, roll, dt);
 
         if (opt.vrMode)
         {
@@ -704,7 +637,6 @@ int main(int argc, char *argv[])
     }
 
     DebugDraw_Shutdown();
-    JOYSTICK_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(ctx.gl_context);
 

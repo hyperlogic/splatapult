@@ -15,6 +15,7 @@ Runtime options
 -------------
 * joystick - fly around the scene
 * c - toggle between initial colmap point cloud and gaussian splats.
+* f - show hide floor carpet.
 * n - jump to next camera
 * p - jump to previous camera
 
@@ -26,8 +27,9 @@ dir/
     point_cloud/
 	    iteration_#/
 			point_cloud.py
-	cameras.json
-	cfg_args
+	cfg_args [optional]
 	input.ply
+	cameras.json [optional]
+	vr.json [optional]
 
 By default the iteration_#/point_cloud.py with the highest # is picked.
