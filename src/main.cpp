@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <limits>
+#include <loguru/loguru.hpp>
 #include <memory>
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -20,6 +21,7 @@
 #include "core/image.h"
 #include "core/inputbuddy.h"
 #include "core/log.h"
+
 #include "core/program.h"
 #include "core/texture.h"
 #include "core/util.h"

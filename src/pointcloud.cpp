@@ -43,7 +43,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     std::ifstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
-        std::cerr << "failed to open " << plyFilename << std::endl;
+        Log::printf("failed to open \"%s\"\n", plyFilename.c_str());
         return false;
     }
 
@@ -51,7 +51,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     if (!CheckLine(plyFile, "ply") ||
         !CheckLine(plyFile, "format binary_little_endian 1.0"))
     {
-        std::cerr << "Invalid ply file" << std::endl;
+        Log::printf("Invalid ply file \"%s\"\n", plyFilename.c_str());
         return false;
     }
 
@@ -59,7 +59,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     std::string line;
     if (!GetNextPlyLine(plyFile, line))
     {
-        std::cerr << "Invalid ply file, error reading element vertex count" << std::endl;
+        Log::printf("Invalid ply file \"%s\", error reading element vertex count\n", plyFilename.c_str());
         return false;
     }
     std::istringstream iss(line);
@@ -67,7 +67,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     int numPoints;
     if (!((iss >> token1 >> token2 >> numPoints) && (token1 == "element") && (token2 == "vertex")))
     {
-        std::cerr << "Invalid ply file, error parsing element vertex count" << std::endl;
+        Log::printf("Invalid ply file \"%s\", error parsing element vertex count\n", plyFilename.c_str());
         return false;
     }
 
@@ -75,7 +75,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
     if (!GetNextPlyLine(plyFile, line))
     {
-        std::cerr << "Invalid ply file, error reading first property" << std::endl;
+        Log::printf("Invalid ply file \"%s\", error reading first property\n", plyFilename.c_str());
         return false;
     }
 
@@ -93,7 +93,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
             !CheckLine(plyFile, "property uchar blue") ||
             !CheckLine(plyFile, "end_header"))
         {
-            std::cerr << "Unsupported ply file, unexpected properties" << std::endl;
+            Log::printf("Unsupported ply file \"%s\", unexpected properties\n", plyFilename.c_str());
             return false;
         }
     }
@@ -111,13 +111,14 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
             !CheckLine(plyFile, "property uchar blue") ||
             !CheckLine(plyFile, "end_header"))
         {
-            std::cerr << "Unsupported ply file, unexpected properties" << std::endl;
+            Log::printf("Unsupported ply file \"%s\", unexpected properties\n", plyFilename.c_str());
             return false;
         }
     }
     else
     {
-        std::cerr << "Unsupported ply file, first property" << std::endl;
+
+        Log::printf("Unsupported ply file \"%s\", unexpected first property\n", plyFilename.c_str());
         return false;
     }
 
@@ -134,7 +135,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
             plyFile.read((char*)&dp, POINT_SIZE);
             if (plyFile.gcount() != POINT_SIZE)
             {
-                std::cerr << "Error reading point[" << i << "]" << std::endl;
+                Log::printf("Error reading \"%s\", point[%d]\n", plyFilename.c_str(), i);
                 return false;
             }
             // convert to float and copy into pointVec.
@@ -160,7 +161,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
             plyFile.read((char*)&pointVec[i], POINT_SIZE);
             if (plyFile.gcount() != POINT_SIZE)
             {
-                std::cerr << "Error reading point[" << i << "]" << std::endl;
+                Log::printf("Error reading \"%s\", point[%d]\n", plyFilename.c_str(), i);
                 return false;
             }
         }

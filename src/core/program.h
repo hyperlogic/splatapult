@@ -28,7 +28,7 @@ public:
         }
         else
         {
-            std::cerr << "could not find uniform " << name << " for program " << debugName << std::endl;
+            Log::printf("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         }
     }
 
@@ -51,7 +51,7 @@ public:
         }
         else
         {
-            std::cerr << "could not find attrib " << name << " for program " << debugName << std::endl;
+            Log::printf("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         }
     }
 

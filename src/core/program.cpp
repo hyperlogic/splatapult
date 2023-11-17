@@ -275,7 +275,7 @@ int Program::GetUniformLoc(const std::string& name) const
     else
     {
         assert(false);
-        std::cerr << "could not find uniform " << name << " for program " << debugName << std::endl;
+        Log::printf("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         return 0;
     }
 }
@@ -289,7 +289,7 @@ int Program::GetAttribLoc(const std::string& name) const
     }
     else
     {
-        std::cerr << "could not find attrib " << name << " for program " << debugName << std::endl;
+        Log::printf("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         assert(false);
         return 0;
     }
