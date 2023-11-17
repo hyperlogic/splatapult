@@ -4,7 +4,6 @@
 #include <GL/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "core/debugdraw.h"
 #include "core/image.h"
 #include "core/log.h"
 #include "core/util.h"

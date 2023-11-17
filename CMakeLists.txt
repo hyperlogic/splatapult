@@ -37,7 +37,7 @@ find_package(OpenXR CONFIG REQUIRED)
 # src
 include_directories(src)
 add_executable(${PROJECT_NAME}
-    src/core/debugdraw.cpp
+    src/core/debugrenderer.cpp
     src/core/image.cpp
     src/core/inputbuddy.cpp
     src/core/log.cpp

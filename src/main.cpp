@@ -16,7 +16,7 @@
 #include <thread>
 #include <tracy/Tracy.hpp>
 
-#include "core/debugdraw.h"
+#include "core/debugrenderer.h"
 #include "core/image.h"
 #include "core/inputbuddy.h"
 #include "core/log.h"
@@ -274,9 +274,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!DebugDraw_Init())
+    auto debugRenderer = std::make_shared<DebugRenderer>();
+    if (!debugRenderer->Init())
     {
-        Log::printf("DebugDraw Init failed\n");
+        Log::printf("DebugRenderer Init failed\n");
         return 1;
     }
 
@@ -397,7 +398,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer, &magicCarpet, &opt](
+        xrBuddy->SetRenderCallback([&pointRenderer, &splatRenderer,  &debugRenderer, &magicCarpet, &opt](
             const glm::mat4& projMat, const glm::mat4& eyeMat,
             const glm::vec4& viewport, const glm::vec2& nearFar, int viewNum)
         {
@@ -407,7 +408,7 @@ int main(int argc, char *argv[])
 
             if (opt.drawDebug)
             {
-                DebugDraw_Render(projMat * glm::inverse(fullEyeMat));
+                debugRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
 
             if (opt.drawCarpet)
@@ -604,7 +605,7 @@ int main(int argc, char *argv[])
 
             if (opt.drawDebug)
             {
-                DebugDraw_Render(projMat * glm::inverse(cameraMat));
+                debugRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
 
             if (opt.drawCarpet)
@@ -629,14 +630,13 @@ int main(int argc, char *argv[])
 #endif
         }
 
-        DebugDraw_Clear();
+        debugRenderer->EndFrame();
 
         frameCount++;
 
         FrameMark;
     }
 
-    DebugDraw_Shutdown();
     SDL_DelEventWatch(Watch, NULL);
     SDL_GL_DeleteContext(ctx.gl_context);
 
