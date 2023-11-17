@@ -314,7 +314,6 @@ int main(int argc, char *argv[])
     else
     {
         vrConfigLoaded = true;
-        PrintMat(vrConfig->GetFloorMat(), "floorMat");
     }
 
     const float MOVE_SPEED = 2.5f;
