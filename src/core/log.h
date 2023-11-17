@@ -1,5 +1,4 @@
-#ifndef LOGGING_H
-#define LOGGING_H
+#pragma once
 
 struct Log
 {
@@ -18,5 +17,3 @@ struct Log
     static int printf(const char *fmt, ...);
     static int printf_ansi(AnsiColor color, const char *fmt, ...);
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef MAGICCARPET_H
-#define MAGICCARPET_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -96,5 +95,3 @@ protected:
     std::shared_ptr<Program> carpetProg;
     std::shared_ptr<VertexArrayObject> carpetVao;
 };
-
-#endif

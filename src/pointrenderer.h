@@ -1,5 +1,4 @@
-#ifndef POINTRENDERER_H
-#define POINTRENDERER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -48,5 +47,3 @@ protected:
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
 };
-
-#endif

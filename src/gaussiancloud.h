@@ -1,5 +1,4 @@
-#ifndef GAUSSIANCLOUD_H
-#define GAUSSIANCLOUD_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -48,5 +47,3 @@ protected:
 
     std::vector<Gaussian> gaussianVec;
 };
-
-#endif

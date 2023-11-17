@@ -1,5 +1,4 @@
-#ifndef SHADERDEBUGRENDERER_H
-#define SHADERDEBUGRENDERER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -30,5 +29,3 @@ protected:
     std::vector<glm::vec4> r_sh0Vec, g_sh0Vec, b_sh0Vec;
     std::vector<glm::vec3> cov3_col0Vec, cov3_col1Vec, cov3_col2Vec;
 };
-
-#endif

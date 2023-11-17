@@ -1,5 +1,4 @@
-#ifndef SOFTWARERENDERER_H
-#define SOFTWARERENDERER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -41,5 +40,3 @@ protected:
 	int WIDTH;
 	int HEIGHT;
 };
-
-#endif

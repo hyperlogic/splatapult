@@ -1,5 +1,4 @@
-#ifndef POINTCLOUD_H
-#define POINTCLOUD_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -31,5 +30,3 @@ protected:
 
     std::vector<Point> pointVec;
 };
-
-#endif

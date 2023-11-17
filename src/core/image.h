@@ -1,5 +1,4 @@
-#ifndef IMAGE_H
-#define IMAGE_H
+#pragma once
 
 #include <stdint.h>
 #include <string>
@@ -23,5 +22,3 @@ struct Image {
     bool isSRGB;
     std::vector<uint8_t> data;
 };
-
-#endif

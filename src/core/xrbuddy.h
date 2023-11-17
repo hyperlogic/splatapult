@@ -1,5 +1,4 @@
-#ifndef XR_BUDDY
-#define XR_BUDDY
+#pragma once
 
 #include <array>
 #include <functional>
@@ -123,5 +122,3 @@ protected:
     RenderCallback renderCallback;
     glm::vec2 nearFar;
 };
-
-#endif XR_BUDDY

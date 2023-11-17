@@ -1,5 +1,4 @@
-#ifndef RAYMARCHRENDERER_H
-#define RAYMARCHRENDERER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -52,5 +51,3 @@ public:
 protected:
     std::vector<Gaussian> gVec;
 };
-
-#endif

@@ -1,9 +1,8 @@
-#ifndef PROGRAM_H
-#define PROGRAM_H
+#pragma once
 
+#include <glm/glm.hpp>
 #include <iostream>
 #include <unordered_map>
-#include <glm/glm.hpp>
 
 class Program
 {
@@ -83,5 +82,3 @@ protected:
     std::unordered_map<std::string, Variable> attribs;
     std::string debugName;
 };
-
-#endif

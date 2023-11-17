@@ -1,5 +1,4 @@
-#ifndef FLYCAM_H
-#define FLYCAM_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -22,5 +21,3 @@ protected:
     glm::quat rot;
     glm::mat4 cameraMat;
 };
-
-#endif

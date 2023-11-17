@@ -1,5 +1,4 @@
-#ifndef TEXTURE_H
-#define TEXTURE_H
+#pragma once
 
 #include <stdint.h>
 
@@ -38,5 +37,3 @@ struct Texture
     uint32_t texture;
     bool hasAlphaChannel;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef VERTEXBUFFER_H
-#define VERTEXBUFFER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -68,5 +67,3 @@ protected:
 	std::vector<std::shared_ptr<BufferObject>> attribBufferVec;
 	std::shared_ptr<BufferObject> elementBuffer;
 };
-
-#endif

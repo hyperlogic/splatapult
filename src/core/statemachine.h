@@ -33,7 +33,7 @@ protected:
     using StatePair = std::pair<State, StateStruct>;
 
 public:
-    StateMachine(State defaultState) : state(defaultState)
+    StateMachine(State defaultState) : state(defaultState), debug(false)
     {
         ;
     }
@@ -64,15 +64,21 @@ public:
 
     void ChangeState(State newState, const std::string& reason)
     {
-        Log::printf("StateChange from %s -> %s, (%s)\n", stateNameMap.at(state).c_str(), stateNameMap.at(newState).c_str(), reason.c_str());
+        if (debug)
+        {
+            Log::printf("StateChange from %s -> %s, (%s)\n", stateNameMap.at(state).c_str(), stateNameMap.at(newState).c_str(), reason.c_str());
+        }
         stateStructMap.at(state).exit();
         stateStructMap.at(newState).enter();
         state = newState;
     }
+
+    void SetDebug(bool debugIn) { debug = debugIn; }
 
 protected:
 
     State state;
     std::map<State, StateStruct> stateStructMap;
     std::map<State, std::string> stateNameMap;
+    bool debug;
 };

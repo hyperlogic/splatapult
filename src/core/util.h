@@ -1,7 +1,6 @@
 // helper functions
 
-#ifndef UTIL_H
-#define UTIL_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -69,4 +68,3 @@ void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLef
                       const float tanAngleRight, const float tanAngleUp, float const tanAngleDown,
                       const float nearZ, const float farZ);
 
-#endif

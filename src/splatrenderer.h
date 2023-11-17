@@ -1,5 +1,4 @@
-#ifndef SPLATRENDERER_H
-#define SPLATRENDERER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -51,5 +50,3 @@ protected:
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
     uint32_t sortCount;
 };
-
-#endif
