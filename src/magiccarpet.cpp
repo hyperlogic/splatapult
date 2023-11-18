@@ -149,14 +149,17 @@ MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
     });
 }
 
-bool MagicCarpet::Init()
+bool MagicCarpet::Init(bool isFramebufferSRGBEnabledIn)
 {
+    isFramebufferSRGBEnabled = isFramebufferSRGBEnabledIn;
+
     Image carpetImg;
     if (!carpetImg.Load("texture/carpet.png"))
     {
         Log::printf("Error loading carpet.png\n");
         return false;
     }
+    carpetImg.isSRGB = isFramebufferSRGBEnabledIn;
     Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::Repeat, WrapType::Repeat};
     carpetTex = std::make_shared<Texture>(carpetImg, texParams);
 

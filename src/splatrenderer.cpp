@@ -19,11 +19,17 @@ SplatRenderer::~SplatRenderer()
 {
 }
 
-bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud)
+bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn)
 {
     GL_ERROR_CHECK("SplatRenderer::Init() begin");
 
+    isFramebufferSRGBEnabled = isFramebufferSRGBEnabledIn;
+
     splatProg = std::make_shared<Program>();
+    if (isFramebufferSRGBEnabled)
+    {
+        splatProg->AddMacro("DEFINES", "#define FRAMEBUFFER_SRGB");
+    }
     if (!splatProg->LoadVertGeomFrag("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
         Log::printf("Error loading splat shaders!\n");

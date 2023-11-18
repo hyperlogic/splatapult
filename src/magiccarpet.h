@@ -17,7 +17,7 @@ class MagicCarpet
 public:
     MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn);
 
-    bool Init();
+    bool Init(bool isFramebufferSRGBEnabledIn);
 
     struct Pose
     {
@@ -94,4 +94,5 @@ protected:
     std::shared_ptr<Texture> carpetTex;
     std::shared_ptr<Program> carpetProg;
     std::shared_ptr<VertexArrayObject> carpetVao;
+    bool isFramebufferSRGBEnabled;
 };

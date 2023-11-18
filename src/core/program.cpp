@@ -17,6 +17,24 @@
 #define WARNINGS_AS_ERRORS
 #endif
 
+static std::string ExpandMacros(std::vector<std::pair<std::string, std::string>> macros, const std::string& source)
+{
+    std::string result = source;
+
+    for (const auto& macro : macros)
+    {
+        std::string::size_type pos = 0;
+        while ((pos = result.find(macro.first, pos)) != std::string::npos)
+        {
+            result.replace(pos, macro.first.length(), macro.second);
+            // Move past the last replaced position
+            pos += macro.second.length();
+        }
+    }
+
+    return result;
+}
+
 static void DumpShaderSource(const std::string& source)
 {
     std::stringstream ss(source);
@@ -84,6 +102,14 @@ Program::~Program()
     Delete();
 }
 
+void Program::AddMacro(const std::string& key, const std::string& value)
+{
+    // In order to keep the glsl code compiling if the macro is not applied.
+    // the key is enclosed in a c-style comment and double %.
+    std::string token = "/*%%" + key + "%%*/";
+    macros.push_back(std::pair(token, value));
+}
+
 bool Program::LoadVertFrag(const std::string& vertFilename, const std::string& fragFilename)
 {
     return LoadVertGeomFrag(vertFilename, std::string(), fragFilename);
@@ -111,6 +137,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
         Log::printf("Failed to load vertex shader %s\n", vertFilename.c_str());
         return false;
     }
+    vertSource = ExpandMacros(macros, vertSource);
 
     if (useGeomShader)
     {
@@ -119,6 +146,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
             Log::printf("Failed to load geometry shader %s\n", geomFilename.c_str());
             return false;
         }
+        geomSource = ExpandMacros(macros, geomSource);
     }
 
     if (!LoadFile(fragFilename, fragSource))
@@ -126,6 +154,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
         Log::printf("Failed to load fragment shader \"%s\"\n", fragFilename.c_str());
         return false;
     }
+    fragSource = ExpandMacros(macros, fragSource);
 
     if (!CompileShader(GL_VERTEX_SHADER, vertSource, &vertShader, vertFilename))
     {

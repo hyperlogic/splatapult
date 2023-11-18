@@ -22,7 +22,7 @@ public:
     PointRenderer();
     ~PointRenderer();
 
-    bool Init(std::shared_ptr<PointCloud> pointCloud);
+    bool Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebufferSRGBEnabledIn);
 
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
@@ -46,4 +46,5 @@ protected:
     std::shared_ptr<BufferObject> atomicCounterBuffer;
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
+    bool isFramebufferSRGBEnabled;
 };

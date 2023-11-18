@@ -5,6 +5,8 @@
 
 #version 460
 
+/*%%DEFINES%%*/
+
 uniform mat4 viewMat;  // used to project position into view coordinates.
 uniform mat4 projMat;  // used to project view coordinates into clip coordinates.
 uniform vec4 projParams;  // x = HEIGHT / tan(FOVY / 2), y = Z_NEAR, z = Z_FAR
@@ -120,6 +122,7 @@ vec3 ComputeRadianceFromSH(const vec3 v)
     return vec3(0.5f, 0.5f, 0.5f) + vec3(re, gr, bl);
 }
 
+#ifdef FRAMEBUFFER_SRGB
 float SRGBToLinearF(float srgb)
 {
     if (srgb <= 0.04045f)
@@ -141,6 +144,7 @@ vec3 SRGBToLinear(const vec3 srgbColor)
     }
     return linearColor;
 }
+#endif
 
 void main(void)
 {
@@ -196,7 +200,18 @@ void main(void)
 
     // compute radiance from sh
     vec3 v = normalize(position.xyz - eye);
-    geom_color = vec4(SRGBToLinear(ComputeRadianceFromSH(v)), alpha);
+    geom_color = vec4(ComputeRadianceFromSH(v), alpha);
+
+#ifdef FRAMEBUFFER_SRGB
+    // The SIBR reference renderer uses sRGB throughout,
+    // i.e. the splat colors are sRGB, the gaussian and alpha-blending occurs in sRGB space.
+    // However, in vr our shader output must be in linear space,
+    // in order for openxr color conversion to work.
+    // So, we convert the splat color to linear,
+    // but the guassian and alpha-blending occur in linear space.
+    // This leads to results that don't quite match the SIBR reference.
+    geom_color.rgb = SRGBToLinear(geom_color.rgb);
+#endif
 
     // gl_Position is in clip coordinates.
     gl_Position = p4;

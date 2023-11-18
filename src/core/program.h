@@ -10,6 +10,9 @@ public:
     Program();
     ~Program();
 
+    // used to inject #defines or other code into shaders
+    void AddMacro(const std::string& key, const std::string& value);
+
     bool LoadVertFrag(const std::string& vertFilename, const std::string& fragFilename);
     bool LoadVertGeomFrag(const std::string& vertFilename, const std::string& geomFilename, const std::string& fragFilename);
     bool LoadCompute(const std::string& computeFilename);
@@ -80,5 +83,6 @@ protected:
 
     std::unordered_map<std::string, Variable> uniforms;
     std::unordered_map<std::string, Variable> attribs;
+    std::vector<std::pair<std::string, std::string>> macros;
     std::string debugName;
 };

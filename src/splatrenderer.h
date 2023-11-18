@@ -22,7 +22,7 @@ public:
     SplatRenderer();
     ~SplatRenderer();
 
-    bool Init(std::shared_ptr<GaussianCloud> GaussianCloud);
+    bool Init(std::shared_ptr<GaussianCloud> GaussianCloud, bool isFramebufferSRGBEnabledIn);
 
     void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
               const glm::vec4& viewport, const glm::vec2& nearFar);
@@ -49,4 +49,5 @@ protected:
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
     uint32_t sortCount;
+    bool isFramebufferSRGBEnabled;
 };

@@ -255,8 +255,18 @@ int main(int argc, char *argv[])
 
     ctx.gl_context = SDL_GL_CreateContext(ctx.window);
 
+    bool isFramebufferSRGBEnabled = opt.vrMode;
+
     SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
-    glEnable(GL_FRAMEBUFFER_SRGB);
+    if (isFramebufferSRGBEnabled)
+    {
+        // necessary for proper color conversion
+        glEnable(GL_FRAMEBUFFER_SRGB);
+    }
+    else
+    {
+        glDisable(GL_FRAMEBUFFER_SRGB);
+    }
 
 #ifdef SOFTWARE_SPLATS
 	ctx.renderer = SDL_CreateRenderer(ctx.window, -1, 0);
@@ -352,7 +362,7 @@ int main(int argc, char *argv[])
     }
 
     MagicCarpet magicCarpet(floorMat, MOVE_SPEED);
-    if (!magicCarpet.Init())
+    if (!magicCarpet.Init(isFramebufferSRGBEnabled))
     {
         Log::printf("Error initalizing MagicCarpet\n");
     }
@@ -372,7 +382,7 @@ int main(int argc, char *argv[])
     }
 
     auto pointRenderer = std::make_shared<PointRenderer>();
-    if (!pointRenderer->Init(pointCloud))
+    if (!pointRenderer->Init(pointCloud, isFramebufferSRGBEnabled))
     {
         Log::printf("Error initializing point renderer!\n");
         return 1;
@@ -384,7 +394,7 @@ int main(int argc, char *argv[])
     auto splatRenderer = std::make_shared<SplatRenderer>();
 #endif
 
-    if (!splatRenderer->Init(gaussianCloud))
+    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled))
     {
         Log::printf("Error initializing splat renderer!\n");
         return 1;
