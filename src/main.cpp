@@ -60,6 +60,7 @@ struct Options
     bool drawCarpet = false;
     bool drawPointCloud = false;
     bool drawDebug = true;
+    bool debugLogging = false;
 };
 
 const float Z_NEAR = 0.1f;
@@ -192,8 +193,6 @@ int main(int argc, char *argv[])
 {
     Options opt;
 
-    Log::SetLevel(Log::Warning);
-
     // parse arguments
     std::string dataDir;
     if (argc < 2)
@@ -214,6 +213,10 @@ int main(int argc, char *argv[])
             {
                 opt.fullscreen = true;
             }
+            else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--debug"))
+            {
+                opt.debugLogging = true;
+            }
         }
         dataDir = argv[argc - 1];
 
@@ -223,6 +226,8 @@ int main(int argc, char *argv[])
             dataDir += "/";
         }
     }
+
+    Log::SetLevel(opt.debugLogging ? Log::Debug : Log::Warning);
 
     // verify dataDir exists
     struct stat sb;
