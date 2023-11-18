@@ -66,7 +66,7 @@ public:
     {
         if (debug)
         {
-            Log::printf("StateChange from %s -> %s, (%s)\n", stateNameMap.at(state).c_str(), stateNameMap.at(newState).c_str(), reason.c_str());
+            Log::D("StateChange from %s -> %s, (%s)\n", stateNameMap.at(state).c_str(), stateNameMap.at(newState).c_str(), reason.c_str());
         }
         stateStructMap.at(state).exit();
         stateStructMap.at(newState).enter();

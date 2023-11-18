@@ -27,7 +27,7 @@ bool Image::Load(const std::string& filenameIn)
 #endif
     if (!fp)
     {
-        Log::printf("Error: Failed to load texture \"%s\"\n", filename);
+        Log::E("Failed to load texture \"%s\"\n", filename);
         return false;
     }
 
@@ -35,21 +35,21 @@ bool Image::Load(const std::string& filenameIn)
     fread(header, 1, 8, fp);
     if (png_sig_cmp(header, 0, 8))
     {
-        Log::printf("Error: Texture \"%s\" is not a valid PNG file\n", filename);
+        Log::E("Texture \"%s\" is not a valid PNG file\n", filename);
         return false;
     }
 
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr)
     {
-        Log::printf("Error: png_create_read_struct() failed\n");
+        Log::E("png_create_read_struct() failed\n");
         return false;
     }
 
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr)
     {
-        Log::printf("Error: png_create_info_struct() failed\n");
+        Log::E("png_create_info_struct() failed\n");
         png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
         return false;
     }
@@ -67,7 +67,7 @@ bool Image::Load(const std::string& filenameIn)
     bool loaded = false;
     if (bit_depth != 8)
     {
-        Log::printf("Error: bad bit depth for texture \"%s\n", filename);
+        Log::E("bad bit depth for texture \"%s\n", filename);
     }
     else
     {
@@ -91,7 +91,7 @@ bool Image::Load(const std::string& filenameIn)
             pixelSize = 4;
             break;
         default:
-            Log::printf("unsupported pixel format %d for image \"%s\n", color_type, filename);
+            Log::E("unsupported pixel format %d for image \"%s\n", color_type, filename);
             return false;
         }
 

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdarg>
 
-static Log::LogLevel level = Log::Warning;
+static Log::LogLevel level = Log::Verbose;
 
 static int log_vprintf(const char *fmt, va_list args)
 {

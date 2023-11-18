@@ -24,9 +24,9 @@ glm::mat4 MagicCarpet::Pose::GetMat() const
 void MagicCarpet::Pose::Dump(const std::string& name) const
 {
     PrintVec(pos, name + ".pos");
-    Log::printf("%s.posValid = %s, %s.posTracked = %s\n", name.c_str(), posValid ? "true" : "false", name.c_str(), posTracked ? "true" : "false");
+    Log::D("%s.posValid = %s, %s.posTracked = %s\n", name.c_str(), posValid ? "true" : "false", name.c_str(), posTracked ? "true" : "false");
     PrintQuat(rot, name + ".rot");
-    Log::printf("%s.rotValid = %s, %s.rotTracked = %s\n", name.c_str(), rotValid ? "true" : "false", name.c_str(), rotTracked ? "true" : "false");
+    Log::D("%s.rotValid = %s, %s.rotTracked = %s\n", name.c_str(), rotValid ? "true" : "false", name.c_str(), rotTracked ? "true" : "false");
 }
 
 MagicCarpet::MagicCarpet(const glm::mat4& carpetMatIn, float moveSpeedIn) :
@@ -156,7 +156,7 @@ bool MagicCarpet::Init(bool isFramebufferSRGBEnabledIn)
     Image carpetImg;
     if (!carpetImg.Load("texture/carpet.png"))
     {
-        Log::printf("Error loading carpet.png\n");
+        Log::E("Error loading carpet.png\n");
         return false;
     }
     carpetImg.isSRGB = isFramebufferSRGBEnabledIn;
@@ -166,7 +166,8 @@ bool MagicCarpet::Init(bool isFramebufferSRGBEnabledIn)
     carpetProg = std::make_shared<Program>();
     if (!carpetProg->LoadVertFrag("shader/carpet_vert.glsl", "shader/carpet_frag.glsl"))
     {
-        Log::printf("Error loading carpet shaders!\n");
+        Log::E("Error loading carpet shaders!\n");
+        return false;
     }
 
     carpetVao = std::make_shared<VertexArrayObject>();

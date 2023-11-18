@@ -18,7 +18,7 @@ bool DebugRenderer::Init()
     ddProg = std::make_shared<Program>();
     if (!ddProg->LoadVertFrag("shader/debugdraw_vert.glsl", "shader/debugdraw_frag.glsl"))
     {
-        Log::printf("Error loading DebugRenderer shader!\n");
+        Log::E("Error loading DebugRenderer shader!\n");
         return false;
     }
     return true;

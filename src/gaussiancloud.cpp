@@ -24,7 +24,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     std::ifstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
-        Log::printf("failed to open %s\n", plyFilename.c_str());
+        Log::E("failed to open %s\n", plyFilename.c_str());
         return false;
     }
 
@@ -32,7 +32,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     if (!CheckLine(plyFile, "ply") ||
         !CheckLine(plyFile, "format binary_little_endian 1.0"))
     {
-        Log::printf("Invalid ply file\n");
+        Log::E("Invalid ply file\n");
         return false;
     }
 
@@ -40,7 +40,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     std::string line;
     if (!std::getline(plyFile, line))
     {
-        Log::printf("Invalid ply file\n");
+        Log::E("Invalid ply file\n");
         return false;
     }
     std::istringstream iss(line);
@@ -48,7 +48,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     int numGaussians;
     if (!((iss >> token1 >> token2 >> numGaussians) && (token1 == "element") && (token2 == "vertex")))
     {
-        Log::printf("Invalid ply file\n");
+        Log::E("Invalid ply file\n");
         return false;
     }
 
@@ -117,7 +117,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
         !CheckLine(plyFile, "property float rot_3") ||
         !CheckLine(plyFile, "end_header"))
     {
-        Log::printf("Invalid ply file\n");
+        Log::E("Invalid ply file\n");
         return false;
     }
 
@@ -139,7 +139,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
         plyFile.read((char*)&g, GAUSSIAN_SIZE);
         if (plyFile.gcount() != GAUSSIAN_SIZE)
         {
-            Log::printf("Error reading gaussian[%d]\n", i);
+            Log::E("Error reading gaussian[%d]\n", i);
             return false;
         }
         glm::vec3 p(g.position[0], g.position[1], g.position[2]);
@@ -157,7 +157,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename) const
     std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
-        Log::printf("failed to open %s\n", plyFilename.c_str());
+        Log::E("failed to open %s\n", plyFilename.c_str());
         return false;
     }
 

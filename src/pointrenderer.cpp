@@ -28,7 +28,7 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebuf
     Image pointImg;
     if (!pointImg.Load("texture/sphere.png"))
     {
-        Log::printf("Error loading sphere.png\n");
+        Log::E("Error loading sphere.png\n");
         return false;
     }
     pointImg.isSRGB = isFramebufferSRGBEnabled;
@@ -39,14 +39,14 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebuf
     pointProg = std::make_shared<Program>();
     if (!pointProg->LoadVertGeomFrag("shader/point_vert.glsl", "shader/point_geom.glsl", "shader/point_frag.glsl"))
     {
-        Log::printf("Error loading point shaders!\n");
+        Log::E("Error loading point shaders!\n");
         return false;
     }
 
     preSortProg = std::make_shared<Program>();
     if (!preSortProg->LoadCompute("shader/presort_compute.glsl"))
     {
-        Log::printf("Error loading point pre-sort compute shader!\n");
+        Log::E("Error loading point pre-sort compute shader!\n");
         return false;
     }
 

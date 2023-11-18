@@ -192,6 +192,8 @@ int main(int argc, char *argv[])
 {
     Options opt;
 
+    Log::SetLevel(Log::Warning);
+
     // parse arguments
     std::string dataDir;
     if (argc < 2)

@@ -31,7 +31,7 @@ public:
         }
         else
         {
-            Log::printf("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
+            Log::W("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         }
     }
 
@@ -54,7 +54,7 @@ public:
         }
         else
         {
-            Log::printf("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
+            Log::W("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         }
     }
 

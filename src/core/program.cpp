@@ -42,10 +42,10 @@ static void DumpShaderSource(const std::string& source)
     int i = 1;
     while (std::getline(ss, line))
     {
-        Log::printf("%04d: %s\n", i, line.c_str());
+        Log::D("%04d: %s\n", i, line.c_str());
         i++;
     }
-    Log::printf("\n");
+    Log::D("\n");
 }
 
 static bool CompileShader(GLenum type, const std::string& source, GLint* shaderOut, const std::string& debugName)
@@ -61,7 +61,7 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
 
     if (!compiled)
     {
-        Log::printf("shader compilation error for \"%s\"!\n", debugName.c_str());
+        Log::E("shader compilation error for \"%s\"!\n", debugName.c_str());
     }
 
     GLint bufferLen = 0;
@@ -70,13 +70,13 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
     {
         if (compiled)
         {
-            Log::printf("shader compilation warning for \"%s\"!\n", debugName.c_str());
+            Log::E("shader compilation warning for \"%s\"!\n", debugName.c_str());
         }
 
         GLsizei len = 0;
         std::unique_ptr<char> buffer(new char[bufferLen]);
         glGetShaderInfoLog(shader, bufferLen, &len, buffer.get());
-        Log::printf("%s\n", buffer.get());
+        Log::E("%s\n", buffer.get());
         DumpShaderSource(source);
     }
 
@@ -134,7 +134,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
     std::string vertSource, geomSource, fragSource;
     if (!LoadFile(vertFilename, vertSource))
     {
-        Log::printf("Failed to load vertex shader %s\n", vertFilename.c_str());
+        Log::E("Failed to load vertex shader %s\n", vertFilename.c_str());
         return false;
     }
     vertSource = ExpandMacros(macros, vertSource);
@@ -143,7 +143,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
     {
         if (!LoadFile(geomFilename, geomSource))
         {
-            Log::printf("Failed to load geometry shader %s\n", geomFilename.c_str());
+            Log::E("Failed to load geometry shader %s\n", geomFilename.c_str());
             return false;
         }
         geomSource = ExpandMacros(macros, geomSource);
@@ -151,14 +151,14 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
 
     if (!LoadFile(fragFilename, fragSource))
     {
-        Log::printf("Failed to load fragment shader \"%s\"\n", fragFilename.c_str());
+        Log::E("Failed to load fragment shader \"%s\"\n", fragFilename.c_str());
         return false;
     }
     fragSource = ExpandMacros(macros, fragSource);
 
     if (!CompileShader(GL_VERTEX_SHADER, vertSource, &vertShader, vertFilename))
     {
-        Log::printf("Failed to compile vertex shader \"%s\"\n", vertFilename.c_str());
+        Log::E("Failed to compile vertex shader \"%s\"\n", vertFilename.c_str());
         return false;
     }
 
@@ -166,14 +166,14 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
     {
         if (!CompileShader(GL_GEOMETRY_SHADER, geomSource, &geomShader, geomFilename))
         {
-            Log::printf("Failed to compile geometry shader \"%s\"\n", geomFilename.c_str());
+            Log::E("Failed to compile geometry shader \"%s\"\n", geomFilename.c_str());
             return false;
         }
     }
 
     if (!CompileShader(GL_FRAGMENT_SHADER, fragSource, &fragShader, fragFilename))
     {
-        Log::printf("Failed to compile fragment shader \"%s\"\n", fragFilename.c_str());
+        Log::E("Failed to compile fragment shader \"%s\"\n", fragFilename.c_str());
         return false;
     }
 
@@ -188,18 +188,18 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
 
     if (!CheckLinkStatus())
     {
-        Log::printf("Failed to link program \"%s\"\n", debugName.c_str());
+        Log::E("Failed to link program \"%s\"\n", debugName.c_str());
 
         // dump shader source for reference
-        Log::printf("\n");
-        Log::printf("%s =\n", vertFilename.c_str());
+        Log::D("\n");
+        Log::D("%s =\n", vertFilename.c_str());
         DumpShaderSource(vertSource);
         if (useGeomShader)
         {
-            Log::printf("%s =\n", geomFilename.c_str());
+            Log::D("%s =\n", geomFilename.c_str());
             DumpShaderSource(geomSource);
         }
-        Log::printf("%s =\n", fragFilename.c_str());
+        Log::D("%s =\n", fragFilename.c_str());
         DumpShaderSource(fragSource);
 
         return false;
@@ -244,12 +244,13 @@ bool Program::LoadCompute(const std::string& computeFilename)
     std::string computeSource;
     if (!LoadFile(computeFilename, computeSource))
     {
-        Log::printf("Failed to load compute shader %s\n", computeFilename.c_str());
+        Log::E("Failed to load compute shader \"%s\"\n", computeFilename.c_str());
+        return false;
     }
 
     if (!CompileShader(GL_COMPUTE_SHADER, computeSource, &computeShader, computeFilename))
     {
-        Log::printf("Failed to compile compute shader %s\n", computeFilename.c_str());
+        Log::E("Failed to compile compute shader \"%s\"\n", computeFilename.c_str());
         return false;
     }
 
@@ -259,11 +260,11 @@ bool Program::LoadCompute(const std::string& computeFilename)
 
     if (!CheckLinkStatus())
     {
-        Log::printf("Failed to link program \"%s\"\n", debugName.c_str());
+        Log::E("Failed to link program \"%s\"\n", debugName.c_str());
 
         // dump shader source for reference
-        Log::printf("\n");
-        Log::printf("%s =\n", computeFilename.c_str());
+        Log::D("\n");
+        Log::D("%s =\n", computeFilename.c_str());
         DumpShaderSource(computeSource);
 
         return false;
@@ -304,7 +305,7 @@ int Program::GetUniformLoc(const std::string& name) const
     else
     {
         assert(false);
-        Log::printf("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
+        Log::W("Could not find uniform \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         return 0;
     }
 }
@@ -318,7 +319,7 @@ int Program::GetAttribLoc(const std::string& name) const
     }
     else
     {
-        Log::printf("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
+        Log::W("Could not find attrib \"%s\" for program \"%s\"\n", name.c_str(), debugName.c_str());
         assert(false);
         return 0;
     }
@@ -433,7 +434,7 @@ bool Program::CheckLinkStatus()
 
     if (!linked)
     {
-        Log::printf("Failed to link shaders \"%s\"\n", debugName.c_str());
+        Log::E("Failed to link shaders \"%s\"\n", debugName.c_str());
     }
 
     const GLint MAX_BUFFER_LEN = 4096;
@@ -444,9 +445,9 @@ bool Program::CheckLinkStatus()
     {
         if (linked)
         {
-            Log::printf("Warning during linking shaders \"%s\"\n", debugName.c_str());
+            Log::W("Warning during linking shaders \"%s\"\n", debugName.c_str());
         }
-        Log::printf("%s\n", buffer.get());
+        Log::W("%s\n", buffer.get());
     }
 
 #ifdef WARNINGS_AS_ERRORS

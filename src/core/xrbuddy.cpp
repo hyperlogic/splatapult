@@ -48,11 +48,11 @@ static bool CheckResult(XrInstance instance, XrResult result, const char* str)
     {
         char resultString[XR_MAX_RESULT_STRING_SIZE];
         xrResultToString(instance, result, resultString);
-        Log::printf("%s [%s]\n", str, resultString);
+        Log::E("%s [%s]\n", str, resultString);
     }
     else
     {
-        Log::printf("%s\n", str);
+        Log::E("%s\n", str);
     }
     return false;
 }
@@ -80,10 +80,10 @@ static bool EnumerateExtensions(std::vector<XrExtensionProperties>& extensionPro
     bool printExtensions = false;
     if (printExtensions || printAll)
     {
-        Log::printf("%d extensions:\n", extensionCount);
+        Log::D("%d extensions:\n", extensionCount);
         for (uint32_t i = 0; i < extensionCount; ++i)
         {
-            Log::printf("    %s\n", extensionProps[i].extensionName);
+            Log::D("    %s\n", extensionProps[i].extensionName);
         }
     }
 
@@ -126,10 +126,10 @@ static bool EnumerateLayers(std::vector<XrApiLayerProperties>& layerProps)
     bool printLayers = false;
     if (printLayers || printAll)
     {
-        Log::printf("%d layers:\n", layerCount);
+        Log::D("%d layers:\n", layerCount);
         for (uint32_t i = 0; i < layerCount; i++)
         {
-            Log::printf("    %s, %s\n", layerProps[i].layerName, layerProps[i].description);
+            Log::D("    %s, %s\n", layerProps[i].layerName, layerProps[i].description);
         }
     }
 
@@ -140,10 +140,10 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
 {
     if (printAll)
     {
-        Log::printf("Attempting to enable the following extensions:\n");
+        Log::D("Attempting to enable the following extensions:\n");
         for (auto&& ext : extensionVec)
         {
-            Log::printf("    %s\n", ext);
+            Log::D("    %s\n", ext);
         }
     }
     // create openxr instance
@@ -181,8 +181,8 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
             return false;
         }
 
-        Log::printf("Runtime Name: %s\n", ip.runtimeName);
-        Log::printf("Runtime Version: %d.%d.%d\n",
+        Log::D("Runtime Name: %s\n", ip.runtimeName);
+        Log::D("Runtime Version: %d.%d.%d\n",
                XR_VERSION_MAJOR(ip.runtimeVersion),
                XR_VERSION_MINOR(ip.runtimeVersion),
                XR_VERSION_PATCH(ip.runtimeVersion));
@@ -225,12 +225,12 @@ static bool GetSystemProperties(XrInstance instance, XrSystemId systemId, XrSyst
     bool printSystemProperties = false;
     if (printSystemProperties || printAll)
     {
-        Log::printf("System properties for system \"%s\":\n", sp.systemName);
-        Log::printf("    maxLayerCount: %d\n", sp.graphicsProperties.maxLayerCount);
-        Log::printf("    maxSwapChainImageHeight: %d\n", sp.graphicsProperties.maxSwapchainImageHeight);
-        Log::printf("    maxSwapChainImageWidth: %d\n", sp.graphicsProperties.maxSwapchainImageWidth);
-        Log::printf("    Orientation Tracking: %s\n", sp.trackingProperties.orientationTracking ? "true" : "false");
-        Log::printf("    Position Tracking: %s\n", sp.trackingProperties.positionTracking ? "true" : "false");
+        Log::D("System properties for system \"%s\":\n", sp.systemName);
+        Log::D("    maxLayerCount: %d\n", sp.graphicsProperties.maxLayerCount);
+        Log::D("    maxSwapChainImageHeight: %d\n", sp.graphicsProperties.maxSwapchainImageHeight);
+        Log::D("    maxSwapChainImageWidth: %d\n", sp.graphicsProperties.maxSwapchainImageWidth);
+        Log::D("    Orientation Tracking: %s\n", sp.trackingProperties.orientationTracking ? "true" : "false");
+        Log::D("    Position Tracking: %s\n", sp.trackingProperties.positionTracking ? "true" : "false");
     }
 
     return true;
@@ -302,16 +302,16 @@ static bool EnumerateViewConfigs(XrInstance instance, XrSystemId systemId, std::
     bool printViews = false;
     if (printViews || printAll)
     {
-        Log::printf("%d viewConfigs:\n", viewCount);
+        Log::D("%d viewConfigs:\n", viewCount);
         for (uint32_t i = 0; i < viewCount; i++)
         {
-            Log::printf("    viewConfigs[%d]:\n", i);
-            Log::printf("        recommendedImageRectWidth: %d\n", viewConfigs[i].recommendedImageRectWidth);
-            Log::printf("        maxImageRectWidth: %d\n", viewConfigs[i].maxImageRectWidth);
-            Log::printf("        recommendedImageRectHeight: %d\n", viewConfigs[i].recommendedImageRectHeight);
-            Log::printf("        maxImageRectHeight: %d\n", viewConfigs[i].maxImageRectHeight);
-            Log::printf("        recommendedSwapchainSampleCount: %d\n", viewConfigs[i].recommendedSwapchainSampleCount);
-            Log::printf("        maxSwapchainSampleCount: %d\n", viewConfigs[i].maxSwapchainSampleCount);
+            Log::D("    viewConfigs[%d]:\n", i);
+            Log::D("        recommendedImageRectWidth: %d\n", viewConfigs[i].recommendedImageRectWidth);
+            Log::D("        maxImageRectWidth: %d\n", viewConfigs[i].maxImageRectWidth);
+            Log::D("        recommendedImageRectHeight: %d\n", viewConfigs[i].recommendedImageRectHeight);
+            Log::D("        maxImageRectHeight: %d\n", viewConfigs[i].maxImageRectHeight);
+            Log::D("        recommendedSwapchainSampleCount: %d\n", viewConfigs[i].recommendedSwapchainSampleCount);
+            Log::D("        maxSwapchainSampleCount: %d\n", viewConfigs[i].maxSwapchainSampleCount);
         }
     }
 
@@ -326,14 +326,14 @@ static bool SetColorSpace(XrInstance instance, XrSession session, XrColorSpaceFB
     result = xrGetInstanceProcAddr(instance, "xrSetColorSpaceFB", (PFN_xrVoidFunction*)&xrSetColorSpaceFB);
     if (!CheckResult(instance, result, "xrGetInstanceProcAddr(xrSetColorSpaceFB)") || !xrSetColorSpaceFB)
     {
-        Log::printf("get proc addr xrSetColorSpaceFB() failed\n");
+        Log::W("get proc addr xrSetColorSpaceFB() failed\n");
         return false;
     }
 
     result = xrSetColorSpaceFB(session, colorSpace);
     if (!CheckResult(instance, result, "xrSetColorSpaceFB"))
     {
-        Log::printf("xrSetColorSpaceFB(XR_COLOR_SPACE_REC2020_FB) failed\n");
+        Log::W("xrSetColorSpaceFB(XR_COLOR_SPACE_REC2020_FB) failed\n");
         return false;
     }
 
@@ -371,15 +371,15 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
         bool printVersion = false;
         if (printVersion || printAll)
         {
-            Log::printf("current OpenGL version: %d.%d.%d\n", XR_VERSION_MAJOR(desiredApiVersion),
+            Log::D("current OpenGL version: %d.%d.%d\n", XR_VERSION_MAJOR(desiredApiVersion),
                    XR_VERSION_MINOR(desiredApiVersion), XR_VERSION_PATCH(desiredApiVersion));
-            Log::printf("minimum OpenGL version: %d.%d.%d\n", XR_VERSION_MAJOR(reqs.minApiVersionSupported),
+            Log::D("minimum OpenGL version: %d.%d.%d\n", XR_VERSION_MAJOR(reqs.minApiVersionSupported),
                    XR_VERSION_MINOR(reqs.minApiVersionSupported), XR_VERSION_PATCH(reqs.minApiVersionSupported));
         }
 
         if (reqs.minApiVersionSupported > desiredApiVersion)
         {
-            Log::printf("Runtime does not support desired Graphics API and/or version\n");
+            Log::E("Runtime does not support desired Graphics API and/or version\n");
             return false;
         }
     }
@@ -668,22 +668,22 @@ static bool CreateSpaces(XrInstance instance, XrSystemId systemId, XrSession ses
             return false;
         }
 
-        Log::printf("referenceSpaces:\n");
+        Log::D("referenceSpaces:\n");
         for (uint32_t i = 0; i < referenceSpacesCount; i++)
         {
             switch (referenceSpaces[i])
             {
             case XR_REFERENCE_SPACE_TYPE_VIEW:
-                Log::printf("    XR_REFERENCE_SPACE_TYPE_VIEW\n");
+                Log::D("    XR_REFERENCE_SPACE_TYPE_VIEW\n");
                 break;
             case XR_REFERENCE_SPACE_TYPE_LOCAL:
-                Log::printf("    XR_REFERENCE_SPACE_TYPE_LOCAL\n");
+                Log::D("    XR_REFERENCE_SPACE_TYPE_LOCAL\n");
                 break;
             case XR_REFERENCE_SPACE_TYPE_STAGE:
-                Log::printf("    XR_REFERENCE_SPACE_TYPE_STAGE\n");
+                Log::D("    XR_REFERENCE_SPACE_TYPE_STAGE\n");
                 break;
             default:
-                Log::printf("    XR_REFERENCE_SPACE_TYPE_%d\n", referenceSpaces[i]);
+                Log::D("    XR_REFERENCE_SPACE_TYPE_%d\n", referenceSpaces[i]);
                 break;
             }
         }
@@ -871,7 +871,7 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
     {
         if (!ExtensionSupported(extensionProps, ext))
         {
-            Log::printf("required extension \"%s\" not supported!\n", ext);
+            Log::W("required extension \"%s\" not supported!\n", ext);
             return;
         }
         extensionVec.push_back(ext);
@@ -907,7 +907,7 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
 
     if (!SupportsVR(instance, systemId))
     {
-        Log::printf("System doesn't support VR\n");
+        Log::E("System doesn't support VR\n");
         return;
     }
 
@@ -975,23 +975,23 @@ bool XrBuddy::PollEvents()
             // Receiving the XrEventDataInstanceLossPending event structure indicates that the application is about to lose the indicated XrInstance at the indicated lossTime in the future.
             // The application should call xrDestroyInstance and relinquish any instance-specific resources.
             // This typically occurs to make way for a replacement of the underlying runtime, such as via a software update.
-            Log::printf("xrEvent: XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING\n");
+            Log::D("xrEvent: XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING\n");
             break;
         case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
         {
             // Receiving the XrEventDataSessionStateChanged event structure indicates that the application has changed lifecycle stat.e
-            Log::printf("xrEvent: XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED -> ");
+            Log::D("xrEvent: XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED -> ");
             XrEventDataSessionStateChanged* ssc = (XrEventDataSessionStateChanged*)&xrEvent;
             state = ssc->state;
             switch (state)
             {
             case XR_SESSION_STATE_IDLE:
                 // The initial state after calling xrCreateSession or returned to after calling xrEndSession.
-                Log::printf("XR_SESSION_STATE_IDLE\n");
+                Log::D("XR_SESSION_STATE_IDLE\n");
                 break;
             case XR_SESSION_STATE_READY:
                 // The application is ready to call xrBeginSession and sync its frame loop with the runtime.
-                Log::printf("XR_SESSION_STATE_READY\n");
+                Log::D("XR_SESSION_STATE_READY\n");
                 if (!BeginSession(instance, systemId, session))
                 {
                     return false;
@@ -1000,18 +1000,18 @@ bool XrBuddy::PollEvents()
                 break;
             case XR_SESSION_STATE_SYNCHRONIZED:
                 // The application has synced its frame loop with the runtime but is not visible to the user.
-                Log::printf("XR_SESSION_STATE_SYNCHRONIZED\n");
+                Log::D("XR_SESSION_STATE_SYNCHRONIZED\n");
                 break;
             case XR_SESSION_STATE_VISIBLE:
                 // The application has synced its frame loop with the runtime and is visible to the user but cannot receive XR input.
-                Log::printf("XR_SESSION_STATE_VISIBLE\n");
+                Log::D("XR_SESSION_STATE_VISIBLE\n");
                 break;
             case XR_SESSION_STATE_FOCUSED:
                 // The application has synced its frame loop with the runtime, is visible to the user and can receive XR input.
-                Log::printf("XR_SESSION_STATE_FOCUSED\n");
+                Log::D("XR_SESSION_STATE_FOCUSED\n");
                 break;
             case XR_SESSION_STATE_STOPPING:
-                Log::printf("XR_SESSION_STATE_STOPPING\n");
+                Log::D("XR_SESSION_STATE_STOPPING\n");
                 // The application should exit its frame loop and call xrEndSession.
                 if (!EndSession(instance, systemId, session))
                 {
@@ -1020,33 +1020,33 @@ bool XrBuddy::PollEvents()
                 sessionReady = false;
                 break;
             case XR_SESSION_STATE_LOSS_PENDING:
-                Log::printf("XR_SESSION_STATE_LOSS_PENDING\n");
+                Log::D("XR_SESSION_STATE_LOSS_PENDING\n");
                 // The session is in the process of being lost. The application should destroy the current session and can optionally recreate it.
                 break;
             case XR_SESSION_STATE_EXITING:
-                Log::printf("XR_SESSION_STATE_EXITING\n");
+                Log::D("XR_SESSION_STATE_EXITING\n");
                 // The application should end its XR experience and not automatically restart it.
                 break;
             default:
-                Log::printf("XR_SESSION_STATE_??? %d\n", (int)state);
+                Log::D("XR_SESSION_STATE_??? %d\n", (int)state);
                 break;
             }
             break;
         }
         case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
             // The XrEventDataReferenceSpaceChangePending event is sent to the application to notify it that the origin (and perhaps the bounds) of a reference space is changing.
-            Log::printf("XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING\n");
+            Log::D("XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING\n");
             break;
         case XR_TYPE_EVENT_DATA_EVENTS_LOST:
             // Receiving the XrEventDataEventsLost event structure indicates that the event queue overflowed and some events were removed at the position within the queue at which this event was found.
-            Log::printf("xrEvent: XR_TYPE_EVENT_DATA_EVENTS_LOST\n");
+            Log::D("xrEvent: XR_TYPE_EVENT_DATA_EVENTS_LOST\n");
             break;
         case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
             // The XrEventDataInteractionProfileChanged event is sent to the application to notify it that the active input form factor for one or more top level user paths has changed.:
-            Log::printf("XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED\n");
+            Log::D("XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED\n");
             break;
         default:
-            Log::printf("Unhandled event type %d\n", xrEvent.type);
+            Log::D("Unhandled event type %d\n", xrEvent.type);
             break;
         }
 
@@ -1101,11 +1101,11 @@ bool XrBuddy::SyncInput()
                 }
                 if (printActions && iter.second.u.boolState.changedSinceLastSync)
                 {
-                    Log::printf("action %s:\n", iter.first.c_str());
-                    Log::printf("    currentState: %s\n", iter.second.u.boolState.currentState ? "true" : "false");
-                    Log::printf("    changedSinceLastSync: %s\n", iter.second.u.boolState.changedSinceLastSync ? "true" : "false");
-                    Log::printf("    lastChangeTime: %lld\n", iter.second.u.boolState.lastChangeTime);
-                    Log::printf("    isActive: %s\n", iter.second.u.boolState.isActive ? "true" : "false");
+                    Log::D("action %s:\n", iter.first.c_str());
+                    Log::D("    currentState: %s\n", iter.second.u.boolState.currentState ? "true" : "false");
+                    Log::D("    changedSinceLastSync: %s\n", iter.second.u.boolState.changedSinceLastSync ? "true" : "false");
+                    Log::D("    lastChangeTime: %lld\n", iter.second.u.boolState.lastChangeTime);
+                    Log::D("    isActive: %s\n", iter.second.u.boolState.isActive ? "true" : "false");
                 }
                 break;
             case XR_ACTION_TYPE_FLOAT_INPUT:
@@ -1117,11 +1117,11 @@ bool XrBuddy::SyncInput()
                 }
                 if (printActions && iter.second.u.floatState.changedSinceLastSync)
                 {
-                    Log::printf("action %s:\n", iter.first.c_str());
-                    Log::printf("    currentState: %.5f\n", iter.second.u.floatState.currentState);
-                    Log::printf("    changedSinceLastSync: %s\n", iter.second.u.floatState.changedSinceLastSync ? "true" : "false");
-                    Log::printf("    lastChangeTime: %lld\n", iter.second.u.floatState.lastChangeTime);
-                    Log::printf("    isActive: %s\n", iter.second.u.floatState.isActive ? "true" : "false");
+                    Log::D("action %s:\n", iter.first.c_str());
+                    Log::D("    currentState: %.5f\n", iter.second.u.floatState.currentState);
+                    Log::D("    changedSinceLastSync: %s\n", iter.second.u.floatState.changedSinceLastSync ? "true" : "false");
+                    Log::D("    lastChangeTime: %lld\n", iter.second.u.floatState.lastChangeTime);
+                    Log::D("    isActive: %s\n", iter.second.u.floatState.isActive ? "true" : "false");
                 }
                 break;
             case XR_ACTION_TYPE_VECTOR2F_INPUT:
@@ -1133,11 +1133,11 @@ bool XrBuddy::SyncInput()
                 }
                 if (printActions && iter.second.u.vec2State.changedSinceLastSync)
                 {
-                    Log::printf("action %s:\n", iter.first.c_str());
-                    Log::printf("    currentState: (%.5f, %.5f)\n", iter.second.u.vec2State.currentState.x, iter.second.u.vec2State.currentState.y);
-                    Log::printf("    changedSinceLastSync: %s\n", iter.second.u.vec2State.changedSinceLastSync ? "true" : "false");
-                    Log::printf("    lastChangeTime: %lld\n", iter.second.u.vec2State.lastChangeTime);
-                    Log::printf("    isActive: %s\n", iter.second.u.vec2State.isActive ? "true" : "false");
+                    Log::D("action %s:\n", iter.first.c_str());
+                    Log::D("    currentState: (%.5f, %.5f)\n", iter.second.u.vec2State.currentState.x, iter.second.u.vec2State.currentState.y);
+                    Log::D("    changedSinceLastSync: %s\n", iter.second.u.vec2State.changedSinceLastSync ? "true" : "false");
+                    Log::D("    lastChangeTime: %lld\n", iter.second.u.vec2State.lastChangeTime);
+                    Log::D("    isActive: %s\n", iter.second.u.vec2State.isActive ? "true" : "false");
                 }
                 break;
             case XR_ACTION_TYPE_POSE_INPUT:
@@ -1350,7 +1350,7 @@ uint32_t XrBuddy::GetColorTexture() const
 void XrBuddy::CycleColorSpace()
 {
     static int i = 0;
-    Log::printf("SETTING COLOR SPACE -> %d\n", i);
+    Log::D("SETTING COLOR SPACE -> %d\n", i);
     SetColorSpace(instance, session, (XrColorSpaceFB)i);
     i = (i + 1) % (XR_COLOR_SPACE_ADOBE_RGB_FB + 1);
 }

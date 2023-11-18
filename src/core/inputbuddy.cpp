@@ -8,11 +8,11 @@ InputBuddy::InputBuddy()
     if (numJoySticks > 0)
     {
         SDL_Joystick* joystick = SDL_JoystickOpen(0);
-        Log::printf("Found joystick \"%s\"\n", SDL_JoystickName(joystick));
+        Log::I("Found joystick \"%s\"\n", SDL_JoystickName(joystick));
     }
     else
     {
-        Log::printf("No joystick found\n");
+        Log::I("No joystick found\n");
     }
 }
 

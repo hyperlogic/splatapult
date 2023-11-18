@@ -45,7 +45,7 @@ bool CamerasConfig::ImportJson(const std::string& jsonFilename)
     catch (const nlohmann::json::exception& e)
     {
         std::string s = e.what();
-        Log::printf("CamerasConfig::ImportJson exception: %s\n", s.c_str());
+        Log::E("CamerasConfig::ImportJson exception: %s\n", s.c_str());
         return false;
     }
 

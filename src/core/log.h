@@ -2,8 +2,6 @@
 
 struct Log
 {
-    static int printf(const char *fmt, ...);
-
     enum LogLevel
     {
         Verbose = 0,
@@ -29,4 +27,7 @@ struct Log
 
     // error
     static void E(const char *fmt, ...);
+
+private:
+    static int printf(const char *fmt, ...);
 };

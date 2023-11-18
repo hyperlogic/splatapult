@@ -32,14 +32,14 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
     }
     if (!splatProg->LoadVertGeomFrag("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_frag.glsl"))
     {
-        Log::printf("Error loading splat shaders!\n");
+        Log::E("Error loading splat shaders!\n");
         return false;
     }
 
     preSortProg = std::make_shared<Program>();
     if (!preSortProg->LoadCompute("shader/presort_compute.glsl"))
     {
-        Log::printf("Error loading point pre-sort compute shader!\n");
+        Log::E("Error loading point pre-sort compute shader!\n");
         return false;
     }
 

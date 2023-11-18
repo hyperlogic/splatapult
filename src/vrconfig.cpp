@@ -33,7 +33,7 @@ bool VrConfig::ImportJson(const std::string& jsonFilename)
     catch (const nlohmann::json::exception& e)
     {
         std::string s = e.what();
-        Log::printf("VrConfig::ImportJson exception: %s\n", s.c_str());
+        Log::E("VrConfig::ImportJson exception: %s\n", s.c_str());
         return false;
     }
 

@@ -86,24 +86,24 @@ void GLErrorCheck(const char* message)
     switch (val)
     {
     case GL_INVALID_ENUM:
-        Log::printf("GL_INVALID_ENUM : %s\n", message);
+        Log::D("GL_INVALID_ENUM : %s\n", message);
         break;
     case GL_INVALID_VALUE:
-        Log::printf("GL_INVALID_VALUE : %s\n", message);
+        Log::D("GL_INVALID_VALUE : %s\n", message);
         break;
     case GL_INVALID_OPERATION:
-        Log::printf("GL_INVALID_OPERATION : %s\n", message);
+        Log::D("GL_INVALID_OPERATION : %s\n", message);
         break;
 #ifndef GL_ES_VERSION_2_0
     case GL_STACK_OVERFLOW:
-        Log::printf("GL_STACK_OVERFLOW : %s\n", message);
+        Log::D("GL_STACK_OVERFLOW : %s\n", message);
         break;
     case GL_STACK_UNDERFLOW:
-        Log::printf("GL_STACK_UNDERFLOW : %s\n", message);
+        Log::D("GL_STACK_UNDERFLOW : %s\n", message);
         break;
 #endif
     case GL_OUT_OF_MEMORY:
-        Log::printf("GL_OUT_OF_MEMORY : %s\n", message);
+        Log::D("GL_OUT_OF_MEMORY : %s\n", message);
         break;
     case GL_NO_ERROR:
         break;
@@ -269,46 +269,46 @@ glm::vec3 RandomColor()
 
 void PrintMat(const glm::mat4& m4, const std::string& name)
 {
-    Log::printf("%s =\n", name.c_str());
-    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][0], m4[1][0], m4[2][0], m4[3][0]);
-    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][1], m4[1][1], m4[2][1], m4[3][1]);
-    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][2], m4[1][2], m4[2][2], m4[3][2]);
-    Log::printf("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][3], m4[1][3], m4[2][3], m4[3][3]);
+    Log::D("%s =\n", name.c_str());
+    Log::D("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][0], m4[1][0], m4[2][0], m4[3][0]);
+    Log::D("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][1], m4[1][1], m4[2][1], m4[3][1]);
+    Log::D("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][2], m4[1][2], m4[2][2], m4[3][2]);
+    Log::D("   | %10.5f, %10.5f, %10.5f, %10.5f |\n", m4[0][3], m4[1][3], m4[2][3], m4[3][3]);
 }
 
 void PrintMat(const glm::mat3& m3, const std::string& name)
 {
-    Log::printf("%s =\n", name.c_str());
-    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[0][0], m3[1][0], m3[2][0]);
-    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[0][1], m3[1][1], m3[2][1]);
-    Log::printf("   | %10.5f, %10.5f, %10.5f |\n", m3[0][2], m3[1][2], m3[2][2]);
+    Log::D("%s =\n", name.c_str());
+    Log::D("   | %10.5f, %10.5f, %10.5f |\n", m3[0][0], m3[1][0], m3[2][0]);
+    Log::D("   | %10.5f, %10.5f, %10.5f |\n", m3[0][1], m3[1][1], m3[2][1]);
+    Log::D("   | %10.5f, %10.5f, %10.5f |\n", m3[0][2], m3[1][2], m3[2][2]);
 }
 
 void PrintMat(const glm::mat2& m2, const std::string& name)
 {
-    Log::printf("%s =\n", name.c_str());
-    Log::printf("   | %10.5f, %10.5f |\n", m2[0][0], m2[1][0]);
-    Log::printf("   | %10.5f, %10.5f |\n", m2[0][1], m2[1][1]);
+    Log::D("%s =\n", name.c_str());
+    Log::D("   | %10.5f, %10.5f |\n", m2[0][0], m2[1][0]);
+    Log::D("   | %10.5f, %10.5f |\n", m2[0][1], m2[1][1]);
 }
 
 void PrintVec(const glm::vec4& v4, const std::string& name)
 {
-    Log::printf("%s = ( %.5f, %.5f, %.5f, %.5f )\n", name.c_str(), v4.x, v4.y, v4.z, v4.w);
+    Log::D("%s = ( %.5f, %.5f, %.5f, %.5f )\n", name.c_str(), v4.x, v4.y, v4.z, v4.w);
 }
 
 void PrintVec(const glm::vec3& v3, const std::string& name)
 {
-    Log::printf("%s = ( %.5f, %.5f, %.5f )\n", name.c_str(), v3.x, v3.y, v3.z);
+    Log::D("%s = ( %.5f, %.5f, %.5f )\n", name.c_str(), v3.x, v3.y, v3.z);
 }
 
 void PrintVec(const glm::vec2& v2, const std::string& name)
 {
-    Log::printf("%s = ( %.5f, %.5f )\n", name.c_str(), v2.x, v2.y);
+    Log::D("%s = ( %.5f, %.5f )\n", name.c_str(), v2.x, v2.y);
 }
 
 void PrintQuat(const glm::quat& q, const std::string& name)
 {
-    Log::printf("%s = ( %.5f, ( %.5f, %.5f, %.5f ) )\n", name.c_str(), q.x, q.y, q.z, q.w);
+    Log::D("%s = ( %.5f, ( %.5f, %.5f, %.5f ) )\n", name.c_str(), q.x, q.y, q.z, q.w);
 }
 
 static const std::string ROOT_PATH("../../");
