@@ -2,18 +2,31 @@
 
 struct Log
 {
-    enum AnsiColor
+    static int printf(const char *fmt, ...);
+
+    enum LogLevel
     {
-        BLACK = 0,
-        RED = 1,
-        GREEN = 2,
-        YELLOW = 3,
-        BLUE = 4,
-        MAGENTA = 5,
-        CYAN = 6,
-        WHITE = 7
+        Verbose = 0,
+        Debug = 1,
+        Info = 2,
+        Warning = 3,
+        Error = 4
     };
 
-    static int printf(const char *fmt, ...);
-    static int printf_ansi(AnsiColor color, const char *fmt, ...);
+    static void SetLevel(LogLevel levelIn);
+
+    // verbose
+    static void V(const char *fmt, ...);
+
+    // debug
+    static void D(const char *fmt, ...);
+
+    // info
+    static void I(const char *fmt, ...);
+
+    // warning
+    static void W(const char *fmt, ...);
+
+    // error
+    static void E(const char *fmt, ...);
 };

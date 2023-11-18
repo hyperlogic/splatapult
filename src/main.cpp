@@ -157,7 +157,7 @@ std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
 
     if (!pointCloud->ImportPly(dataDir + "input.ply"))
     {
-        Log::printf("Error loading PointCloud!\n");
+        Log::E("Error loading PointCloud!\n");
         return nullptr;
     }
     return pointCloud;
@@ -171,7 +171,7 @@ std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
     std::string iterationDir = dataDir + "point_cloud/iteration_30000/";
     if (!gaussianCloud->ImportPly(iterationDir + "point_cloud.ply"))
     {
-        Log::printf("Error loading GaussianCloud!\n");
+        Log::E("Error loading GaussianCloud!\n");
         return nullptr;
     }
 
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     std::string dataDir;
     if (argc < 2)
     {
-        Log::printf("Missing FILENAME argument\n");
+        Log::E("Missing FILENAME argument\n");
         // AJT: TODO print usage
         return 1;
     }
@@ -226,13 +226,13 @@ int main(int argc, char *argv[])
     struct stat sb;
     if (stat(dataDir.c_str(), &sb))
     {
-        Log::printf("Invalid directory \"%s\"\n", dataDir.c_str());
+        Log::E("Invalid directory \"%s\"\n", dataDir.c_str());
         return 1;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)
     {
-        Log::printf("Failed to initialize SDL: %s\n", SDL_GetError());
+        Log::E("Failed to initialize SDL: %s\n", SDL_GetError());
         return 1;
     }
 
@@ -275,21 +275,21 @@ int main(int argc, char *argv[])
 #endif
 	if (!ctx.renderer)
     {
-        Log::printf("Failed to SDL Renderer: %s\n", SDL_GetError());
+        Log::E("Failed to SDL Renderer: %s\n", SDL_GetError());
 		return 1;
 	}
 
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
-        Log::printf("Error: %s\n", glewGetErrorString(err));
+        Log::E("Error: %s\n", glewGetErrorString(err));
         return 1;
     }
 
     auto debugRenderer = std::make_shared<DebugRenderer>();
     if (!debugRenderer->Init())
     {
-        Log::printf("DebugRenderer Init failed\n");
+        Log::E("DebugRenderer Init failed\n");
         return 1;
     }
 
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
         xrBuddy = std::make_shared<XrBuddy>(glm::vec2(Z_NEAR, Z_FAR));
         if (!xrBuddy->Init())
         {
-            Log::printf("OpenXR Init failed\n");
+            Log::E("OpenXR Init failed\n");
             return 1;
         }
     }
@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
     auto camerasConfig = std::make_shared<CamerasConfig>();
     if (!camerasConfig->ImportJson(dataDir + "cameras.json"))
     {
-        Log::printf("Error loading cameras.json\n");
+        Log::W("Error loading cameras.json\n");
     }
     else
     {
@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<VrConfig> vrConfig = std::make_shared<VrConfig>();
     if (!vrConfig->ImportJson(dataDir + "vr.json"))
     {
-        Log::printf("Could not load vr.json\n");
+        Log::I("Could not load vr.json\n");
     }
     else
     {
@@ -364,27 +364,28 @@ int main(int argc, char *argv[])
     MagicCarpet magicCarpet(floorMat, MOVE_SPEED);
     if (!magicCarpet.Init(isFramebufferSRGBEnabled))
     {
-        Log::printf("Error initalizing MagicCarpet\n");
+        Log::E("Error initalizing MagicCarpet\n");
+        return false;
     }
 
     auto pointCloud = LoadPointCloud(dataDir);
     if (!pointCloud)
     {
-        Log::printf("Error loading PointCloud\n");
+        Log::E("Error loading PointCloud\n");
         return 1;
     }
 
     auto gaussianCloud = LoadGaussianCloud(dataDir);
     if (!gaussianCloud)
     {
-        Log::printf("Error loading GaussianCloud\n");
+        Log::E("Error loading GaussianCloud\n");
         return 1;
     }
 
     auto pointRenderer = std::make_shared<PointRenderer>();
     if (!pointRenderer->Init(pointCloud, isFramebufferSRGBEnabled))
     {
-        Log::printf("Error initializing point renderer!\n");
+        Log::E("Error initializing point renderer!\n");
         return 1;
     }
 
@@ -396,16 +397,17 @@ int main(int argc, char *argv[])
 
     if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled))
     {
-        Log::printf("Error initializing splat renderer!\n");
+        Log::E("Error initializing splat renderer!\n");
         return 1;
     }
 
     auto desktopProgram = std::make_shared<Program>();
     if (opt.vrMode)
     {
+        // TODO: move this into a DesktopRenderer class
         if (!desktopProgram->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
         {
-            Log::printf("Error loading desktop shader!\n");
+            Log::E("Error loading desktop shader!\n");
             return 1;
         }
 
@@ -501,7 +503,7 @@ int main(int argc, char *argv[])
             vrConfig->SetFloorMat(magicCarpet.GetCarpetMat());
             if (vrConfig->ExportJson(dataDir + "vr.json"))
             {
-                Log::printf("Wrote \"%s\"\n", (dataDir + "vr.json").c_str());
+                Log::I("Wrote \"%s\"\n", (dataDir + "vr.json").c_str());
             }
         }
     });
@@ -521,7 +523,7 @@ int main(int argc, char *argv[])
         {
             if (!xrBuddy->PollEvents())
             {
-                Log::printf("xrBuddy PollEvents failed\n");
+                Log::E("xrBuddy PollEvents failed\n");
                 return 1;
             }
         }
@@ -532,7 +534,7 @@ int main(int argc, char *argv[])
             float delta = (ticks - frameTicks) / 1000.0f;
             float fps = (float)FPS_FRAMES / delta;
             frameTicks = ticks;
-            //Log::printf("fps = %.2f\n", fps);
+            //Log::D("fps = %.2f\n", fps);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
@@ -547,7 +549,7 @@ int main(int argc, char *argv[])
         {
             if (!xrBuddy->SyncInput())
             {
-                Log::printf("xrBuddy SyncInput failed\n");
+                Log::E("xrBuddy SyncInput failed\n");
                 return 1;
             }
 
@@ -555,11 +557,11 @@ int main(int argc, char *argv[])
             MagicCarpet::Pose headPose, rightPose, leftPose;
             if (!xrBuddy->GetActionPosition("head_pose", &headPose.pos, &headPose.posValid, &headPose.posTracked))
             {
-                Log::printf("xrBuddy GetActionPosition(head_pose) failed\n");
+                Log::W("xrBuddy GetActionPosition(head_pose) failed\n");
             }
             if (!xrBuddy->GetActionOrientation("head_pose", &headPose.rot, &headPose.rotValid, &headPose.rotTracked))
             {
-                Log::printf("xrBuddy GetActionOrientation(head_pose) failed\n");
+                Log::W("xrBuddy GetActionOrientation(head_pose) failed\n");
             }
             xrBuddy->GetActionPosition("l_aim_pose", &leftPose.pos, &leftPose.posValid, &leftPose.posTracked);
             xrBuddy->GetActionOrientation("l_aim_pose", &leftPose.rot, &leftPose.rotValid, &leftPose.rotTracked);
@@ -589,7 +591,7 @@ int main(int argc, char *argv[])
             {
                 if (!xrBuddy->RenderFrame())
                 {
-                    Log::printf("xrBuddy RenderFrame failed\n");
+                    Log::E("xrBuddy RenderFrame failed\n");
                     return 1;
                 }
             }
