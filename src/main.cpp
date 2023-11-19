@@ -517,7 +517,50 @@ int main(int argc, char *argv[])
     });
 
     glm::vec2 virtualLeftStick(0.0f, 0.0f);
+    inputBuddy.OnKey(SDLK_a, [&virtualLeftStick](bool down, uint16_t mod)
+    {
+        virtualLeftStick.x += down ? -1.0f : 1.0f;
+    });
+    inputBuddy.OnKey(SDLK_d, [&virtualLeftStick](bool down, uint16_t mod)
+    {
+        virtualLeftStick.x += down ? 1.0f : -1.0f;
+    });
+    inputBuddy.OnKey(SDLK_w, [&virtualLeftStick](bool down, uint16_t mod)
+    {
+        virtualLeftStick.y += down ? 1.0f : -1.0f;
+    });
+    inputBuddy.OnKey(SDLK_s, [&virtualLeftStick](bool down, uint16_t mod)
+    {
+        virtualLeftStick.y += down ? -1.0f : 1.0f;
+    });
+
     glm::vec2 virtualRightStick(0.0f, 0.0f);
+    inputBuddy.OnKey(SDLK_LEFT, [&virtualRightStick](bool down, uint16_t mod)
+    {
+        virtualRightStick.x += down ? -1.0f : 1.0f;
+    });
+    inputBuddy.OnKey(SDLK_RIGHT, [&virtualRightStick](bool down, uint16_t mod)
+    {
+        virtualRightStick.x += down ? 1.0f : -1.0f;
+    });
+    inputBuddy.OnKey(SDLK_UP, [&virtualRightStick](bool down, uint16_t mod)
+    {
+        virtualRightStick.y += down ? 1.0f : -1.0f;
+    });
+    inputBuddy.OnKey(SDLK_DOWN, [&virtualRightStick](bool down, uint16_t mod)
+    {
+        virtualRightStick.y += down ? -1.0f : 1.0f;
+    });
+
+    float virtualRoll = 0.0f;
+    inputBuddy.OnKey(SDLK_q, [&virtualRoll](bool down, uint16_t mod)
+    {
+        virtualRoll += down ? -1.0f : 1.0f;
+    });
+    inputBuddy.OnKey(SDLK_e, [&virtualRoll](bool down, uint16_t mod)
+    {
+        virtualRoll += down ? 1.0f : -1.0f;
+    });
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -591,7 +634,9 @@ int main(int argc, char *argv[])
         float roll = 0.0f;
         roll -= joypad.lb ? 1.0f : 0.0f;
         roll += joypad.rb ? 1.0f : 0.0f;
-        flyCam.Process(joypad.leftStick, joypad.rightStick, roll, dt);
+        flyCam.Process(joypad.leftStick + virtualLeftStick,
+                       joypad.rightStick + virtualRightStick,
+                       roll + virtualRoll, dt);
 
         if (opt.vrMode)
         {
