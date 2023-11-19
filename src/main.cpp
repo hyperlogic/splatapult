@@ -402,7 +402,8 @@ int main(int argc, char *argv[])
     auto splatRenderer = std::make_shared<SplatRenderer>();
 #endif
 
-    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled))
+    bool useFullSH = true;
+    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH))
     {
         Log::E("Error initializing splat renderer!\n");
         return 1;
