@@ -585,7 +585,7 @@ int main(int argc, char *argv[])
             float delta = (ticks - frameTicks) / 1000.0f;
             float fps = (float)FPS_FRAMES / delta;
             frameTicks = ticks;
-            //Log::D("fps = %.2f\n", fps);
+            Log::D("fps = %.2f\n", fps);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;

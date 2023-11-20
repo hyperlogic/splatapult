@@ -311,7 +311,13 @@ void PrintQuat(const glm::quat& q, const std::string& name)
     Log::D("%s = ( %.5f, ( %.5f, %.5f, %.5f ) )\n", name.c_str(), q.x, q.y, q.z, q.w);
 }
 
+#ifdef SHIPPING
+static const std::string ROOT_PATH("");
+#else
+// enables us to run from the build/Debug dir
 static const std::string ROOT_PATH("../../");
+#endif
+
 const std::string& GetRootPath()
 {
     return ROOT_PATH;
