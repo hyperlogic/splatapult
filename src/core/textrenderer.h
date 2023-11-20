@@ -25,7 +25,8 @@ public:
     using TextKey = uint32_t;
 
     // creates a new text and adds it to the scene
-    TextKey AddText(const glm::mat4 xform, const glm::vec4& color, const std::string& asciiString);
+    TextKey AddText(const glm::mat4 xform, const glm::vec4& color, float lineHeight, const std::string& asciiString);
+    void SetTextXform(TextKey key, const glm::mat4 xform);
 
     // removes text object form the scene
     void RemoveText(TextKey key);

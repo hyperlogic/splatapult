@@ -89,6 +89,11 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
 {
     textProg->Bind();
 
+    // use texture unit 0 for fontTexture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fontTex->texture);
+    textProg->SetUniform("fontTex", 0);
+
     glm::mat4 viewProjMat = projMat * glm::inverse(cameraMat);
     for (auto&& tIter : textMap)
     {
@@ -96,12 +101,13 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         textProg->SetUniform("color", tIter.second.color);
         textProg->SetAttrib("position", tIter.second.posVec.data());
         textProg->SetAttrib("uv", tIter.second.uvVec.data());
+
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)tIter.second.posVec.size());
     }
 }
 
 // creates a new text and adds it to the scene
-TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::vec4& color, const std::string& asciiString)
+TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::vec4& color, float lineHeight, const std::string& asciiString)
 {
     Text text;
     text.xform = xform;
@@ -117,53 +123,65 @@ TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::ve
     }
 
     glm::vec2 pen(0.0f, 0.0f);
-    int i = 0;
+    int r = 0;
+    int c = 0;
     for (auto&& ch : asciiString)
     {
-        auto gIter = glyphMap.find((uint8_t)ch);
-        if (gIter == glyphMap.end())
-        {
-            continue;
-        }
-        const Glyph& g = gIter->second;
-
         if (ch == ' ')
         {
-            pen += g.advance;
+            pen += lineHeight * spaceGlyph.advance;
+            c++;
         }
         else if (ch == '\n')
         {
-            pen = glm::vec2(0.0f, pen.y - 1.0f);
+            pen = lineHeight * glm::vec2(0.0f, (float)-(r + 1));
+            r++;
         }
         else if (ch == '\t')
         {
-            int numSpaces = TAB_SIZE - (i % TAB_SIZE);
-            pen += (float)numSpaces * spaceGlyph.advance;
+            int numSpaces = TAB_SIZE - (c % TAB_SIZE);
+            pen += lineHeight * (float)numSpaces * spaceGlyph.advance;
+            c += numSpaces;
         }
         else
         {
-            text.posVec.push_back(pen + g.xyMin);
-            text.posVec.push_back(pen + g.xyMax);
-            text.posVec.push_back(pen + glm::vec2(g.xyMin.x, g.xyMax.y));
-            text.posVec.push_back(pen + g.xyMin);
-            text.posVec.push_back(pen + glm::vec2(g.xyMax.x, g.xyMin.y));
-            text.posVec.push_back(pen + g.xyMax);
-            text.uvVec.push_back(pen + g.uvMin);
-            text.uvVec.push_back(pen + g.uvMax);
-            text.uvVec.push_back(pen + glm::vec2(g.uvMin.x, g.uvMax.y));
-            text.uvVec.push_back(pen + g.uvMin);
-            text.uvVec.push_back(pen + glm::vec2(g.uvMax.x, g.uvMin.y));
-            text.uvVec.push_back(pen + g.uvMax);
-            pen += g.advance;
-        }
+            auto gIter = glyphMap.find((uint8_t)ch);
+            if (gIter == glyphMap.end())
+            {
+                continue;
+            }
+            const Glyph& g = gIter->second;
 
-        i++;
+            text.posVec.push_back(pen + lineHeight * g.xyMin);
+            text.posVec.push_back(pen + lineHeight * g.xyMax);
+            text.posVec.push_back(pen + lineHeight * glm::vec2(g.xyMin.x, g.xyMax.y));
+            text.posVec.push_back(pen + lineHeight * g.xyMin);
+            text.posVec.push_back(pen + lineHeight * glm::vec2(g.xyMax.x, g.xyMin.y));
+            text.posVec.push_back(pen + lineHeight * g.xyMax);
+            text.uvVec.push_back(g.uvMin);
+            text.uvVec.push_back(g.uvMax);
+            text.uvVec.push_back(glm::vec2(g.uvMin.x, g.uvMax.y));
+            text.uvVec.push_back(g.uvMin);
+            text.uvVec.push_back(glm::vec2(g.uvMax.x, g.uvMin.y));
+            text.uvVec.push_back(g.uvMax);
+            pen += lineHeight * g.advance;
+            c++;
+        }
     }
 
     uint32_t textKey = nextKey++;
     textMap.insert(std::pair<uint32_t, Text>(textKey, text));
 
     return textKey;
+}
+
+void TextRenderer::SetTextXform(TextKey key, const glm::mat4 xform)
+{
+    auto tIter = textMap.find(key);
+    if (tIter != textMap.end())
+    {
+        tIter->second.xform = xform;
+    }
 }
 
 // removes text object form the scene

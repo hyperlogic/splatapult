@@ -4,6 +4,8 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "core/log.h"
+
 class Program
 {
 public:

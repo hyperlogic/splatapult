@@ -571,7 +571,9 @@ int main(int argc, char *argv[])
     });
 
     const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    TextRenderer::TextKey fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, "Hello World!");
+    const float NUM_ROWS = 20.0f;
+    const float TEXT_LINE_HEIGHT = 2.0f / NUM_ROWS;
+    TextRenderer::TextKey fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, "fps:");
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -596,7 +598,8 @@ int main(int argc, char *argv[])
             float delta = (ticks - frameTicks) / 1000.0f;
             float fps = (float)FPS_FRAMES / delta;
             frameTicks = ticks;
-            Log::D("fps = %.2f\n", fps);
+            textRenderer->RemoveText(fpsText);
+            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, "fps: " + std::to_string((int)fps));
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
@@ -699,6 +702,15 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
+
+            // In this case we want the fps text to follow the camera (i.e. be in screen space not in world space)
+            // so we cancel out the view and projection mat, and add in a "penMat" to position the text
+            // in clip coords.
+            float aspect = viewport.w / viewport.z;
+            glm::vec3 pen = glm::vec3(-1.0f + 0.1f * TEXT_LINE_HEIGHT, 1.0f - 0.75f * TEXT_LINE_HEIGHT, 0.0f);
+            glm::mat4 penMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), pen);
+            glm::mat4 textMat = cameraMat * glm::inverse(projMat) * penMat;
+            textRenderer->SetTextXform(fpsText, textMat);
 
             textRenderer->Render(cameraMat, projMat, viewport, nearFar);
 
