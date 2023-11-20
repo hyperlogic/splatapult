@@ -26,6 +26,7 @@
 #include "core/texture.h"
 #include "core/util.h"
 #include "core/vertexbuffer.h"
+#include "core/textrenderer.h"
 #include "core/xrbuddy.h"
 
 #include "camerasconfig.h"
@@ -300,6 +301,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    auto textRenderer = std::make_shared<TextRenderer>();
+    if (!textRenderer->Init("font/JetBrainsMono-Medium.json", "font/JetBrainsMono-Medium.png"))
+    {
+        Log::E("TextRenderer Init failed\n");
+        return 1;
+    }
+
     std::shared_ptr<XrBuddy> xrBuddy;
     if (opt.vrMode)
     {
@@ -562,6 +570,9 @@ int main(int argc, char *argv[])
         virtualRoll += down ? 1.0f : -1.0f;
     });
 
+    const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    TextRenderer::TextKey fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, "Hello World!");
+
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
@@ -688,6 +699,8 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
+
+            textRenderer->Render(cameraMat, projMat, viewport, nearFar);
 
 #ifdef SOFTWARE_SPLATS
             SDL_RenderPresent(ctx.renderer);

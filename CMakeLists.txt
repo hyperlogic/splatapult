@@ -45,6 +45,7 @@ add_executable(${PROJECT_NAME}
     src/core/texture.cpp
     src/core/util.cpp
     src/core/vertexbuffer.cpp
+    src/core/textrenderer.cpp
     src/core/xrbuddy.cpp
 
     src/camerasconfig.cpp
