@@ -62,6 +62,7 @@ struct Options
     bool drawPointCloud = false;
     bool drawDebug = true;
     bool debugLogging = false;
+    bool drawFps = true;
 };
 
 const float Z_NEAR = 0.1f;
@@ -524,6 +525,14 @@ int main(int argc, char *argv[])
         }
     });
 
+    inputBuddy.OnKey(SDLK_F1, [&opt](bool down, uint16_t mod)
+    {
+        if (down)
+        {
+            opt.drawFps = !opt.drawFps;
+        }
+    });
+
     glm::vec2 virtualLeftStick(0.0f, 0.0f);
     inputBuddy.OnKey(SDLK_a, [&virtualLeftStick](bool down, uint16_t mod)
     {
@@ -602,8 +611,8 @@ int main(int argc, char *argv[])
             frameTicks = ticks;
             std::string text = "fps: " + std::to_string((int)fps);
             textRenderer->RemoveText(fpsText);
-            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, text);
             textRenderer->RemoveText(fpsTextDrop);
+            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, text);
             fpsTextDrop = textRenderer->AddText(glm::mat4(1.0), BLACK, TEXT_LINE_HEIGHT, text);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
@@ -721,7 +730,10 @@ int main(int argc, char *argv[])
             textMat = cameraMat * glm::inverse(projMat) * penMat;
             textRenderer->SetTextXform(fpsTextDrop, textMat);
 
-            textRenderer->Render(cameraMat, projMat, viewport, nearFar);
+            if (opt.drawFps)
+            {
+                textRenderer->Render(cameraMat, projMat, viewport, nearFar);
+            }
 
 #ifdef SOFTWARE_SPLATS
             SDL_RenderPresent(ctx.renderer);
