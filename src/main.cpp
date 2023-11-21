@@ -571,9 +571,11 @@ int main(int argc, char *argv[])
     });
 
     const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    const glm::vec4 BLACK = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     const float NUM_ROWS = 20.0f;
     const float TEXT_LINE_HEIGHT = 2.0f / NUM_ROWS;
     TextRenderer::TextKey fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, "fps:");
+    TextRenderer::TextKey fpsTextDrop = textRenderer->AddText(glm::mat4(1.0), BLACK, TEXT_LINE_HEIGHT, "fps:");
 
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
@@ -598,8 +600,11 @@ int main(int argc, char *argv[])
             float delta = (ticks - frameTicks) / 1000.0f;
             float fps = (float)FPS_FRAMES / delta;
             frameTicks = ticks;
+            std::string text = "fps: " + std::to_string((int)fps);
             textRenderer->RemoveText(fpsText);
-            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, "fps: " + std::to_string((int)fps));
+            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, text);
+            textRenderer->RemoveText(fpsTextDrop);
+            fpsTextDrop = textRenderer->AddText(glm::mat4(1.0), BLACK, TEXT_LINE_HEIGHT, text);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
@@ -711,6 +716,10 @@ int main(int argc, char *argv[])
             glm::mat4 penMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), pen);
             glm::mat4 textMat = cameraMat * glm::inverse(projMat) * penMat;
             textRenderer->SetTextXform(fpsText, textMat);
+            pen = glm::vec3(-1.0f + 0.15f * TEXT_LINE_HEIGHT, 1.0f - 0.80f * TEXT_LINE_HEIGHT, 0.1f);
+            penMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), pen);
+            textMat = cameraMat * glm::inverse(projMat) * penMat;
+            textRenderer->SetTextXform(fpsTextDrop, textMat);
 
             textRenderer->Render(cameraMat, projMat, viewport, nearFar);
 

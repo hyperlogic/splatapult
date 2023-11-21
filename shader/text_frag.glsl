@@ -9,7 +9,7 @@ out vec4 out_color;
 
 void main()
 {
-    vec4 texColor = texture2D(fontTex, frag_uv);
+    vec4 texColor = texture2D(fontTex, frag_uv, -0.5f); // bias to increase sharpness a bit
 
     // premultiplied alpha blending
     out_color.rgb = color.a * color.rgb * texColor.rgb;
