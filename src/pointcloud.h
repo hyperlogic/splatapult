@@ -16,7 +16,6 @@ public:
     struct Point
     {
         float position[3];
-        float normal[3];
         uint8_t color[3];
     };
 
@@ -27,6 +26,5 @@ public:
     std::vector<Point>& GetPointVec() { return pointVec; }
 
 protected:
-
     std::vector<Point> pointVec;
 };

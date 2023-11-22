@@ -9,11 +9,7 @@
 #include "core/log.h"
 #include "core/util.h"
 
-static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
-{
-    std::string line;
-    return std::getline(plyFile, line) && line == validLine;
-}
+#include "ply.h"
 
 GaussianCloud::GaussianCloud()
 {
@@ -28,126 +24,92 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
         return false;
     }
 
-    // validate start of header
-    if (!CheckLine(plyFile, "ply") ||
-        !CheckLine(plyFile, "format binary_little_endian 1.0"))
+    Ply ply;
+    if (!ply.Parse(plyFile))
     {
-        Log::E("Invalid ply file\n");
+        Log::E("Error parsing ply file \"%s\"\n", plyFilename.c_str());
         return false;
     }
 
-    // parse "element vertex 123"
-    std::string line;
-    if (!std::getline(plyFile, line))
+    struct
     {
-        Log::E("Invalid ply file\n");
-        return false;
-    }
-    std::istringstream iss(line);
-    std::string token1, token2;
-    int numGaussians;
-    if (!((iss >> token1 >> token2 >> numGaussians) && (token1 == "element") && (token2 == "vertex")))
-    {
-        Log::E("Invalid ply file\n");
-        return false;
-    }
+        Ply::Property x, y, z;
+        Ply::Property f_dc[3];
+        Ply::Property f_rest[45];
+        Ply::Property opacity;
+        Ply::Property scale[3];
+        Ply::Property rot[4];
+    } props;
 
-    // validate rest of header
-    if (!CheckLine(plyFile, "property float x") ||
-        !CheckLine(plyFile, "property float y") ||
-        !CheckLine(plyFile, "property float z") ||
-        !CheckLine(plyFile, "property float nx") ||
-        !CheckLine(plyFile, "property float ny") ||
-        !CheckLine(plyFile, "property float nz") ||
-        !CheckLine(plyFile, "property float f_dc_0") ||
-        !CheckLine(plyFile, "property float f_dc_1") ||
-        !CheckLine(plyFile, "property float f_dc_2") ||
-        !CheckLine(plyFile, "property float f_rest_0") ||
-        !CheckLine(plyFile, "property float f_rest_1") ||
-        !CheckLine(plyFile, "property float f_rest_2") ||
-        !CheckLine(plyFile, "property float f_rest_3") ||
-        !CheckLine(plyFile, "property float f_rest_4") ||
-        !CheckLine(plyFile, "property float f_rest_5") ||
-        !CheckLine(plyFile, "property float f_rest_6") ||
-        !CheckLine(plyFile, "property float f_rest_7") ||
-        !CheckLine(plyFile, "property float f_rest_8") ||
-        !CheckLine(plyFile, "property float f_rest_9") ||
-        !CheckLine(plyFile, "property float f_rest_10") ||
-        !CheckLine(plyFile, "property float f_rest_11") ||
-        !CheckLine(plyFile, "property float f_rest_12") ||
-        !CheckLine(plyFile, "property float f_rest_13") ||
-        !CheckLine(plyFile, "property float f_rest_14") ||
-        !CheckLine(plyFile, "property float f_rest_15") ||
-        !CheckLine(plyFile, "property float f_rest_16") ||
-        !CheckLine(plyFile, "property float f_rest_17") ||
-        !CheckLine(plyFile, "property float f_rest_18") ||
-        !CheckLine(plyFile, "property float f_rest_19") ||
-        !CheckLine(plyFile, "property float f_rest_20") ||
-        !CheckLine(plyFile, "property float f_rest_21") ||
-        !CheckLine(plyFile, "property float f_rest_22") ||
-        !CheckLine(plyFile, "property float f_rest_23") ||
-        !CheckLine(plyFile, "property float f_rest_24") ||
-        !CheckLine(plyFile, "property float f_rest_25") ||
-        !CheckLine(plyFile, "property float f_rest_26") ||
-        !CheckLine(plyFile, "property float f_rest_27") ||
-        !CheckLine(plyFile, "property float f_rest_28") ||
-        !CheckLine(plyFile, "property float f_rest_29") ||
-        !CheckLine(plyFile, "property float f_rest_30") ||
-        !CheckLine(plyFile, "property float f_rest_31") ||
-        !CheckLine(plyFile, "property float f_rest_32") ||
-        !CheckLine(plyFile, "property float f_rest_33") ||
-        !CheckLine(plyFile, "property float f_rest_34") ||
-        !CheckLine(plyFile, "property float f_rest_35") ||
-        !CheckLine(plyFile, "property float f_rest_36") ||
-        !CheckLine(plyFile, "property float f_rest_37") ||
-        !CheckLine(plyFile, "property float f_rest_38") ||
-        !CheckLine(plyFile, "property float f_rest_39") ||
-        !CheckLine(plyFile, "property float f_rest_40") ||
-        !CheckLine(plyFile, "property float f_rest_41") ||
-        !CheckLine(plyFile, "property float f_rest_42") ||
-        !CheckLine(plyFile, "property float f_rest_43") ||
-        !CheckLine(plyFile, "property float f_rest_44") ||
-        !CheckLine(plyFile, "property float opacity") ||
-        !CheckLine(plyFile, "property float scale_0") ||
-        !CheckLine(plyFile, "property float scale_1") ||
-        !CheckLine(plyFile, "property float scale_2") ||
-        !CheckLine(plyFile, "property float rot_0") ||
-        !CheckLine(plyFile, "property float rot_1") ||
-        !CheckLine(plyFile, "property float rot_2") ||
-        !CheckLine(plyFile, "property float rot_3") ||
-        !CheckLine(plyFile, "end_header"))
+    if (!ply.GetProperty("x", props.x) || !ply.GetProperty("y", props.y) || !ply.GetProperty("z", props.z))
     {
-        Log::E("Invalid ply file\n");
-        return false;
+        Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
     }
 
-    // the data in the plyFile is packed
-    // so we read it in one Gaussian structure at a time
-    const size_t GAUSSIAN_SIZE = 62 * sizeof(float);
-    static_assert(sizeof(Gaussian) >= GAUSSIAN_SIZE);
-
-    glm::vec3 pos(-3.0089893469241797f, -0.11086489695181866f, -3.7527640949141428f);
-    pos += glm::vec3(0.0f, 0.0f, 3.0f);
-    const float SIZE = 300.0f;
-    glm::vec3 aabbMin = pos + glm::vec3(-0.5f, -0.5f, -0.5f) * SIZE;
-    glm::vec3 aabbMax = pos + glm::vec3(0.5f, 0.5f, 0.5f) * SIZE;
-
-    gaussianVec.reserve(numGaussians);
-    for (int i = 0; i < numGaussians; i++)
+    for (int i = 0; i < 3; i++)
     {
-        Gaussian g;
-        plyFile.read((char*)&g, GAUSSIAN_SIZE);
-        if (plyFile.gcount() != GAUSSIAN_SIZE)
+        if (!ply.GetProperty("f_dc_" + std::to_string(i), props.f_dc[i]))
         {
-            Log::E("Error reading gaussian[%d]\n", i);
-            return false;
-        }
-        glm::vec3 p(g.position[0], g.position[1], g.position[2]);
-        if (PointInsideAABB(p, aabbMin, aabbMax))
-        {
-            gaussianVec.push_back(g);
+            Log::E("Error parsing ply file \"%s\", missing f_dc property\n", plyFilename.c_str());
         }
     }
+
+    for (int i = 0; i < 45; i++)
+    {
+        if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
+        {
+            Log::E("Error parsing ply file \"%s\", missing f_rest property\n", plyFilename.c_str());
+        }
+    }
+
+    if (!ply.GetProperty("opacity", props.opacity))
+    {
+        Log::E("Error parsing ply file \"%s\", missing opacity property\n", plyFilename.c_str());
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        if (!ply.GetProperty("scale_" + std::to_string(i), props.scale[i]))
+        {
+            Log::E("Error parsing ply file \"%s\", missing scale property\n", plyFilename.c_str());
+        }
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (!ply.GetProperty("rot_" + std::to_string(i), props.rot[i]))
+        {
+            Log::E("Error parsing ply file \"%s\", missing rot property\n", plyFilename.c_str());
+        }
+    }
+
+    gaussianVec.resize(ply.GetVertexCount());
+
+    int i = 0;
+    ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
+    {
+        gaussianVec[i].position[0] = props.x.Get<float>(data);
+        gaussianVec[i].position[1] = props.y.Get<float>(data);
+        gaussianVec[i].position[2] = props.z.Get<float>(data);
+        for (int j = 0; j < 3; j++)
+        {
+            gaussianVec[i].f_dc[j] = props.f_dc[j].Get<float>(data);
+        }
+        for (int j = 0; j < 45; j++)
+        {
+            gaussianVec[i].f_rest[j] = props.f_rest[j].Get<float>(data);
+        }
+        gaussianVec[i].opacity = props.opacity.Get<float>(data);
+        for (int j = 0; j < 3; j++)
+        {
+            gaussianVec[i].scale[j] = props.scale[j].Get<float>(data);
+        }
+        for (int j = 0; j < 4; j++)
+        {
+            gaussianVec[i].rot[j] = props.rot[j].Get<float>(data);
+        }
+        i++;
+    });
 
     return true;
 }

@@ -56,6 +56,7 @@ add_executable(${PROJECT_NAME}
     src/gaussiancloud.cpp
     src/magiccarpet.cpp
     src/main.cpp
+    src/ply.cpp
     src/pointcloud.cpp
     src/pointrenderer.cpp
     src/raymarchrenderer.cpp

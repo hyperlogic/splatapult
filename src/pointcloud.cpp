@@ -7,32 +7,7 @@
 #include <string>
 
 #include "core/log.h"
-
-struct DoublePoint
-{
-    double position[3];
-    double normal[3];
-    uint8_t color[3];
-};
-
-static bool GetNextPlyLine(std::ifstream& plyFile, std::string& lineOut)
-{
-    while (std::getline(plyFile, lineOut))
-    {
-        // skip comment lines
-        if (lineOut.find("comment", 0) != 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
-{
-    std::string line;
-    return GetNextPlyLine(plyFile, line) && line == validLine;
-}
+#include "ply.h"
 
 PointCloud::PointCloud()
 {
@@ -47,126 +22,61 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         return false;
     }
 
-    // validate start of header
-    if (!CheckLine(plyFile, "ply") ||
-        !CheckLine(plyFile, "format binary_little_endian 1.0"))
+    Ply ply;
+    if (!ply.Parse(plyFile))
     {
-        Log::E("Invalid ply file \"%s\"\n", plyFilename.c_str());
+        Log::E("Error parsing ply file \"%s\"\n", plyFilename.c_str());
         return false;
     }
 
-    // parse "element vertex 123"
-    std::string line;
-    if (!GetNextPlyLine(plyFile, line))
+    struct
     {
-        Log::E("Invalid ply file \"%s\", error reading element vertex count\n", plyFilename.c_str());
-        return false;
-    }
-    std::istringstream iss(line);
-    std::string token1, token2;
-    int numPoints;
-    if (!((iss >> token1 >> token2 >> numPoints) && (token1 == "element") && (token2 == "vertex")))
+        Ply::Property x, y, z;
+        Ply::Property red, green, blue;
+    } props;
+
+    if (!ply.GetProperty("x", props.x) || !ply.GetProperty("y", props.y) || !ply.GetProperty("z", props.z))
     {
-        Log::E("Invalid ply file \"%s\", error parsing element vertex count\n", plyFilename.c_str());
-        return false;
+        Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
     }
 
-    bool useDoubles = false;
+    bool useDoubles = (props.x.type == Ply::Type::Double && props.y.type == Ply::Type::Double && props.z.type == Ply::Type::Double);
 
-    if (!GetNextPlyLine(plyFile, line))
+    if (!ply.GetProperty("red", props.red) || !ply.GetProperty("green", props.green) || !ply.GetProperty("blue", props.blue))
     {
-        Log::E("Invalid ply file \"%s\", error reading first property\n", plyFilename.c_str());
-        return false;
+        Log::E("Error parsing ply file \"%s\", missing color property\n", plyFilename.c_str());
     }
 
-    if (line == "property double x")
-    {
-        useDoubles = true;
-        // validate rest of header
-        if (!CheckLine(plyFile, "property double y") ||
-            !CheckLine(plyFile, "property double z") ||
-            !CheckLine(plyFile, "property double nx") ||
-            !CheckLine(plyFile, "property double ny") ||
-            !CheckLine(plyFile, "property double nz") ||
-            !CheckLine(plyFile, "property uchar red") ||
-            !CheckLine(plyFile, "property uchar green") ||
-            !CheckLine(plyFile, "property uchar blue") ||
-            !CheckLine(plyFile, "end_header"))
-        {
-            Log::E("Unsupported ply file \"%s\", unexpected properties\n", plyFilename.c_str());
-            return false;
-        }
-    }
-    else if (line == "property float x")
-    {
-        useDoubles = false;
-        // validate rest of header
-        if (!CheckLine(plyFile, "property float y") ||
-            !CheckLine(plyFile, "property float z") ||
-            !CheckLine(plyFile, "property float nx") ||
-            !CheckLine(plyFile, "property float ny") ||
-            !CheckLine(plyFile, "property float nz") ||
-            !CheckLine(plyFile, "property uchar red") ||
-            !CheckLine(plyFile, "property uchar green") ||
-            !CheckLine(plyFile, "property uchar blue") ||
-            !CheckLine(plyFile, "end_header"))
-        {
-            Log::E("Unsupported ply file \"%s\", unexpected properties\n", plyFilename.c_str());
-            return false;
-        }
-    }
-    else
-    {
+    pointVec.resize(ply.GetVertexCount());
 
-        Log::E("Unsupported ply file \"%s\", unexpected first property\n", plyFilename.c_str());
-        return false;
-    }
-
-    // the data in the plyFile is packed
-    // so we read it in one Point structure at a time
     if (useDoubles)
     {
-        const size_t POINT_SIZE = 51;
-        assert(sizeof(DoublePoint) >= POINT_SIZE);
-        pointVec.resize(numPoints);
-        for (int i = 0; i < numPoints; i++)
+        int i = 0;
+        ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
         {
-            DoublePoint dp;
-            plyFile.read((char*)&dp, POINT_SIZE);
-            if (plyFile.gcount() != POINT_SIZE)
-            {
-                Log::E("Error reading \"%s\", point[%d]\n", plyFilename.c_str(), i);
-                return false;
-            }
-            // convert to float and copy into pointVec.
-            pointVec[i].position[0] = (float)dp.position[0];
-            pointVec[i].position[1] = (float)dp.position[1];
-            pointVec[i].position[2] = (float)dp.position[2];
-            pointVec[i].normal[0] = (float)dp.normal[0];
-            pointVec[i].normal[1] = (float)dp.normal[1];
-            pointVec[i].normal[2] = (float)dp.normal[2];
-            pointVec[i].color[0] = dp.color[0];
-            pointVec[i].color[1] = dp.color[1];
-            pointVec[i].color[2] = dp.color[2];
-        }
+            pointVec[i].position[0] = (float)props.x.Get<double>(data);
+            pointVec[i].position[1] = (float)props.y.Get<double>(data);
+            pointVec[i].position[2] = (float)props.z.Get<double>(data);
+            pointVec[i].color[0] = props.red.Get<uint8_t>(data);
+            pointVec[i].color[1] = props.green.Get<uint8_t>(data);
+            pointVec[i].color[2] = props.blue.Get<uint8_t>(data);
+            i++;
+        });
     }
     else
     {
-        const size_t POINT_SIZE = 27;
-        assert(sizeof(Point) >= POINT_SIZE);
-        pointVec.resize(numPoints);
-        for (int i = 0; i < numPoints; i++)
+        int i = 0;
+        ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
         {
-            // read directly into Point structure
-            plyFile.read((char*)&pointVec[i], POINT_SIZE);
-            if (plyFile.gcount() != POINT_SIZE)
-            {
-                Log::E("Error reading \"%s\", point[%d]\n", plyFilename.c_str(), i);
-                return false;
-            }
-        }
+            pointVec[i].position[0] = props.x.Get<float>(data);
+            pointVec[i].position[1] = props.y.Get<float>(data);
+            pointVec[i].position[2] = props.z.Get<float>(data);
+            pointVec[i].color[0] = props.red.Get<uint8_t>(data);
+            pointVec[i].color[1] = props.green.Get<uint8_t>(data);
+            pointVec[i].color[2] = props.blue.Get<uint8_t>(data);
+            i++;
+        });
     }
-
 
     return true;
 }

@@ -4,7 +4,8 @@
 
 struct Image;
 
-enum class FilterType {
+enum class FilterType
+{
     Nearest = 0,
     Linear,
     NearestMipmapNearest,
@@ -13,7 +14,8 @@ enum class FilterType {
     LinearMipmapLinear
 };
 
-enum class WrapType {
+enum class WrapType
+{
     Repeat = 0,
     MirroredRepeat,
     ClampToEdge,
@@ -22,7 +24,8 @@ enum class WrapType {
 
 struct Texture
 {
-    struct Params {
+    struct Params
+    {
         FilterType minFilter;
         FilterType magFilter;
         WrapType sWrap;
