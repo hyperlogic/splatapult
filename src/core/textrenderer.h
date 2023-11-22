@@ -25,10 +25,12 @@ public:
     using TextKey = uint32_t;
 
     // creates a new text and adds it to the scene
-    TextKey AddText(const glm::mat4 xform, const glm::vec4& color,
+    TextKey AddWorldText(const glm::mat4 xform, const glm::vec4& color,
                     float lineHeight, const std::string& asciiString);
-    TextKey AddText2D(const glm::ivec2& pos, int numRows, const glm::vec4& color,
-                      const std::string& asciiString);
+    TextKey AddScreenText(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                          const std::string& asciiString);
+    TextKey AddScreenTextWithDropShadow(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                                        const glm::vec4& shadowColor, const std::string& asciiString);
     void SetTextXform(TextKey key, const glm::mat4 xform);
 
     // removes text object form the scene
@@ -48,13 +50,16 @@ protected:
     struct Text
     {
         glm::mat4 xform;
-        glm::vec4 color;
-        std::vector<glm::vec2> posVec;
+        std::vector<glm::vec3> posVec;
         std::vector<glm::vec2> uvVec;
-        bool screenSpace;
+        std::vector<glm::vec4> colorVec;
+        bool isScreenAligned;
     };
 
-    void BuildText(Text& text, glm::vec2& pen, float lineHeight, const std::string& asciiString) const;
+    void BuildText(Text& text, const glm::vec3& pen, float lineHeight, const glm::vec4& color,
+                   const std::string& asciiString) const;
+    TextKey AddScreenTextImpl(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                              const std::string& asciiString, bool addDropShadow, const glm::vec4& shadowColor);
 
     std::unordered_map<uint8_t, Glyph> glyphMap;
     float textureWidth;

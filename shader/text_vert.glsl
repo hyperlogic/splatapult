@@ -1,15 +1,17 @@
 #version 460
 
 uniform mat4 modelViewProjMat;
-uniform vec4 color;
 
-in vec2 position;
+in vec3 position;
 in vec2 uv;
+in vec4 color;
 
 out vec2 frag_uv;
+out vec4 frag_color;
 
 void main(void)
 {
-    gl_Position = modelViewProjMat * vec4(position, 0.0f, 1.0f);
+    gl_Position = modelViewProjMat * vec4(position, 1.0f);
     frag_uv = uv;
+    frag_color = color;
 }

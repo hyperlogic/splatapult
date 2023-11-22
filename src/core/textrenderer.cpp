@@ -108,7 +108,7 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     glm::mat4 aspectMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), glm::vec3(-aspect / aspect, 0.0f, 0.0f));
     for (auto&& tIter : textMap)
     {
-        if (tIter.second.screenSpace)
+        if (tIter.second.isScreenAligned)
         {
             textProg->SetUniform("modelViewProjMat", aspectMat * tIter.second.xform);
         }
@@ -116,76 +116,27 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         {
             textProg->SetUniform("modelViewProjMat", viewProjMat * tIter.second.xform);
         }
-        textProg->SetUniform("color", tIter.second.color);
         textProg->SetAttrib("position", tIter.second.posVec.data());
         textProg->SetAttrib("uv", tIter.second.uvVec.data());
+        textProg->SetAttrib("color", tIter.second.colorVec.data());
 
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)tIter.second.posVec.size());
     }
 }
 
-void TextRenderer::BuildText(Text& text, glm::vec2& pen, float lineHeight, const std::string& asciiString) const
-{
-    int r = 0;
-    int c = 0;
-    for (auto&& ch : asciiString)
-    {
-        if (ch == ' ')
-        {
-            pen += lineHeight * spaceGlyph.advance;
-            c++;
-        }
-        else if (ch == '\n')
-        {
-            pen = lineHeight * glm::vec2(0.0f, (float)-(r + 1));
-            r++;
-        }
-        else if (ch == '\t')
-        {
-            int numSpaces = TAB_SIZE - (c % TAB_SIZE);
-            pen += lineHeight * (float)numSpaces * spaceGlyph.advance;
-            c += numSpaces;
-        }
-        else
-        {
-            auto gIter = glyphMap.find((uint8_t)ch);
-            if (gIter == glyphMap.end())
-            {
-                continue;
-            }
-            const Glyph& g = gIter->second;
-
-            text.posVec.push_back(pen + lineHeight * g.xyMin);
-            text.posVec.push_back(pen + lineHeight * g.xyMax);
-            text.posVec.push_back(pen + lineHeight * glm::vec2(g.xyMin.x, g.xyMax.y));
-            text.posVec.push_back(pen + lineHeight * g.xyMin);
-            text.posVec.push_back(pen + lineHeight * glm::vec2(g.xyMax.x, g.xyMin.y));
-            text.posVec.push_back(pen + lineHeight * g.xyMax);
-            text.uvVec.push_back(g.uvMin);
-            text.uvVec.push_back(g.uvMax);
-            text.uvVec.push_back(glm::vec2(g.uvMin.x, g.uvMax.y));
-            text.uvVec.push_back(g.uvMin);
-            text.uvVec.push_back(glm::vec2(g.uvMax.x, g.uvMin.y));
-            text.uvVec.push_back(g.uvMax);
-            pen += lineHeight * g.advance;
-            c++;
-        }
-    }
-}
-
 // creates a new text and adds it to the scene
-TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::vec4& color,
-                                            float lineHeight, const std::string& asciiString)
+TextRenderer::TextKey TextRenderer::AddWorldText(const glm::mat4 xform, const glm::vec4& color,
+                                                 float lineHeight, const std::string& asciiString)
 {
     Text text;
     text.xform = xform;
-    text.color = color;
     text.posVec.reserve(asciiString.size() * 6);
     text.uvVec.reserve(asciiString.size() * 6);
-    text.screenSpace = false;
+    text.colorVec.reserve(asciiString.size() * 6);
+    text.isScreenAligned = false;
 
-    glm::vec2 pen(0.0f, 0.0f);
-    BuildText(text, pen, lineHeight, asciiString);
+    glm::vec3 pen(0.0f, 0.0f, 0.0f);
+    BuildText(text, pen, lineHeight, color, asciiString);
 
     uint32_t textKey = nextKey++;
     textMap.insert(std::pair<uint32_t, Text>(textKey, text));
@@ -193,25 +144,18 @@ TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::ve
     return textKey;
 }
 
-TextRenderer::TextKey TextRenderer::AddText2D(const glm::ivec2& pos, int numRows, const glm::vec4& color,
-                                              const std::string& asciiString)
+TextRenderer::TextKey TextRenderer::AddScreenText(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                                                  const std::string& asciiString)
 {
-    const float TEXT_LINE_HEIGHT = 2.0f / numRows;
-    glm::vec3 offset(0.1f * TEXT_LINE_HEIGHT, 1.0f - 0.75f * TEXT_LINE_HEIGHT, 0.0f);
-    Text text;
-    text.xform = MakeMat4(glm::quat(), offset + glm::vec3((float)pos.x * spaceGlyph.advance.x * TEXT_LINE_HEIGHT, (float)pos.y * -TEXT_LINE_HEIGHT, 0.0f));
-    text.color = color;
-    text.posVec.reserve(asciiString.size() * 6);
-    text.uvVec.reserve(asciiString.size() * 6);
-    text.screenSpace = true;
+    const bool addDropShadow = false;
+    return AddScreenTextImpl(pos, numRows, color, asciiString, addDropShadow, glm::vec4());
+}
 
-    glm::vec2 pen(0.0f, 0.0f);
-    BuildText(text, pen, TEXT_LINE_HEIGHT, asciiString);
-
-    uint32_t textKey = nextKey++;
-    textMap.insert(std::pair<uint32_t, Text>(textKey, text));
-
-    return textKey;
+TextRenderer::TextKey TextRenderer::AddScreenTextWithDropShadow(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                                                                const glm::vec4& shadowColor, const std::string& asciiString)
+{
+    const bool addDropShadow = true;
+    return AddScreenTextImpl(pos, numRows, color, asciiString, addDropShadow, shadowColor);
 }
 
 void TextRenderer::SetTextXform(TextKey key, const glm::mat4 xform)
@@ -228,3 +172,92 @@ void TextRenderer::RemoveText(TextKey key)
 {
     textMap.erase(key);
 }
+
+void TextRenderer::BuildText(Text& text, const glm::vec3& pen, float lineHeight, const glm::vec4& color,
+                             const std::string& asciiString) const
+{
+    int r = 0;
+    int c = 0;
+    glm::vec2 penxy = pen;
+    float depth = pen.z;
+    for (auto&& ch : asciiString)
+    {
+        if (ch == ' ')
+        {
+            penxy += lineHeight * spaceGlyph.advance;
+            c++;
+        }
+        else if (ch == '\n')
+        {
+            penxy = lineHeight * glm::vec2(0.0f, (float)-(r + 1));
+            r++;
+        }
+        else if (ch == '\t')
+        {
+            int numSpaces = TAB_SIZE - (c % TAB_SIZE);
+            penxy += lineHeight * (float)numSpaces * spaceGlyph.advance;
+            c += numSpaces;
+        }
+        else
+        {
+            auto gIter = glyphMap.find((uint8_t)ch);
+            if (gIter == glyphMap.end())
+            {
+                continue;
+            }
+            const Glyph& g = gIter->second;
+
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * g.xyMin, depth));
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * g.xyMax, depth));
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * glm::vec2(g.xyMin.x, g.xyMax.y), depth));
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * g.xyMin, depth));
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * glm::vec2(g.xyMax.x, g.xyMin.y), depth));
+            text.posVec.push_back(glm::vec3(penxy + lineHeight * g.xyMax, depth));
+            text.uvVec.push_back(g.uvMin);
+            text.uvVec.push_back(g.uvMax);
+            text.uvVec.push_back(glm::vec2(g.uvMin.x, g.uvMax.y));
+            text.uvVec.push_back(g.uvMin);
+            text.uvVec.push_back(glm::vec2(g.uvMax.x, g.uvMin.y));
+            text.uvVec.push_back(g.uvMax);
+            for (int i = 0; i < 6; i++)
+            {
+                text.colorVec.push_back(color);
+            }
+
+            penxy += lineHeight * g.advance;
+            c++;
+        }
+    }
+}
+
+TextRenderer::TextKey TextRenderer::AddScreenTextImpl(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                                                      const std::string& asciiString, bool addDropShadow,
+                                                      const glm::vec4& shadowColor)
+{
+    const float TEXT_LINE_HEIGHT = 2.0f / numRows;
+    glm::vec3 origin(0.1f * TEXT_LINE_HEIGHT, 1.0f - 0.75f * TEXT_LINE_HEIGHT, 0.0f);
+    glm::vec3 offset((float)pos.x * spaceGlyph.advance.x * TEXT_LINE_HEIGHT, (float)pos.y * -TEXT_LINE_HEIGHT, 0.0f);
+    Text text;
+    text.xform = MakeMat4(glm::quat(), origin + offset);
+    size_t vecSize = addDropShadow ? (asciiString.size() * 6 * 2) : (asciiString.size() * 6);
+    text.posVec.reserve(vecSize);
+    text.uvVec.reserve(vecSize);
+    text.colorVec.reserve(vecSize);
+    text.isScreenAligned = true;
+
+    if (addDropShadow)
+    {
+        glm::vec3 shadowPen = glm::vec3(0.05f * TEXT_LINE_HEIGHT, -0.05f * TEXT_LINE_HEIGHT, 0.1f);
+        BuildText(text, shadowPen, TEXT_LINE_HEIGHT, shadowColor, asciiString);
+    }
+
+    glm::vec3 pen(0.0f, 0.0f, 0.0f);
+    BuildText(text, pen, TEXT_LINE_HEIGHT, color, asciiString);
+
+    uint32_t textKey = nextKey++;
+    textMap.insert(std::pair<uint32_t, Text>(textKey, text));
+
+    return textKey;
+}
+
+

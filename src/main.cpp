@@ -140,8 +140,9 @@ void RenderDesktop(std::shared_ptr<Program> desktopProgram, uint32_t colorTextur
         glm::vec2 uvLowerLeft(0.0f, 0.0f);
         glm::vec2 uvUpperRight(1.0f, 1.0f);
 
-        glm::vec3 positions[] = {glm::vec3(xyLowerLeft, 0.0f), glm::vec3(xyUpperRight.x, xyLowerLeft.y, 0.0f),
-                                 glm::vec3(xyUpperRight, 0.0f), glm::vec3(xyLowerLeft.x, xyUpperRight.y, 0.0f)};
+        float depth = -9.0f;
+        glm::vec3 positions[] = {glm::vec3(xyLowerLeft, depth), glm::vec3(xyUpperRight.x, xyLowerLeft.y, depth),
+                                 glm::vec3(xyUpperRight, depth), glm::vec3(xyLowerLeft.x, xyUpperRight.y, depth)};
         desktopProgram->SetAttrib("position", positions);
 
         glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
@@ -580,9 +581,9 @@ int main(int argc, char *argv[])
     });
 
     const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    const glm::vec4 RED = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    const int TEXT_NUM_ROWS = 20;
-    TextRenderer::TextKey fpsText = textRenderer->AddText2D(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, "fps:");
+    const glm::vec4 BLACK = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    const int TEXT_NUM_ROWS = 25;
+    TextRenderer::TextKey fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, "fps:");
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
@@ -608,7 +609,7 @@ int main(int argc, char *argv[])
             frameTicks = ticks;
             std::string text = "fps: " + std::to_string((int)fps);
             textRenderer->RemoveText(fpsText);
-            fpsText = textRenderer->AddText2D(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, text);
+            fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, BLACK, text);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
@@ -679,6 +680,16 @@ int main(int argc, char *argv[])
             // render desktop.
             Clear(true);
             RenderDesktop(desktopProgram, xrBuddy->GetColorTexture());
+
+            if (opt.drawFps)
+            {
+                int width, height;
+                SDL_GetWindowSize(ctx.window, &width, &height);
+                glm::vec4 viewport(0.0f, 0.0f, (float)width, (float)height);
+                glm::vec2 nearFar(Z_NEAR, Z_FAR);
+                glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
+                textRenderer->Render(glm::mat4(1.0f), projMat, viewport, nearFar);
+            }
             SDL_GL_SwapWindow(ctx.window);
         }
         else
