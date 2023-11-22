@@ -25,13 +25,17 @@ public:
     using TextKey = uint32_t;
 
     // creates a new text and adds it to the scene
-    TextKey AddText(const glm::mat4 xform, const glm::vec4& color, float lineHeight, const std::string& asciiString);
+    TextKey AddText(const glm::mat4 xform, const glm::vec4& color,
+                    float lineHeight, const std::string& asciiString);
+    TextKey AddText2D(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                      const std::string& asciiString);
     void SetTextXform(TextKey key, const glm::mat4 xform);
 
     // removes text object form the scene
     void RemoveText(TextKey key);
 
 protected:
+
     struct Glyph
     {
         glm::vec2 xyMin;
@@ -47,13 +51,17 @@ protected:
         glm::vec4 color;
         std::vector<glm::vec2> posVec;
         std::vector<glm::vec2> uvVec;
+        bool screenSpace;
     };
+
+    void BuildText(Text& text, glm::vec2& pen, float lineHeight, const std::string& asciiString) const;
 
     std::unordered_map<uint8_t, Glyph> glyphMap;
     float textureWidth;
     std::shared_ptr<Program> textProg;
     std::shared_ptr<Texture> fontTex;
     std::unordered_map<uint32_t, Text> textMap;
+    Glyph spaceGlyph;
 };
 
 

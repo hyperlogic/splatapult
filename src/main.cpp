@@ -580,12 +580,9 @@ int main(int argc, char *argv[])
     });
 
     const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    const glm::vec4 BLACK = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    const float NUM_ROWS = 20.0f;
-    const float TEXT_LINE_HEIGHT = 2.0f / NUM_ROWS;
-    TextRenderer::TextKey fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, "fps:");
-    TextRenderer::TextKey fpsTextDrop = textRenderer->AddText(glm::mat4(1.0), BLACK, TEXT_LINE_HEIGHT, "fps:");
-
+    const glm::vec4 RED = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    const int TEXT_NUM_ROWS = 20;
+    TextRenderer::TextKey fpsText = textRenderer->AddText2D(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, "fps:");
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
@@ -611,9 +608,7 @@ int main(int argc, char *argv[])
             frameTicks = ticks;
             std::string text = "fps: " + std::to_string((int)fps);
             textRenderer->RemoveText(fpsText);
-            textRenderer->RemoveText(fpsTextDrop);
-            fpsText = textRenderer->AddText(glm::mat4(1.0), WHITE, TEXT_LINE_HEIGHT, text);
-            fpsTextDrop = textRenderer->AddText(glm::mat4(1.0), BLACK, TEXT_LINE_HEIGHT, text);
+            fpsText = textRenderer->AddText2D(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, text);
         }
         float dt = (ticks - lastTicks) / 1000.0f;
         lastTicks = ticks;
@@ -716,19 +711,6 @@ int main(int argc, char *argv[])
                 splatRenderer->Sort(cameraMat, projMat, viewport, nearFar);
                 splatRenderer->Render(cameraMat, projMat, viewport, nearFar);
             }
-
-            // In this case we want the fps text to follow the camera (i.e. be in screen space not in world space)
-            // so we cancel out the view and projection mat, and add in a "penMat" to position the text
-            // in clip coords.
-            float aspect = viewport.w / viewport.z;
-            glm::vec3 pen = glm::vec3(-1.0f + 0.1f * TEXT_LINE_HEIGHT, 1.0f - 0.75f * TEXT_LINE_HEIGHT, 0.0f);
-            glm::mat4 penMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), pen);
-            glm::mat4 textMat = cameraMat * glm::inverse(projMat) * penMat;
-            textRenderer->SetTextXform(fpsText, textMat);
-            pen = glm::vec3(-1.0f + 0.15f * TEXT_LINE_HEIGHT, 1.0f - 0.80f * TEXT_LINE_HEIGHT, 0.1f);
-            penMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), pen);
-            textMat = cameraMat * glm::inverse(projMat) * penMat;
-            textRenderer->SetTextXform(fpsTextDrop, textMat);
 
             if (opt.drawFps)
             {

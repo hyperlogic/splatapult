@@ -62,6 +62,14 @@ bool TextRenderer::Init(const std::string& fontJsonFilename, const std::string& 
         return false;
     }
 
+    // find the spaceGlyph
+    auto gIter = glyphMap.find((uint8_t)' ');
+    assert(gIter != glyphMap.end());
+    if (gIter != glyphMap.end())
+    {
+        spaceGlyph = gIter->second;
+    }
+
     Image fontImg;
     if (!fontImg.Load(fontPngFilename))
     {
@@ -81,6 +89,7 @@ bool TextRenderer::Init(const std::string& fontJsonFilename, const std::string& 
         Log::E("Error loading TextRenderer shader!\n");
         return false;
     }
+
     return true;
 }
 
@@ -95,9 +104,18 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     textProg->SetUniform("fontTex", 0);
 
     glm::mat4 viewProjMat = projMat * glm::inverse(cameraMat);
+    float aspect = viewport.w / viewport.z;
+    glm::mat4 aspectMat = MakeMat4(glm::vec3(aspect, 1.0f, 1.0f), glm::quat(), glm::vec3(-aspect / aspect, 0.0f, 0.0f));
     for (auto&& tIter : textMap)
     {
-        textProg->SetUniform("modelViewProjMat", viewProjMat * tIter.second.xform);
+        if (tIter.second.screenSpace)
+        {
+            textProg->SetUniform("modelViewProjMat", aspectMat * tIter.second.xform);
+        }
+        else
+        {
+            textProg->SetUniform("modelViewProjMat", viewProjMat * tIter.second.xform);
+        }
         textProg->SetUniform("color", tIter.second.color);
         textProg->SetAttrib("position", tIter.second.posVec.data());
         textProg->SetAttrib("uv", tIter.second.uvVec.data());
@@ -106,23 +124,8 @@ void TextRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     }
 }
 
-// creates a new text and adds it to the scene
-TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::vec4& color, float lineHeight, const std::string& asciiString)
+void TextRenderer::BuildText(Text& text, glm::vec2& pen, float lineHeight, const std::string& asciiString) const
 {
-    Text text;
-    text.xform = xform;
-    text.color = color;
-    text.posVec.reserve(asciiString.size() * 6);
-    text.uvVec.reserve(asciiString.size() * 6);
-
-    Glyph spaceGlyph;
-    auto gIter = glyphMap.find((uint8_t)' ');
-    if (gIter != glyphMap.end())
-    {
-        spaceGlyph = gIter->second;
-    }
-
-    glm::vec2 pen(0.0f, 0.0f);
     int r = 0;
     int c = 0;
     for (auto&& ch : asciiString)
@@ -168,6 +171,42 @@ TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::ve
             c++;
         }
     }
+}
+
+// creates a new text and adds it to the scene
+TextRenderer::TextKey TextRenderer::AddText(const glm::mat4 xform, const glm::vec4& color,
+                                            float lineHeight, const std::string& asciiString)
+{
+    Text text;
+    text.xform = xform;
+    text.color = color;
+    text.posVec.reserve(asciiString.size() * 6);
+    text.uvVec.reserve(asciiString.size() * 6);
+    text.screenSpace = false;
+
+    glm::vec2 pen(0.0f, 0.0f);
+    BuildText(text, pen, lineHeight, asciiString);
+
+    uint32_t textKey = nextKey++;
+    textMap.insert(std::pair<uint32_t, Text>(textKey, text));
+
+    return textKey;
+}
+
+TextRenderer::TextKey TextRenderer::AddText2D(const glm::ivec2& pos, int numRows, const glm::vec4& color,
+                                              const std::string& asciiString)
+{
+    const float TEXT_LINE_HEIGHT = 2.0f / numRows;
+    glm::vec3 offset(0.1f * TEXT_LINE_HEIGHT, 1.0f - 0.75f * TEXT_LINE_HEIGHT, 0.0f);
+    Text text;
+    text.xform = MakeMat4(glm::quat(), offset + glm::vec3((float)pos.x * spaceGlyph.advance.x * TEXT_LINE_HEIGHT, (float)pos.y * -TEXT_LINE_HEIGHT, 0.0f));
+    text.color = color;
+    text.posVec.reserve(asciiString.size() * 6);
+    text.uvVec.reserve(asciiString.size() * 6);
+    text.screenSpace = true;
+
+    glm::vec2 pen(0.0f, 0.0f);
+    BuildText(text, pen, TEXT_LINE_HEIGHT, asciiString);
 
     uint32_t textKey = nextKey++;
     textMap.insert(std::pair<uint32_t, Text>(textKey, text));
