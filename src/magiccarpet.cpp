@@ -242,21 +242,29 @@ void MagicCarpet::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
 void MagicCarpet::NormalProcess(float dt)
 {
-    // get the forward and right vectors of the HMD
-    glm::vec3 headForward = in.headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 headRight = in.headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 horizVel;
+    if (in.headPose.rotValid)
+    {
+        // get the forward and right vectors of the HMD
+        glm::vec3 headForward = in.headPose.rot * glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 headRight = in.headPose.rot * glm::vec3(1.0f, 0.0f, 0.0f);
 
-    // project the HMD forward & right vectors onto the carpet, i.e. make sure they lie in the horizontal plane
-    // AJT: TODO: Handle bad normalize
-    glm::vec3 horizForward = glm::normalize(glm::vec3(headForward.x, 0.0f, headForward.z));
-    glm::vec3 horizRight = glm::normalize(glm::vec3(headRight.x, 0.0f, headRight.z));
+        // project the HMD forward & right vectors onto the carpet, i.e. make sure they lie in the horizontal plane
+        // AJT: TODO: Handle bad normalize
+        glm::vec3 horizForward = glm::normalize(glm::vec3(headForward.x, 0.0f, headForward.z));
+        glm::vec3 horizRight = glm::normalize(glm::vec3(headRight.x, 0.0f, headRight.z));
 
-    // use leftStick to move horizontally
-    glm::vec3 horizVel = horizForward * in.leftStick.y * moveSpeed + horizRight * in.leftStick.x * moveSpeed;
+        // use leftStick to move horizontally
+        horizVel = horizForward * in.leftStick.y * moveSpeed + horizRight * in.leftStick.x * moveSpeed;
+    }
+    else
+    {
+        horizVel = glm::vec3(0.0f, 0.0f, 0.0f);
+    }
 
     // handle snap turns
     snapTimer -= dt;
-    if (fabs(in.rightStick.x) > 0.5f && snapTimer < 0.0f)
+    if (fabs(in.rightStick.x) > 0.5f && snapTimer < 0.0f && in.headPose.posValid && in.headPose.posTracked)
     {
         // snap!
         float snapSign = in.rightStick.x > 0.0f ? -1.0f : 1.0f;

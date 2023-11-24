@@ -149,6 +149,7 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
     // create openxr instance
     XrResult result;
     XrInstanceCreateInfo ici;
+    memset((void*)&ici, 0, sizeof(XrInstanceCreateInfo));
     ici.type = XR_TYPE_INSTANCE_CREATE_INFO;
     ici.next = NULL;
     ici.createFlags = 0;
@@ -172,6 +173,7 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
     if (printRuntimeInfo || printAll)
     {
         XrInstanceProperties ip;
+        memset((void*)&ip, 0, sizeof(XrInstanceProperties));
         ip.type = XR_TYPE_INSTANCE_PROPERTIES;
         ip.next = NULL;
 
@@ -195,6 +197,7 @@ static bool GetSystemId(XrInstance instance, XrSystemId& systemId)
 {
     XrResult result;
     XrSystemGetInfo sgi;
+    memset((void*)&sgi, 0, sizeof(XrSystemGetInfo));
     sgi.type = XR_TYPE_SYSTEM_GET_INFO;
     sgi.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
     sgi.next = NULL;
@@ -257,6 +260,7 @@ static bool SupportsVR(XrInstance instance, XrSystemId systemId)
     for (uint32_t i = 0; i < viewConfigurationCount; i++)
     {
         XrViewConfigurationProperties vcp;
+        memset((void*)&vcp, 0, sizeof(XrViewConfigurationProperties));
         vcp.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
         vcp.next = NULL;
 
@@ -347,6 +351,7 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     // check if opengl version is sufficient.
     {
         XrGraphicsRequirementsOpenGLKHR reqs;
+        memset((void*)&reqs, 0, sizeof(XrGraphicsRequirementsOpenGLKHR));
         reqs.type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR;
         reqs.next = NULL;
         PFN_xrGetOpenGLGraphicsRequirementsKHR pfnGetOpenGLGraphicsRequirementsKHR = NULL;
@@ -385,12 +390,14 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     }
 
     XrGraphicsBindingOpenGLWin32KHR glBinding;
+    memset((void*)&glBinding, 0, sizeof(XrGraphicsBindingOpenGLWin32KHR));
     glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR;
     glBinding.next = NULL;
     glBinding.hDC = wglGetCurrentDC();
     glBinding.hGLRC = wglGetCurrentContext();
 
     XrSessionCreateInfo sci;
+    memset((void*)&sci, 0, sizeof(XrSessionCreateInfo));
     sci.type = XR_TYPE_SESSION_CREATE_INFO;
     sci.next = &glBinding;
     sci.systemId = systemId;
@@ -411,6 +418,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
 
     // create action set
     XrActionSetCreateInfo asci;
+    memset((void*)&asci, 0, sizeof(XrActionSetCreateInfo));
     asci.type = XR_TYPE_ACTION_SET_CREATE_INFO;
     asci.next = NULL;
     strcpy_s(asci.actionSetName, "default");
@@ -453,6 +461,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         // selectAction
         XrAction action = XR_NULL_HANDLE;
         XrActionCreateInfo aci;
+        memset((void*)&aci, 0, sizeof(XrActionCreateInfo));
         aci.type = XR_TYPE_ACTION_CREATE_INFO;
         aci.next = NULL;
         aci.actionType = actionPair.second;
@@ -470,6 +479,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         if (actionPair.second == XR_ACTION_TYPE_POSE_INPUT)
         {
             XrActionSpaceCreateInfo aspci;
+            memset((void*)&aspci, 0, sizeof(XrActionSpaceCreateInfo));
             aspci.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
             aspci.next = NULL;
             aspci.action = action;
@@ -511,6 +521,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         };
 
         XrInteractionProfileSuggestedBinding suggestedBindings;
+        memset((void*)&suggestedBindings, 0, sizeof(XrInteractionProfileSuggestedBinding));
         suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
         suggestedBindings.next = NULL;
         suggestedBindings.interactionProfile = interactionProfilePath;
@@ -547,6 +558,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         };
 
         XrInteractionProfileSuggestedBinding suggestedBindings;
+        memset((void*)&suggestedBindings, 0, sizeof(XrInteractionProfileSuggestedBinding));
         suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
         suggestedBindings.next = NULL;
         suggestedBindings.interactionProfile = interactionProfilePath;
@@ -591,6 +603,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         };
 
         XrInteractionProfileSuggestedBinding suggestedBindings;
+        memset((void*)&suggestedBindings, 0, sizeof(XrInteractionProfileSuggestedBinding));
         suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
         suggestedBindings.next = NULL;
         suggestedBindings.interactionProfile = interactionProfilePath;
@@ -621,6 +634,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         };
 
         XrInteractionProfileSuggestedBinding suggestedBindings;
+        memset((void*)&suggestedBindings, 0, sizeof(XrInteractionProfileSuggestedBinding));
         suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
         suggestedBindings.next = NULL;
         suggestedBindings.interactionProfile = interactionProfilePath;
@@ -635,6 +649,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
 #endif
 
     XrSessionActionSetsAttachInfo sasai;
+    memset((void*)&sasai, 0, sizeof(XrSessionActionSetsAttachInfo));
     sasai.type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO;
     sasai.next = NULL;
     sasai.countActionSets = 1;
@@ -694,6 +709,7 @@ static bool CreateSpaces(XrInstance instance, XrSystemId systemId, XrSession ses
     identityPose.position = {0.0f, 0.0f, 0.0f};
 
     XrReferenceSpaceCreateInfo rsci;
+    memset((void*)&rsci, 0, sizeof(XrReferenceSpaceCreateInfo));
     rsci.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
     rsci.next = NULL;
     rsci.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
@@ -712,6 +728,8 @@ static bool CreateSpaces(XrInstance instance, XrSystemId systemId, XrSession ses
         return false;
     }
 
+    memset((void*)&viewSpaceLocation, 0, sizeof(XrSpaceLocation));
+    memset((void*)&viewSpaceVelocity, 0, sizeof(XrSpaceVelocity));
     viewSpaceLocation.type = XR_TYPE_SPACE_LOCATION;
     viewSpaceLocation.next = &viewSpaceVelocity;
     viewSpaceVelocity.type = XR_TYPE_SPACE_VELOCITY;
@@ -725,6 +743,7 @@ static bool BeginSession(XrInstance instance, XrSystemId systemId, XrSession ses
     XrResult result;
     XrViewConfigurationType stereoViewConfigType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     XrSessionBeginInfo sbi;
+    memset((void*)&sbi, 0, sizeof(XrSessionBeginInfo));
     sbi.type = XR_TYPE_SESSION_BEGIN_INFO;
     sbi.next = NULL;
     sbi.primaryViewConfigurationType = stereoViewConfigType;
@@ -786,6 +805,7 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
     for (uint32_t i = 0; i < viewConfigs.size(); i++)
     {
         XrSwapchainCreateInfo sci;
+        memset((void*)&sci, 0, sizeof(XrSwapchainCreateInfo));
         sci.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
         sci.next = NULL;
         sci.createFlags = 0;
@@ -900,6 +920,7 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
         return;
     }
 
+    memset((void*)&systemProperties, 0, sizeof(XrSystemProperties));
     if (!GetSystemProperties(instance, systemId, systemProperties))
     {
         return;
@@ -964,6 +985,7 @@ bool XrBuddy::PollEvents()
     ZoneScoped;
 
     XrEventDataBuffer xrEvent;
+    memset((void*)&xrEvent, 0, sizeof(XrEventDataBuffer));
     xrEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
     xrEvent.next = NULL;
 
@@ -1066,9 +1088,11 @@ bool XrBuddy::SyncInput()
         XrResult result;
 
         XrActiveActionSet aas;
+        memset((void*)&aas, 0, sizeof(XrActiveActionSet));
         aas.actionSet = actionSet;
         aas.subactionPath = XR_NULL_PATH;
         XrActionsSyncInfo asi;
+        memset((void*)&asi, 0, sizeof(XrActionsSyncInfo));
         asi.type = XR_TYPE_ACTIONS_SYNC_INFO;
         asi.next = NULL;
         asi.countActiveActionSets = 1;
@@ -1085,6 +1109,7 @@ bool XrBuddy::SyncInput()
         {
             ActionInfo& actionInfo = iter.second;
             XrActionStateGetInfo getInfo;
+            memset((void*)&getInfo, 0, sizeof(XrActionStateGetInfo));
             getInfo.type = XR_TYPE_ACTION_STATE_GET_INFO;
             getInfo.next = NULL;
             getInfo.action = actionInfo.action;
@@ -1359,6 +1384,13 @@ bool XrBuddy::LocateSpaces(XrTime predictedDisplayTime)
 {
     ZoneScoped;
 
+    memset((void*)&viewSpaceLocation, 0, sizeof(XrSpaceLocation));
+    memset((void*)&viewSpaceVelocity, 0, sizeof(XrSpaceVelocity));
+    viewSpaceLocation.type = XR_TYPE_SPACE_LOCATION;
+    viewSpaceLocation.next = &viewSpaceVelocity;
+    viewSpaceVelocity.type = XR_TYPE_SPACE_VELOCITY;
+    viewSpaceVelocity.next = NULL;
+
     XrResult result;
     if (state == XR_SESSION_STATE_FOCUSED)
     {
@@ -1400,10 +1432,12 @@ bool XrBuddy::RenderFrame()
         state == XR_SESSION_STATE_FOCUSED)
     {
         XrFrameState fs;
+        memset((void*)&fs, 0, sizeof(XrFrameState));
         fs.type = XR_TYPE_FRAME_STATE;
         fs.next = NULL;
 
         XrFrameWaitInfo fwi;
+        memset((void*)&fwi, 0, sizeof(XrFrameWaitInfo));
         fwi.type = XR_TYPE_FRAME_WAIT_INFO;
         fwi.next = NULL;
 
@@ -1419,6 +1453,7 @@ bool XrBuddy::RenderFrame()
         lastPredictedDisplayTime = fs.predictedDisplayTime;
 
         XrFrameBeginInfo fbi;
+        memset((void*)&fbi, 0, sizeof(XrFrameBeginInfo));
         fbi.type = XR_TYPE_FRAME_BEGIN_INFO;
         fbi.next = NULL;
         {
@@ -1432,6 +1467,7 @@ bool XrBuddy::RenderFrame()
 
         std::vector<XrCompositionLayerBaseHeader*> layers;
         XrCompositionLayerProjection layer;
+        memset((void*)&layer, 0, sizeof(XrCompositionLayerProjection));
         layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
         layer.next = NULL;
 
@@ -1449,6 +1485,7 @@ bool XrBuddy::RenderFrame()
         }
 
         XrFrameEndInfo fei;
+        memset((void*)&fei, 0, sizeof(XrFrameEndInfo));
         fei.type = XR_TYPE_FRAME_END_INFO;
         fei.next = NULL;
         fei.displayTime = fs.predictedDisplayTime;
@@ -1548,6 +1585,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
     ZoneScoped;
 
     XrViewState viewState;
+    memset((void*)&viewState, 0, sizeof(XrViewState));
     viewState.type = XR_TYPE_VIEW_STATE;
     viewState.next = NULL;
 
@@ -1557,11 +1595,13 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
     std::vector<XrView> views(viewConfigs.size());
     for (size_t i = 0; i < viewConfigs.size(); i++)
     {
+        memset((void*)&views[i], 0, sizeof(XrView));
         views[i].type = XR_TYPE_VIEW;
         views[i].next = NULL;
     }
 
     XrViewLocateInfo vli;
+    memset((void*)&vli, 0, sizeof(XrViewLocateInfo));
     vli.type = XR_TYPE_VIEW_LOCATE_INFO;
     vli.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
     vli.displayTime = predictedDisplayTime;
@@ -1588,6 +1628,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
             const SwapchainInfo& viewSwapchain = swapchains[i];
 
             XrSwapchainImageAcquireInfo ai;
+            memset((void*)&ai, 0, sizeof(XrSwapchainImageAcquireInfo));
             ai.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
             ai.next = NULL;
 
@@ -1599,6 +1640,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
             }
 
             XrSwapchainImageWaitInfo wi;
+            memset((void*)&wi, 0, sizeof(XrSwapchainImageWaitInfo));
             wi.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
             wi.next = NULL;
             wi.timeout = XR_INFINITE_DURATION;
@@ -1608,6 +1650,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
                 return false;
             }
 
+            memset((void*)&projectionLayerViews[i], 0, sizeof(XrCompositionLayerProjectionView));
             projectionLayerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
             projectionLayerViews[i].pose = views[i].pose;
             projectionLayerViews[i].fov = views[i].fov;
@@ -1635,6 +1678,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
             RenderView(projectionLayerViews[i], frameBuffer, iter->first, iter->second, i);
 
             XrSwapchainImageReleaseInfo ri;
+            memset((void*)&ri, 0, sizeof(XrSwapchainImageReleaseInfo));
             ri.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
             ri.next = NULL;
             result = xrReleaseSwapchainImage(viewSwapchain.handle, &ri);
