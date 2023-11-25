@@ -18,6 +18,7 @@ protected:
     float speed;  // units per sec
     float rotSpeed; // radians per sec
     glm::vec3 pos;
+    glm::vec3 vel;
     glm::quat rot;
     glm::mat4 cameraMat;
 };

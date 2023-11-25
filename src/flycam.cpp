@@ -3,7 +3,7 @@
 #include "core/log.h"
 
 FlyCam::FlyCam(const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn) :
-    pos(posIn), rot(rotIn), speed(speedIn), rotSpeed(rotSpeedIn)
+    pos(posIn), vel(0.0f, 0.0f, 0.0f), rot(rotIn), speed(speedIn), rotSpeed(rotSpeedIn)
 {
 
 }
@@ -14,10 +14,18 @@ void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn
     glm::vec2 rightStick = glm::clamp(rightStickIn, -1.0f, 1.0f);
     float rollAmount = glm::clamp(rollAmountIn, -1.0f, 1.0f);
 
+    const float STIFF = 15.0f;
+    const float K = STIFF / speed;
+
     // left stick controls position
-    glm::vec3 ls = glm::vec3(leftStick.x, 0.0f, -leftStick.y);
-    glm::vec3 v = ls * speed * dt;
-    pos += rot * v;
+    glm::vec3 stick = rot * glm::vec3(leftStick.x, 0.0f, -leftStick.y);
+    glm::vec3 s_over_k = (stick * STIFF) / K;
+    glm::vec3 s_over_k_sq = (stick * STIFF) / (K * K);
+    float e_neg_kt = exp(-K * dt);
+
+    glm::vec3 v = s_over_k + e_neg_kt * (vel - s_over_k);
+    pos = s_over_k * dt + (s_over_k_sq - vel / K) * e_neg_kt + pos - s_over_k_sq + (vel / K);
+    vel = v;
 
     // right stick controls orientation
     glm::vec3 up = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
