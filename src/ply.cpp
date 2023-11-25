@@ -90,7 +90,8 @@ bool Ply::Parse(std::ifstream& plyFile)
             break;
         }
 
-        std::istringstream iss(line);
+        iss.str(line);
+        iss.clear();
         iss >> token1 >> token2 >> token3;
         if (token1 != "property")
         {
@@ -99,42 +100,42 @@ bool Ply::Parse(std::ifstream& plyFile)
         }
         if (token2 == "char" || token2 == "int8")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::Char}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::Char}));
             offset += 1;
         }
         else if (token2 == "uchar" || token2 == "uint8")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::UChar}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::UChar}));
             offset += 1;
         }
         else if (token2 == "short" || token2 == "int16")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::Short}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::Short}));
             offset += 2;
         }
         else if (token2 == "ushort" || token2 == "uint16")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::UShort}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::UShort}));
             offset += 2;
         }
         else if (token2 == "int" || token2 == "int32")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Int}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Int}));
             offset += 4;
         }
         else if (token2 == "uint" || token2 == "uint32")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::UInt}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::UInt}));
             offset += 4;
         }
         else if (token2 == "float" || token2 == "float32")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Float}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Float}));
             offset += 4;
         }
         else if (token2 == "double" || token2 == "float64")
         {
-            propertyMap.insert(std::pair<std::string, Property>(token3, {offset, 8, Ply::Type::Double}));
+            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 8, Ply::Type::Double}));
             offset += 8;
         }
         else
