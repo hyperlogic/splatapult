@@ -1,7 +1,8 @@
-Toy program to display 3d gaussian splats
+Splatapult
 ----------------------------------------------
+A program to display 3d gaussian splats files
 
-3dgstoy [OPTIONS] DIRECTORY
+splatapult [OPTIONS] DIRECTORY
 
 Options
 -------------
@@ -11,13 +12,25 @@ Options
 -f, --fullscreen
     launch window in fullscreen
 
-Runtime options
+Desktop Controls
 -------------
 * joystick - fly around the scene
 * c - toggle between initial colmap point cloud and gaussian splats.
-* f - show hide floor carpet.
 * n - jump to next camera
 * p - jump to previous camera
+* wasd - move
+* arrow keys - look
+
+Vr Controls
+--------------
+* c - toggle between initial colmap point cloud and gaussian splats.
+* left stick - move
+* right stick - snap turn
+* f - show hide floor carpet.
+* single grab - translate the world.
+* double grab - rotate and translate the world.
+* triple grab - (double grab while trigger is depressed) scale, rotate and translate the world.
+* return - save the current position and orientation/scale of the world into a vr.json file.
 
 Directory
 -------------
@@ -28,7 +41,7 @@ dir/
 	    iteration_#/
 			point_cloud.py
 	cfg_args [optional]
-	input.ply
+	input.ply [optional]
 	cameras.json [optional]
 	vr.json [optional]
 

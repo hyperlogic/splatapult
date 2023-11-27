@@ -4,9 +4,8 @@
 # cmake --build .
 
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
-project(3dgstoy LANGUAGES CXX)
-
-set(PROJECT_NAME 3dgstoy)
+set(PROJECT_NAME splatapult)
+project(${PROJECT_NAME} LANGUAGES CXX)
 
 # opengl
 find_package(OpenGL REQUIRED)
