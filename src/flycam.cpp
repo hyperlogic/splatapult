@@ -46,4 +46,5 @@ void FlyCam::SetCameraMat(const glm::mat4& cameraMat)
 {
     pos = glm::vec3(cameraMat[3]);
     rot = glm::quat(glm::mat3(cameraMat));
+    vel = glm::vec3(0.0f, 0.0f, 0.0f);
 }
