@@ -1,6 +1,6 @@
 # mkdir build
 # cd build
-# cmake -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\ajthy\code2\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
+# cmake -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\hyperlogic\code\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
 # cmake --build .
 
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
@@ -47,6 +47,7 @@ add_executable(${PROJECT_NAME}
     src/core/textrenderer.cpp
     src/core/xrbuddy.cpp
 
+    src/app.cpp
     src/camerasconfig.cpp
     src/debug_splat_vert.cpp
     src/debug_splat_geom.cpp
