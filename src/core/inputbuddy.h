@@ -3,12 +3,17 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <map>
-#include <SDL.h>
 #include <stdint.h>
+
+union SDL_Event;
+struct SDL_JoyAxisEvent;
+struct SDL_JoyHatEvent;
+struct SDL_JoyButtonEvent;
 
 class InputBuddy
 {
 public:
+    using Keycode = int32_t;
 
     InputBuddy();
 
@@ -18,7 +23,7 @@ public:
 
     void ProcessEvent(const SDL_Event& event);
 
-    void OnKey(SDL_Keycode key, const KeyCallback& cb);
+    void OnKey(Keycode key, const KeyCallback& cb);
     void OnQuit(const VoidCallback& cb);
     void OnResize(const ResizeCallback& cb);
 
@@ -57,7 +62,7 @@ protected:
     void UpdateJoypadHat(const SDL_JoyHatEvent& event);
     void UpdateJoypadButton(const SDL_JoyButtonEvent& event);
 
-    std::map<SDL_Keycode, KeyCallback> keyCallbackMap;
+    std::map<Keycode, KeyCallback> keyCallbackMap;
     VoidCallback quitCallback;
     ResizeCallback resizeCallback;
     Joypad joypad;

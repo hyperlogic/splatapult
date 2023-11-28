@@ -1,5 +1,7 @@
 #include "inputbuddy.h"
 
+#include <SDL.h>
+
 #include "log.h"
 
 InputBuddy::InputBuddy()
@@ -56,9 +58,9 @@ void InputBuddy::ProcessEvent(const SDL_Event& event)
     }
 }
 
-void InputBuddy::OnKey(SDL_Keycode key, const KeyCallback& cb)
+void InputBuddy::OnKey(Keycode key, const KeyCallback& cb)
 {
-    keyCallbackMap.insert(std::pair<SDL_Keycode, KeyCallback>(key, cb));
+    keyCallbackMap.insert(std::pair<Keycode, KeyCallback>(key, cb));
 }
 
 void InputBuddy::OnQuit(const VoidCallback& cb)

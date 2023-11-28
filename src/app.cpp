@@ -1,6 +1,11 @@
 #include "app.h"
 
+#define USE_SDL
+
 #include <GL/glew.h>
+#ifdef USE_SDL
+#include <SDL.h>
+#endif
 #include <thread>
 
 #include "core/log.h"
@@ -371,6 +376,7 @@ bool App::Init()
         Resize(newWidth, newHeight);
     });
 
+#ifdef USE_SDL
     inputBuddy->OnKey(SDLK_ESCAPE, [this](bool down, uint16_t mod)
     {
         shouldQuit = true;
@@ -479,6 +485,7 @@ bool App::Init()
     {
         virtualRoll += down ? 1.0f : -1.0f;
     });
+#endif // USE_SDL
 
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, "fps:");
 
