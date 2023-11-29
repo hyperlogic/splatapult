@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 struct Log
 {
     enum LogLevel
@@ -12,6 +14,7 @@ struct Log
     };
 
     static void SetLevel(LogLevel levelIn);
+    static void SetAppName(const std::string& appNameIn);
 
     // verbose
     static void V(const char *fmt, ...);
