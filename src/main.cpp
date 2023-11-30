@@ -47,6 +47,7 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 
 int main(int argc, char *argv[])
 {
+    Log::SetAppName("splataplut");
     App app;
     if (!app.ParseArguments(argc, argv))
     {

@@ -80,6 +80,8 @@ static void app_handle_cmd(struct android_app* androidApp, int32_t cmd)
  */
 void android_main(struct android_app* androidApp)
 {
+    Log::SetAppName("splataplut");
+
     Log::D("----------------------------------------------------------------\n");
     Log::D("android_app_entry()\n");
     Log::D("    android_main()\n");

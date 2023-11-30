@@ -51,7 +51,7 @@ void Log::SetLevel(LogLevel levelIn)
     level = levelIn;
 }
 
-void SetAppName(const char* appNameIn)
+void Log::SetAppName(const std::string& appNameIn)
 {
     appName = appNameIn;
 }

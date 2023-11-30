@@ -22,8 +22,11 @@ Or build from the command line: `cmake --build . --config=Release`
 
 Meta Quest
 --------------
-* Install (Meta OpenXR Mobile SDK 59.0)[https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/]
+* Download the (Meta OpenXR Mobile SDK 59.0)[https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/]
 * Install (Android Studio Bumble Bee, Patch 3)[https://developer.android.com/studio/archive]
   newer versions do not work with Meta OpenXR Mobile SDK 59.0.
   Follow this guide to setup (Android Studio)[https://developer.oculus.com/documentation/native/android/mobile-studio-setup-android/]
-* Make sure the OVR_MOBILE_SDK_PATH environment variable contains the path to the ovr_openxr_mobile_sdk_59.0 directory.
+* Copy the ovr_openxr_mobile_sdk_59.0 dir into the meta-quest dir.
+* Copy the meta-quest/splatapult dir to ovr_openxr_mobile_sdk_59.0/XrSamples/splataplut
+* Open the ovr_openxr_mobile_sdk_59.0/XrSamples/splatapult in AndroidStudio.
+* Sync and Build
