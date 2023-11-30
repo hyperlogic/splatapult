@@ -26,4 +26,4 @@ Meta Quest
 * Install (Android Studio Bumble Bee, Patch 3)[https://developer.android.com/studio/archive]
   newer versions do not work with Meta OpenXR Mobile SDK 59.0.
   Follow this guide to setup (Android Studio)[https://developer.oculus.com/documentation/native/android/mobile-studio-setup-android/]
-* TODO: more to follow
+* Make sure the OVR_MOBILE_SDK_PATH environment variable contains the path to the ovr_openxr_mobile_sdk_59.0 directory.
