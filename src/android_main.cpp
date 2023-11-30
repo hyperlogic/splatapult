@@ -9,16 +9,30 @@
 
 #include "core/log.h"
 
+/*
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
+*/
+
+struct AppContext
+{
+    AppContext() : resumed(false), sessionActive(false) {}
+    bool resumed;
+    bool sessionActive;
+    void Clear()
+    {
+        resumed = false;
+        sessionActive = false;
+    }
+};
 
 /**
  * Process the next main command.
  */
 static void app_handle_cmd(struct android_app* androidApp, int32_t cmd)
 {
-    ovrApp& app = *(ovrApp*)androidApp->userData;
+    AppContext& ctx = *(AppContext*)androidApp->userData;
 
     switch (cmd)
     {
@@ -32,21 +46,21 @@ static void app_handle_cmd(struct android_app* androidApp, int32_t cmd)
     case APP_CMD_RESUME:
         Log::D("onResume()\n");
         Log::D("    APP_CMD_RESUME\n");
-        app.Resumed = true;
+        ctx.resumed = true;
         break;
     case APP_CMD_PAUSE:
         Log::D("onPause()\n");
         Log::D("    APP_CMD_PAUSE\n");
-        app.Resumed = false;
+        ctx.resumed = false;
         break;
     case APP_CMD_STOP:
         Log::D("onStop()\n");
-        LOG::D("    APP_CMD_STOP\n");
+        Log::D("    APP_CMD_STOP\n");
         break;
     case APP_CMD_DESTROY:
         Log::D("onDestroy()\n");
         Log::D("    APP_CMD_DESTROY\n");
-        app.Clear();
+        ctx.Clear();
         break;
     case APP_CMD_INIT_WINDOW:
         Log::D("surfaceCreated()\n");
@@ -76,20 +90,19 @@ void android_main(struct android_app* androidApp)
     // Note that AttachCurrentThread will reset the thread name.
     prctl(PR_SET_NAME, (long)"android_main", 0, 0, 0);
 
-    //androidApp->userData = &app;
+    AppContext ctx;
+    androidApp->userData = &ctx;
     androidApp->onAppCmd = app_handle_cmd;
 
     while (androidApp->destroyRequested == 0)
     {
-        frameCount++;
-
         // Read all pending events.
         for (;;) {
             int events;
             struct android_poll_source* source;
             // If the timeout is zero, returns immediately without blocking.
             // If the timeout is negative, waits indefinitely until an event appears.
-            const int timeoutMilliseconds = (app.Resumed == false && app.SessionActive == false &&
+            const int timeoutMilliseconds = (ctx.resumed == false && ctx.sessionActive == false &&
                                              androidApp->destroyRequested == 0)
                 ? -1
                 : 0;
@@ -110,4 +123,3 @@ void android_main(struct android_app* androidApp)
 
     (*androidApp->activity->vm).DetachCurrentThread();
 }
-
