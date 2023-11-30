@@ -9,7 +9,7 @@ android {
   // -debug.apk or -release.apk appended to it.
   // The filename doesn't effect the Android installation process.
   // Use only letters to remain compatible with the package name.
-  project.archivesBaseName = "scenemodel"
+  project.archivesBaseName = "splatapult"
 
 
   defaultConfig {

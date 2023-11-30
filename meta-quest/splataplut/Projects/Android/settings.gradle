@@ -1,5 +1,5 @@
 rootProject.projectDir = new File(settingsDir, '../../../..')
-rootProject.name = "XrSceneModel"
+rootProject.name = "splatapult"
 
 include ':', \
     ':XrSamples:splatapult:Projects:Android'

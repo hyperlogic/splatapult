@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := scenemodel
+LOCAL_MODULE := splatapult
 
 LOCAL_CFLAGS += -Werror
 LOCAL_CFLAGS += -DANDROID_NDK

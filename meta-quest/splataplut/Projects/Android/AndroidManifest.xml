@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.oculus.sdk.scenemodel"
+    package="io.github.hyperlogic.splatapult"
     android:versionCode="1"
     android:versionName="1.0"
     android:installLocation="auto"
@@ -21,20 +21,13 @@
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-  <!-- Allows to access TrackingEnvironment functionality -->
-  <uses-permission android:name="com.oculus.permission.ACCESS_TRACKING_ENV" />
-
-  
-  <!-- Request permission to use Scene -->
-  <uses-permission android:name="com.oculus.permission.USE_SCENE" />
   <!-- Enable report events to Telemetry Service -->
   <uses-permission android:name="com.oculus.permission.REPORT_EVENTS" />
   <uses-permission android:name="com.oculus.permission.REPORT_EVENTS_DEBUG" />
-  <!-- Grants access to Spatial Anchors. -->
-  <uses-permission android:name="com.oculus.permission.USE_ANCHOR_API" />
+
   <application
       android:allowBackup="false"
-      android:label="scenemodel"
+      android:label="splatapult"
       >
     <meta-data
         android:name="com.samsung.android.vr.application.mode"
@@ -54,7 +47,7 @@
         android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode"
         >
       <!-- Tell NativeActivity the name of the .so -->
-      <meta-data android:name="android.app.lib_name" android:value="scenemodel" />
+      <meta-data android:name="android.app.lib_name" android:value="splatapult" />
       <!-- This filter lets the apk show up as a launchable icon. -->
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
