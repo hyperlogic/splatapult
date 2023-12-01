@@ -24,7 +24,7 @@
 #include "vrconfig.h"
 
 const float Z_NEAR = 0.1f;
-const float Z_FAR = 100.0f;
+const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 const float MOVE_SPEED = 2.5f;

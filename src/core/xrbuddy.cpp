@@ -1,13 +1,21 @@
 #include "xrbuddy.h"
 
 #include <cassert>
+#include <string.h>
 #include <vector>
 
+#ifndef __ANDROID__
 #include <GL/glew.h>
+#endif
+
 #include <glm/gtc/type_ptr.hpp>
-//#include <SDL2/SDL.h>
-//#include <SDL2/SDL_opengl.h>
+
+#ifndef __ANDROID__
 #include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
 
 #include "log.h"
 #include "util.h"
@@ -157,7 +165,7 @@ static bool CreateInstance(XrInstance& instance, const std::vector<const char*>&
     ici.enabledExtensionNames = extensionVec.data();
     ici.enabledApiLayerCount = 0;
     ici.enabledApiLayerNames = NULL;
-    strcpy_s(ici.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE, "xrtoy");
+    StrCpy_s(ici.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE, "xrtoy");
     ici.applicationInfo.engineName[0] = '\0';
     ici.applicationInfo.applicationVersion = 1;
     ici.applicationInfo.engineVersion = 0;
@@ -349,6 +357,7 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     XrResult result;
 
     // check if opengl version is sufficient.
+#ifdef XR_USE_GRAPHICS_API_OPENGL
     {
         XrGraphicsRequirementsOpenGLKHR reqs;
         memset((void*)&reqs, 0, sizeof(XrGraphicsRequirementsOpenGLKHR));
@@ -402,6 +411,25 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     sci.next = &glBinding;
     sci.systemId = systemId;
 
+#elif defined (XR_USE_GRAPHICS_API_OPENGL_ES)
+    XrGraphicsRequirementsOpenGLESKHR reqs;
+    memset((void*)&reqs, 0, sizeof(XrGraphicsRequirementsOpenGLESKHR));
+    reqs.type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_ES_KHR;
+    reqs.next = NULL;
+    PFN_xrGetOpenGLESGraphicsRequirementsKHR pfnGetOpenGLESGraphicsRequirementsKHR = NULL;
+    result = xrGetInstanceProcAddr(instance, "xrGetOpenGLESGraphicsRequirementsKHR", (PFN_xrVoidFunction *)&pfnGetOpenGLESGraphicsRequirementsKHR);
+    if (!CheckResult(instance, result, "xrGetInstanceProcAddr"))
+    {
+        return false;
+    }
+
+    // AJT: TODO this should happen in android_main.cpp
+    //app.Egl.CreateContext(nullptr);
+
+    XrSessionCreateInfo sci;
+    memset((void*)&sci, 0, sizeof(XrSessionCreateInfo));
+#endif
+
     result = xrCreateSession(instance, &sci, &session);
     if (!CheckResult(instance, result, "xrCreateSession"))
     {
@@ -421,8 +449,8 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
     memset((void*)&asci, 0, sizeof(XrActionSetCreateInfo));
     asci.type = XR_TYPE_ACTION_SET_CREATE_INFO;
     asci.next = NULL;
-    strcpy_s(asci.actionSetName, "default");
-    strcpy_s(asci.localizedActionSetName, "Default");
+    StrCpy_s(asci.actionSetName, XR_MAX_ACTION_NAME_SIZE, "default");
+    StrCpy_s(asci.localizedActionSetName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, "Default");
     asci.priority = 0;
     result = xrCreateActionSet(instance, &asci, &actionSet);
     if (!CheckResult(instance, result, "xrCreateActionSet"))
@@ -465,8 +493,8 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
         aci.type = XR_TYPE_ACTION_CREATE_INFO;
         aci.next = NULL;
         aci.actionType = actionPair.second;
-        strcpy_s(aci.actionName, actionPair.first.c_str());
-        strcpy_s(aci.localizedActionName, actionPair.first.c_str());
+        StrCpy_s(aci.actionName, XR_MAX_ACTION_NAME_SIZE, actionPair.first.c_str());
+        StrCpy_s(aci.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, actionPair.first.c_str());
         aci.countSubactionPaths = 0;
         aci.subactionPaths = NULL;
         result = xrCreateAction(actionSet, &aci, &action);
@@ -487,7 +515,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
             identity.orientation = {0.0f, 0.0f, 0.0f, 1.0f};
             identity.position = {0.0f, 0.0f, 0.0f};
             aspci.poseInActionSpace = identity;
-            aspci.subactionPath = NULL;
+            aspci.subactionPath = 0;
             result = xrCreateActionSpace(session, &aspci, &space);
             if (!CheckResult(instance, result, "xrCreateActionSpace"))
             {
@@ -778,7 +806,7 @@ static bool CreateFrameBuffer(GLuint& frameBuffer)
 static bool CreateSwapchains(XrInstance instance, XrSession session,
                              const std::vector<XrViewConfigurationView>& viewConfigs,
                              std::vector<XrBuddy::SwapchainInfo>& swapchains,
-                             std::vector<std::vector<XrSwapchainImageOpenGLKHR>>& swapchainImages)
+                             std::vector<std::vector<XrBuddy::SwapchainImage>>& swapchainImages)
 {
     XrResult result;
     uint32_t swapchainFormatCount;
@@ -857,12 +885,9 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
     return true;
 }
 
-static GLuint CreateDepthTexture(GLuint colorTexture)
+static GLuint CreateDepthTexture(GLuint colorTexture, GLint width, GLint height)
 {
-    GLint width, height;
     glBindTexture(GL_TEXTURE_2D, colorTexture);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
     uint32_t depthTexture;
     glGenTextures(1, &depthTexture);
@@ -871,14 +896,18 @@ static GLuint CreateDepthTexture(GLuint colorTexture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     return depthTexture;
 }
 
 XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
 {
     nearFar = nearFarIn;
+#ifdef XR_USE_GRAPHICS_API_OPENGL
     std::vector<const char*> requiredExtensionVec = {XR_KHR_OPENGL_ENABLE_EXTENSION_NAME};
+#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    std::vector<const char*> requiredExtensionVec = {XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME};
+#endif
     std::vector<const char*> optionalExtensionVec = {XR_FB_COLOR_SPACE_EXTENSION_NAME};
     std::vector<const char*> extensionVec;
 
@@ -1113,7 +1142,7 @@ bool XrBuddy::SyncInput()
             getInfo.type = XR_TYPE_ACTION_STATE_GET_INFO;
             getInfo.next = NULL;
             getInfo.action = actionInfo.action;
-            getInfo.subactionPath = NULL;
+            getInfo.subactionPath = 0;
             iter.second.u.boolState.next = NULL;
             switch (iter.second.type)
             {
@@ -1658,7 +1687,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
             projectionLayerViews[i].subImage.imageRect.offset = {0, 0};
             projectionLayerViews[i].subImage.imageRect.extent = {viewSwapchain.width, viewSwapchain.height};
 
-            const XrSwapchainImageOpenGLKHR& swapchainImage = swapchainImages[i][swapchainImageIndex];
+            const SwapchainImage& swapchainImage = swapchainImages[i][swapchainImageIndex];
 
             // find or create the depthTexture associated with this colorTexture
             const uint32_t colorTexture = swapchainImage.image;
@@ -1671,7 +1700,7 @@ bool XrBuddy::RenderLayer(XrTime predictedDisplayTime,
             auto iter = colorToDepthMap.find(colorTexture);
             if (iter == colorToDepthMap.end())
             {
-                const uint32_t depthTexture = CreateDepthTexture(colorTexture);
+                const uint32_t depthTexture = CreateDepthTexture(colorTexture, viewSwapchain.width, viewSwapchain.height);
                 iter = colorToDepthMap.insert(std::make_pair(colorTexture, depthTexture)).first;
             }
 

@@ -22,6 +22,11 @@ Or build from the command line: `cmake --build . --config=Release`
 
 Meta Quest
 --------------
+* Use vcpkg to install the following packages:
+    - `vcpkg install glm:arm64-android`
+    - `vcpkg install libpng:arm64-android`
+    - `vcpkg install nlohmann-json:arm64-android`
+* Set the following environment var ANDROID_VCPKG_DIR to point to vcpkg/installed/arm64-android.
 * Download the (Meta OpenXR Mobile SDK 59.0)[https://developer.oculus.com/downloads/package/oculus-openxr-mobile-sdk/]
 * Install (Android Studio Bumble Bee, Patch 3)[https://developer.android.com/studio/archive]
   newer versions do not work with Meta OpenXR Mobile SDK 59.0.

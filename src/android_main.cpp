@@ -8,22 +8,77 @@
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
 
 #include "core/log.h"
+#include "core/xrbuddy.h"
 
 /*
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
 */
+static const char* EglErrorString(const EGLint error) {
+    switch (error) {
+        case EGL_SUCCESS:
+            return "EGL_SUCCESS";
+        case EGL_NOT_INITIALIZED:
+            return "EGL_NOT_INITIALIZED";
+        case EGL_BAD_ACCESS:
+            return "EGL_BAD_ACCESS";
+        case EGL_BAD_ALLOC:
+            return "EGL_BAD_ALLOC";
+        case EGL_BAD_ATTRIBUTE:
+            return "EGL_BAD_ATTRIBUTE";
+        case EGL_BAD_CONTEXT:
+            return "EGL_BAD_CONTEXT";
+        case EGL_BAD_CONFIG:
+            return "EGL_BAD_CONFIG";
+        case EGL_BAD_CURRENT_SURFACE:
+            return "EGL_BAD_CURRENT_SURFACE";
+        case EGL_BAD_DISPLAY:
+            return "EGL_BAD_DISPLAY";
+        case EGL_BAD_SURFACE:
+            return "EGL_BAD_SURFACE";
+        case EGL_BAD_MATCH:
+            return "EGL_BAD_MATCH";
+        case EGL_BAD_PARAMETER:
+            return "EGL_BAD_PARAMETER";
+        case EGL_BAD_NATIVE_PIXMAP:
+            return "EGL_BAD_NATIVE_PIXMAP";
+        case EGL_BAD_NATIVE_WINDOW:
+            return "EGL_BAD_NATIVE_WINDOW";
+        case EGL_CONTEXT_LOST:
+            return "EGL_CONTEXT_LOST";
+        default:
+            return "unknown";
+    }
+}
 
 struct AppContext
 {
     AppContext() : resumed(false), sessionActive(false) {}
     bool resumed;
     bool sessionActive;
+
+    struct EGLInfo
+    {
+        EGLInfo() : majorVersion(0), minorVersion(0), display(0), config(0), context(EGL_NO_CONTEXT) {}
+        EGLint majorVersion;
+        EGLint minorVersion;
+        EGLDisplay display;
+        EGLConfig config;
+        EGLContext context;
+    };
+
+    EGLInfo egl;
+
     void Clear()
     {
         resumed = false;
         sessionActive = false;
+        egl.majorVersion = 0;
+        egl.minorVersion = 0;
+        egl.display = 0;
+        egl.config = 0;
+        egl.context = EGL_NO_CONTEXT;
     }
 };
 
@@ -95,6 +150,66 @@ void android_main(struct android_app* androidApp)
     AppContext ctx;
     androidApp->userData = &ctx;
     androidApp->onAppCmd = app_handle_cmd;
+
+    // create the egl context
+    ctx.egl.display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    eglInitialize(ctx.egl.display, &ctx.egl.majorVersion, &ctx.egl.minorVersion);
+    Log::D("OpenGLES majorVersion = %d, minorVersion = %d\n", ctx.egl.majorVersion, ctx.egl.minorVersion);
+    const int MAX_CONFIGS = 1024;
+    EGLConfig configs[MAX_CONFIGS];
+    EGLint numConfigs = 0;
+    if (!eglGetConfigs(ctx.egl.display, configs, MAX_CONFIGS, &numConfigs))
+    {
+        Log::E("eglGetConfigs failed: %s\n", EglErrorString(eglGetError()));
+        return;
+    }
+    const EGLint configAttribs[] = {EGL_RED_SIZE, 8,
+                                    EGL_GREEN_SIZE, 8,
+                                    EGL_BLUE_SIZE, 8,
+                                    EGL_ALPHA_SIZE, 8, // need alpha for the multi-pass timewarp compositor
+                                    EGL_DEPTH_SIZE, 0,
+                                    EGL_STENCIL_SIZE, 0,
+                                    EGL_SAMPLES, 0,
+                                    EGL_NONE};
+    ctx.egl.config = 0;
+    for (int i = 0; i < numConfigs; i++)
+    {
+        EGLint value = 0;
+        eglGetConfigAttrib(ctx.egl.display, configs[i], EGL_RENDERABLE_TYPE, &value);
+        if ((value & EGL_OPENGL_ES3_BIT_KHR) != EGL_OPENGL_ES3_BIT_KHR) {
+            continue;
+        }
+        // The pbuffer config also needs to be compatible with normal window rendering
+        // so it can share textures with the window context.
+        eglGetConfigAttrib(ctx.egl.display, configs[i], EGL_SURFACE_TYPE, &value);
+        if ((value & (EGL_WINDOW_BIT | EGL_PBUFFER_BIT)) != (EGL_WINDOW_BIT | EGL_PBUFFER_BIT)) {
+            continue;
+        }
+
+        int j = 0;
+        for (; configAttribs[j] != EGL_NONE; j += 2) {
+            eglGetConfigAttrib(ctx.egl.display, configs[i], configAttribs[j], &value);
+            if (value != configAttribs[j + 1]) {
+                break;
+            }
+        }
+        if (configAttribs[j] == EGL_NONE) {
+            ctx.egl.config = configs[i];
+            break;
+        }
+    }
+    if (ctx.egl.config == 0)
+    {
+        Log::E("eglChooseConfig() failed: %s\n", EglErrorString(eglGetError()));
+        return;
+    }
+    EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+    ctx.egl.context = eglCreateContext(ctx.egl.display, ctx.egl.config, EGL_NO_CONTEXT, contextAttribs);
+    if (ctx.egl.context == EGL_NO_CONTEXT)
+    {
+        Log::E("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
+        return;
+    }
 
     while (androidApp->destroyRequested == 0)
     {

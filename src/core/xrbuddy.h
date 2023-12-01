@@ -6,14 +6,21 @@
 #include <string>
 #include <vector>
 
-#define XR_USE_GRAPHICS_API_OPENGL
 #if defined(WIN32)
-#define XR_USE_PLATFORM_WIN32
+#define XR_USE_PLATFORM_WIN32 1
+#define XR_USE_GRAPHICS_API_OPENGL 1
 #include <Windows.h>
 #elif defined(__ANDROID__)
-#define XR_USE_PLATFORM_ANDROID
+#define XR_USE_PLATFORM_ANDROID 1
+#define XR_USE_GRAPHICS_API_OPENGL_ES 1
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#include <jni.h>
 #else
-#define XR_USE_PLATFORM_XLIB
+#define XR_USE_PLATFORM_XLIB 1
+#define XR_USE_GRAPHICS_API_OPENGL 1
 #endif
 
 #include <openxr/openxr.h>
@@ -82,6 +89,12 @@ public:
 
     void CycleColorSpace();
 
+#if defined(XR_USE_GRAPHICS_API_OPENGL)
+    using SwapchainImage = XrSwapchainImageOpenGLKHR;
+#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    using SwapchainImage = XrSwapchainImageOpenGLESKHR;
+#endif
+
 protected:
     bool LocateSpaces(XrTime predictedDisplayTime);
     bool RenderLayer(XrTime predictedDisplayTime,
@@ -110,7 +123,7 @@ protected:
     XrSpaceVelocity viewSpaceVelocity;
 
     std::vector<SwapchainInfo> swapchains;
-    std::vector<std::vector<XrSwapchainImageOpenGLKHR>> swapchainImages;
+    std::vector<std::vector<SwapchainImage>> swapchainImages;
 
     uint32_t frameBuffer = 0;
     std::map<uint32_t, uint32_t> colorToDepthMap;

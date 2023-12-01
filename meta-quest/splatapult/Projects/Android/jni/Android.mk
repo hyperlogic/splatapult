@@ -4,18 +4,23 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := splatapult
 
 LOCAL_CFLAGS += -Werror
-LOCAL_CFLAGS += -DANDROID_NDK
+
+# This should be set via an environment var
+# ANDROID_VCPKG_DIR := C:/msys64/home/hyperlogic/code/vcpkg/installed/arm64-android
 
 LOCAL_C_INCLUDES := \
                     $(LOCAL_PATH)/../../../../../../../src/ \
 					$(LOCAL_PATH)/../../../../../1stParty/OVR/Include \
 					$(LOCAL_PATH)/../../../../../OpenXr/Include \
 					$(LOCAL_PATH)/../../../../../3rdParty/khronos/openxr/OpenXR-SDK/include/ \
-					$(LOCAL_PATH)/../../../../../3rdParty/khronos/openxr/OpenXR-SDK/src/common/
+					$(LOCAL_PATH)/../../../../../3rdParty/khronos/openxr/OpenXR-SDK/src/common/ \
+					$(ANDROID_VCPKG_DIR)/include \
 
-# 
-LOCAL_SRC_FILES	:= 	../../../../../../../src/android_main.cpp \
-					../../../../../../../src/core/log.cpp \
+LOCAL_SRC_PATH := ../../../../../../../src
+LOCAL_SRC_FILES	:= 	$(LOCAL_SRC_PATH)/core/log.cpp \
+					$(LOCAL_SRC_PATH)/core/util.cpp \
+					$(LOCAL_SRC_PATH)/core/xrbuddy.cpp \
+					$(LOCAL_SRC_PATH)/android_main.cpp \
 
 LOCAL_LDLIBS := -lEGL -lGLESv3 -landroid -llog
 

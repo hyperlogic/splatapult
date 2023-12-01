@@ -4,8 +4,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-
-#include <SDL.h>
 #include <string>
 
 // returns true on success, false on failure
@@ -68,3 +66,4 @@ void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLef
                       const float tanAngleRight, const float tanAngleUp, float const tanAngleDown,
                       const float nearZ, const float farZ);
 
+void StrCpy_s(char* dest, size_t destsz, const char* src);

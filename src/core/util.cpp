@@ -7,10 +7,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
 
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
+#include <SDL.h>
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
+#else
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#endif
 
 #include "log.h"
 
@@ -453,4 +461,13 @@ void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLef
         m[11] = -1;
         m[15] = 0;
     }
+}
+
+void StrCpy_s(char* dest, size_t destsz, const char* src)
+{
+#ifndef __ANDROID__
+    strcpy_s(dest, destsz, src);
+#else
+    strcpy(dest, src);
+#endif
 }

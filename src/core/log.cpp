@@ -2,14 +2,14 @@
 #include <cstdio>
 #include <cstdarg>
 
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
 #include <android/log.h>
 #endif
 
 static Log::LogLevel level = Log::Verbose;
 static std::string appName = "Core";
 
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
 static int log_vprintf(int prio, const char *fmt, va_list args)
 {
     char buffer[4096];
@@ -30,7 +30,7 @@ static int log_vprintf(const char *fmt, va_list args)
 
 int Log::printf(const char *fmt, ...)
 {
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
     return 0;
 #else
     char buffer[4096];
@@ -63,7 +63,7 @@ void Log::V(const char *fmt, ...)
         Log::printf("[VERBOSE] ");
         va_list args;
         va_start(args, fmt);
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
         log_vprintf(ANDROID_LOG_VERBOSE, fmt, args);
 #else
         log_vprintf(fmt, args);
@@ -79,7 +79,7 @@ void Log::D(const char *fmt, ...)
         Log::printf("[DEBUG] ");
         va_list args;
         va_start(args, fmt);
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
         log_vprintf(ANDROID_LOG_DEBUG, fmt, args);
 #else
         log_vprintf(fmt, args);
@@ -95,7 +95,7 @@ void Log::I(const char *fmt, ...)
         Log::printf("[INFO] ");
         va_list args;
         va_start(args, fmt);
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
         log_vprintf(ANDROID_LOG_INFO, fmt, args);
 #else
         log_vprintf(fmt, args);
@@ -111,7 +111,7 @@ void Log::W(const char *fmt, ...)
         Log::printf("[WARNING] ");
         va_list args;
         va_start(args, fmt);
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
         log_vprintf(ANDROID_LOG_WARN, fmt, args);
 #else
         log_vprintf(fmt, args);
@@ -127,7 +127,7 @@ void Log::E(const char *fmt, ...)
         Log::printf("[ERROR] ");
         va_list args;
         va_start(args, fmt);
-#ifdef ANDROID_NDK
+#ifdef __ANDROID__
         log_vprintf(ANDROID_LOG_ERROR, fmt, args);
 #else
         log_vprintf(fmt, args);
