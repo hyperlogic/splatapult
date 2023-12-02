@@ -66,6 +66,7 @@ struct AppContext
         EGLDisplay display;
         EGLConfig config;
         EGLContext context;
+        EGLSurface tinySurface;
     };
 
     EGLInfo egl;
@@ -135,7 +136,7 @@ static void app_handle_cmd(struct android_app* androidApp, int32_t cmd)
  */
 void android_main(struct android_app* androidApp)
 {
-    Log::SetAppName("splataplut");
+    Log::SetAppName("splatapult");
 
     Log::D("----------------------------------------------------------------\n");
     Log::D("android_app_entry()\n");
@@ -208,6 +209,50 @@ void android_main(struct android_app* androidApp)
     if (ctx.egl.context == EGL_NO_CONTEXT)
     {
         Log::E("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
+        return;
+    }
+
+    const EGLint surfaceAttribs[] = {EGL_WIDTH, 16, EGL_HEIGHT, 16, EGL_NONE};
+    ctx.egl.tinySurface = eglCreatePbufferSurface(ctx.egl.display, ctx.egl.config, surfaceAttribs);
+    if (ctx.egl.tinySurface == EGL_NO_SURFACE)
+    {
+        Log::E("eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
+        eglDestroyContext(ctx.egl.display, ctx.egl.context);
+        ctx.egl.context = EGL_NO_CONTEXT;
+        return;
+    }
+
+    if (eglMakeCurrent(ctx.egl.display, ctx.egl.tinySurface, ctx.egl.tinySurface, ctx.egl.context) == EGL_FALSE)
+    {
+        Log::E("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
+        eglDestroySurface(ctx.egl.display, ctx.egl.tinySurface);
+        eglDestroyContext(ctx.egl.display, ctx.egl.context);
+        ctx.egl.context = EGL_NO_CONTEXT;
+        return;
+    }
+
+    PFN_xrInitializeLoaderKHR xrInitializeLoaderKHR;
+    xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", (PFN_xrVoidFunction*)&xrInitializeLoaderKHR);
+    if (xrInitializeLoaderKHR != NULL)
+    {
+        XrLoaderInitInfoAndroidKHR loaderInitializeInfoAndroid;
+        memset((void*)&loaderInitializeInfoAndroid, 0, sizeof(XrLoaderInitInfoAndroidKHR));
+        loaderInitializeInfoAndroid.type = XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR;
+        loaderInitializeInfoAndroid.applicationVM = androidApp->activity->vm;
+        loaderInitializeInfoAndroid.applicationContext = androidApp->activity->clazz;
+        xrInitializeLoaderKHR((XrLoaderInitInfoBaseHeaderKHR*)&loaderInitializeInfoAndroid);
+    }
+
+    const float Z_NEAR = 0.1f;
+    const float Z_FAR = 1000.0f;
+    XrBuddy xrBuddy(glm::vec2(Z_NEAR, Z_FAR));
+    XrBuddy::InitContext xrBuddyContext;
+    xrBuddyContext.display = ctx.egl.display;
+    xrBuddyContext.config = ctx.egl.config;
+    xrBuddyContext.context = ctx.egl.context;
+    if (!xrBuddy.Init(xrBuddyContext))
+    {
+        Log::E("XrBuddy::Init() Failed!\n");
         return;
     }
 

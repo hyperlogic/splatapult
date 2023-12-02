@@ -232,7 +232,8 @@ bool App::Init()
     if (opt.vrMode)
     {
         xrBuddy = std::make_shared<XrBuddy>(glm::vec2(Z_NEAR, Z_FAR));
-        if (!xrBuddy->Init())
+        XrBuddy::InitContext xrBuddyContext;
+        if (!xrBuddy->Init(xrBuddyContext))
         {
             Log::E("OpenXR Init failed\n");
             return false;

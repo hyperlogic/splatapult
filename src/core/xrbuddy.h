@@ -33,7 +33,20 @@ class XrBuddy
 public:
     XrBuddy(const glm::vec2& nearFarIn);
 
-    bool Init();
+#if defined(XR_USE_GRAPHICS_API_OPENGL)
+    struct InitContext
+    {
+    };
+#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    struct InitContext
+    {
+        EGLDisplay display;
+        EGLConfig config;
+        EGLContext context;
+    };
+#endif
+
+    bool Init(const InitContext& context);
     bool PollEvents();
     bool SyncInput();
 

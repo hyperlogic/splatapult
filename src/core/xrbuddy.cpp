@@ -68,12 +68,14 @@ static bool CheckResult(XrInstance instance, XrResult result, const char* str)
 static bool EnumerateExtensions(std::vector<XrExtensionProperties>& extensionProps)
 {
     XrResult result;
+
     uint32_t extensionCount = 0;
     result = xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
     if (!CheckResult(NULL, result, "xrEnumerateInstanceExtensionProperties failed"))
     {
         return false;
     }
+
     extensionProps.resize(extensionCount);
     for (uint32_t i = 0; i < extensionCount; i++) {
         extensionProps[i].type = XR_TYPE_EXTENSION_PROPERTIES;
@@ -352,7 +354,7 @@ static bool SetColorSpace(XrInstance instance, XrSession session, XrColorSpaceFB
     return true;
 }
 
-static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& session)
+static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& session, const XrBuddy::InitContext& context)
 {
     XrResult result;
 
@@ -405,12 +407,6 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     glBinding.hDC = wglGetCurrentDC();
     glBinding.hGLRC = wglGetCurrentContext();
 
-    XrSessionCreateInfo sci;
-    memset((void*)&sci, 0, sizeof(XrSessionCreateInfo));
-    sci.type = XR_TYPE_SESSION_CREATE_INFO;
-    sci.next = &glBinding;
-    sci.systemId = systemId;
-
 #elif defined (XR_USE_GRAPHICS_API_OPENGL_ES)
     XrGraphicsRequirementsOpenGLESKHR reqs;
     memset((void*)&reqs, 0, sizeof(XrGraphicsRequirementsOpenGLESKHR));
@@ -423,12 +419,49 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
         return false;
     }
 
-    // AJT: TODO this should happen in android_main.cpp
-    //app.Egl.CreateContext(nullptr);
+    result = pfnGetOpenGLESGraphicsRequirementsKHR(instance, systemId, &reqs);
+    if (!CheckResult(instance, result, "GetOpenGLGraphicsRequirementsPKR"))
+    {
+        return false;
+    }
+
+    GLint major = 0;
+    GLint minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    const XrVersion desiredApiVersion = XR_MAKE_VERSION(major, minor, 0);
+
+    bool printVersion = false;
+    if (printVersion || printAll)
+    {
+        Log::D("current OpenGLES version: %d.%d.%d\n", XR_VERSION_MAJOR(desiredApiVersion),
+               XR_VERSION_MINOR(desiredApiVersion), XR_VERSION_PATCH(desiredApiVersion));
+        Log::D("minimum OpenGLES version: %d.%d.%d\n", XR_VERSION_MAJOR(reqs.minApiVersionSupported),
+               XR_VERSION_MINOR(reqs.minApiVersionSupported), XR_VERSION_PATCH(reqs.minApiVersionSupported));
+    }
+
+    if (reqs.minApiVersionSupported > desiredApiVersion)
+    {
+        Log::E("Runtime does not support desired Graphics API and/or version\n");
+        return false;
+    }
+
+    XrGraphicsBindingOpenGLESAndroidKHR glBinding;
+    memset((void*)&glBinding, 0, sizeof(XrGraphicsBindingOpenGLESAndroidKHR));
+    glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR;
+    glBinding.next = NULL;
+    glBinding.display = context.display;
+    glBinding.config = context.config;
+    glBinding.context = context.context;
+
+#endif
 
     XrSessionCreateInfo sci;
     memset((void*)&sci, 0, sizeof(XrSessionCreateInfo));
-#endif
+    sci.type = XR_TYPE_SESSION_CREATE_INFO;
+    sci.next = &glBinding;
+    sci.createFlags = 0;
+    sci.systemId = systemId;
 
     result = xrCreateSession(instance, &sci, &session);
     if (!CheckResult(instance, result, "xrCreateSession"))
@@ -823,8 +856,42 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         return false;
     }
 
-    // TODO: pick a format.
-    int64_t swapchainFormatToUse = swapchainFormats[0];
+    if (printAll)
+    {
+        Log::D("xrEnumerateSwapchainFormats, count = %d\n", swapchainFormatCount);
+        for (uint32_t i = 0; i < swapchainFormatCount; i++)
+        {
+            Log::D("    format[%d] = 0x%x\n", i, swapchainFormats[i]);
+        }
+    }
+
+    uint64_t desiredFormat = GL_RGBA8;
+    //uint64_t desiredFormat = GL_SRGB8_ALPHA8;
+    uint32_t foundFormatIndex = swapchainFormatCount;
+    for (uint32_t i = 0; i < swapchainFormatCount; i++)
+    {
+        if (swapchainFormats[i] == desiredFormat)
+        {
+            foundFormatIndex = i;
+            break;
+        }
+        i++;
+    }
+
+    int64_t format;
+    if (foundFormatIndex == swapchainFormatCount)
+    {
+        Log::W("could not find desired swapchain format 0x%x!\n", desiredFormat);
+        format = swapchainFormats[0];
+    }
+    else
+    {
+        if (printAll)
+        {
+            Log::D("found desiredFormat 0x%x!\n", desiredFormat);
+        }
+        format = swapchainFormats[foundFormatIndex];
+    }
 
     std::vector<uint32_t> swapchainLengths(viewConfigs.size());
 
@@ -838,7 +905,7 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         sci.next = NULL;
         sci.createFlags = 0;
         sci.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-        sci.format = swapchainFormatToUse;
+        sci.format = format;
         sci.sampleCount = 1;
         sci.width = viewConfigs[i].recommendedImageRectWidth;
         sci.height = viewConfigs[i].recommendedImageRectHeight;
@@ -857,11 +924,17 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         swapchains[i].width = sci.width;
         swapchains[i].height = sci.height;
 
-        result = xrEnumerateSwapchainImages(swapchains[i].handle, 0, swapchainLengths.data() + i, NULL);
+        Log::D("AJT: swapchains[%d].handle = %d\n", i, swapchainHandle);
+        Log::D("AJT: swapchains[%d].width = %d\n", i, sci.width);
+        Log::D("AJT: swapchains[%d].height = %d\n", i, sci.height);
+
+        uint32_t length;
+        result = xrEnumerateSwapchainImages(swapchains[i].handle, 0, &length, nullptr);
         if (!CheckResult(instance, result, "xrEnumerateSwapchainImages"))
         {
             return false;
         }
+        swapchainLengths[i] = length;
     }
 
     swapchainImages.resize(viewConfigs.size());
@@ -969,14 +1042,14 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
     constructorSucceded = true;
 }
 
-bool XrBuddy::Init()
+bool XrBuddy::Init(const InitContext& context)
 {
     if (!constructorSucceded)
     {
         return false;
     }
 
-    if (!CreateSession(instance, systemId, session))
+    if (!CreateSession(instance, systemId, session, context))
     {
         return false;
     }
