@@ -113,7 +113,7 @@ static bool ExtensionSupported(const std::vector<XrExtensionProperties>& extensi
     return supported;
 }
 
-static bool EnumerateLayers(std::vector<XrApiLayerProperties>& layerProps)
+static bool EnumerateApiLayers(std::vector<XrApiLayerProperties>& layerProps)
 {
     uint32_t layerCount;
     XrResult result = xrEnumerateApiLayerProperties(0, &layerCount, NULL);
@@ -136,7 +136,7 @@ static bool EnumerateLayers(std::vector<XrApiLayerProperties>& layerProps)
     bool printLayers = false;
     if (printLayers || printAll)
     {
-        Log::D("%d layers:\n", layerCount);
+        Log::D("%d XrApiLayerProperties:\n", layerCount);
         for (uint32_t i = 0; i < layerCount; i++)
         {
             Log::D("    %s, %s\n", layerProps[i].layerName, layerProps[i].description);
@@ -913,7 +913,7 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         sci.arraySize = 1;
         sci.mipCount = 1;
 
-        XrSwapchain swapchainHandle;
+        XrSwapchain swapchainHandle = XR_NULL_HANDLE;
         result = xrCreateSwapchain(session, &sci, &swapchainHandle);
         if (!CheckResult(instance, result, "xrCreateSwapchain"))
         {
@@ -923,10 +923,6 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         swapchains[i].handle = swapchainHandle;
         swapchains[i].width = sci.width;
         swapchains[i].height = sci.height;
-
-        Log::D("AJT: swapchains[%d].handle = %d\n", i, swapchainHandle);
-        Log::D("AJT: swapchains[%d].width = %d\n", i, sci.width);
-        Log::D("AJT: swapchains[%d].height = %d\n", i, sci.height);
 
         uint32_t length;
         result = xrEnumerateSwapchainImages(swapchains[i].handle, 0, &length, nullptr);
@@ -943,7 +939,11 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         swapchainImages[i].resize(swapchainLengths[i]);
         for (uint32_t j = 0; j < swapchainLengths[i]; j++)
         {
+#if defined(XR_USE_GRAPHICS_API_OPENGL)
             swapchainImages[i][j].type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
+#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+            swapchainImages[i][j].type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR;
+#endif
             swapchainImages[i][j].next = NULL;
         }
 
@@ -976,6 +976,7 @@ static GLuint CreateDepthTexture(GLuint colorTexture, GLint width, GLint height)
 XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
 {
     nearFar = nearFarIn;
+
 #ifdef XR_USE_GRAPHICS_API_OPENGL
     std::vector<const char*> requiredExtensionVec = {XR_KHR_OPENGL_ENABLE_EXTENSION_NAME};
 #elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
@@ -1007,7 +1008,7 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
         }
     }
 
-    if (!EnumerateLayers(layerProps))
+    if (!EnumerateApiLayers(layerProps))
     {
         return;
     }
