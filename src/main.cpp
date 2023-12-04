@@ -48,7 +48,8 @@ int SDLCALL Watch(void *userdata, SDL_Event* event)
 int main(int argc, char *argv[])
 {
     Log::SetAppName("splataplut");
-    App app;
+    MainContext mainContext;
+    App app(mainContext);
     if (!app.ParseArguments(argc, argv))
     {
         Log::E("App::ParseArguments failed!\n");

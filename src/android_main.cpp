@@ -9,6 +9,7 @@
 
 #include "core/log.h"
 #include "core/xrbuddy.h"
+#include "maincontext.h"
 
 /*
 static const int CPU_LEVEL = 2;
@@ -231,26 +232,15 @@ void android_main(struct android_app* androidApp)
         return;
     }
 
-    PFN_xrInitializeLoaderKHR xrInitializeLoaderKHR;
-    xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", (PFN_xrVoidFunction*)&xrInitializeLoaderKHR);
-    if (xrInitializeLoaderKHR != NULL)
-    {
-        XrLoaderInitInfoAndroidKHR loaderInitializeInfoAndroid;
-        memset((void*)&loaderInitializeInfoAndroid, 0, sizeof(XrLoaderInitInfoAndroidKHR));
-        loaderInitializeInfoAndroid.type = XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR;
-        loaderInitializeInfoAndroid.applicationVM = androidApp->activity->vm;
-        loaderInitializeInfoAndroid.applicationContext = androidApp->activity->clazz;
-        xrInitializeLoaderKHR((XrLoaderInitInfoBaseHeaderKHR*)&loaderInitializeInfoAndroid);
-    }
-
+    MainContext mainContext;
+    mainContext.display = ctx.egl.display;
+    mainContext.config = ctx.egl.config;
+    mainContext.context = ctx.egl.context;
+    mainContext.androidApp = androidApp;
     const float Z_NEAR = 0.1f;
     const float Z_FAR = 1000.0f;
-    XrBuddy xrBuddy(glm::vec2(Z_NEAR, Z_FAR));
-    XrBuddy::InitContext xrBuddyContext;
-    xrBuddyContext.display = ctx.egl.display;
-    xrBuddyContext.config = ctx.egl.config;
-    xrBuddyContext.context = ctx.egl.context;
-    if (!xrBuddy.Init(xrBuddyContext))
+    XrBuddy xrBuddy(mainContext, glm::vec2(Z_NEAR, Z_FAR));
+    if (!xrBuddy.Init())
     {
         Log::E("XrBuddy::Init() Failed!\n");
         return;

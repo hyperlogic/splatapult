@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "maincontext.h"
+
 class CamerasConfig;
 class DebugRenderer;
 class FlyCam;
@@ -23,7 +25,7 @@ union SDL_Event;
 class App
 {
 public:
-    App();
+    App(const MainContext& mainContextIn);
     bool ParseArguments(int argc, char* argv[]);
     bool Init();
     bool ShouldQuit() const { return shouldQuit; }
@@ -45,6 +47,7 @@ protected:
         bool drawFps = true;
     };
 
+    MainContext mainContext;
     Options opt;
     std::string dataDir;
     std::shared_ptr<DebugRenderer> debugRenderer;

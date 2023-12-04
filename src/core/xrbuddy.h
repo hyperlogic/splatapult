@@ -18,6 +18,7 @@
 #include <GLES3/gl3.h>
 #include <GLES3/gl3ext.h>
 #include <jni.h>
+#include <android_native_app_glue.h>
 #else
 #define XR_USE_PLATFORM_XLIB 1
 #define XR_USE_GRAPHICS_API_OPENGL 1
@@ -28,25 +29,14 @@
 
 #include <glm/glm.hpp>
 
+#include "maincontext.h"
+
 class XrBuddy
 {
 public:
-    XrBuddy(const glm::vec2& nearFarIn);
+    XrBuddy(const MainContext& mainContextIn, const glm::vec2& nearFarIn);
 
-#if defined(XR_USE_GRAPHICS_API_OPENGL)
-    struct InitContext
-    {
-    };
-#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    struct InitContext
-    {
-        EGLDisplay display;
-        EGLConfig config;
-        EGLContext context;
-    };
-#endif
-
-    bool Init(const InitContext& context);
+    bool Init();
     bool PollEvents();
     bool SyncInput();
 
@@ -117,6 +107,7 @@ protected:
                     uint32_t colorTexture, uint32_t depthTexture, int32_t viewNum);
 
     bool constructorSucceded = false;
+    MainContext mainContext;
     XrSessionState state = XR_SESSION_STATE_UNKNOWN;
     std::vector<XrExtensionProperties> extensionProps;
     std::vector<XrApiLayerProperties> layerProps;

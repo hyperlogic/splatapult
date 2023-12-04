@@ -138,8 +138,9 @@ static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataD
     return gaussianCloud;
 }
 
-App::App()
+App::App(const MainContext& mainContextIn)
 {
+    mainContext = mainContextIn;
     cameraIndex = 0;
     shouldQuit = false;
     virtualLeftStick = glm::vec2(0.0f, 0.0f);
@@ -231,9 +232,8 @@ bool App::Init()
 
     if (opt.vrMode)
     {
-        xrBuddy = std::make_shared<XrBuddy>(glm::vec2(Z_NEAR, Z_FAR));
-        XrBuddy::InitContext xrBuddyContext;
-        if (!xrBuddy->Init(xrBuddyContext))
+        xrBuddy = std::make_shared<XrBuddy>(mainContext, glm::vec2(Z_NEAR, Z_FAR));
+        if (!xrBuddy->Init())
         {
             Log::E("OpenXR Init failed\n");
             return false;

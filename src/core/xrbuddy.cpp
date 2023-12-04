@@ -354,7 +354,7 @@ static bool SetColorSpace(XrInstance instance, XrSession session, XrColorSpaceFB
     return true;
 }
 
-static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& session, const XrBuddy::InitContext& context)
+static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& session, const MainContext& mainContext)
 {
     XrResult result;
 
@@ -450,9 +450,9 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     memset((void*)&glBinding, 0, sizeof(XrGraphicsBindingOpenGLESAndroidKHR));
     glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR;
     glBinding.next = NULL;
-    glBinding.display = context.display;
-    glBinding.config = context.config;
-    glBinding.context = context.context;
+    glBinding.display = mainContext.display;
+    glBinding.config = mainContext.config;
+    glBinding.context = mainContext.context;
 
 #endif
 
@@ -973,8 +973,9 @@ static GLuint CreateDepthTexture(GLuint colorTexture, GLint width, GLint height)
     return depthTexture;
 }
 
-XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
+XrBuddy::XrBuddy(const MainContext& mainContextIn, const glm::vec2& nearFarIn)
 {
+    mainContext = mainContextIn;
     nearFar = nearFarIn;
 
 #ifdef XR_USE_GRAPHICS_API_OPENGL
@@ -984,6 +985,20 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
 #endif
     std::vector<const char*> optionalExtensionVec = {XR_FB_COLOR_SPACE_EXTENSION_NAME};
     std::vector<const char*> extensionVec;
+
+#ifdef __ANDROID__
+    PFN_xrInitializeLoaderKHR xrInitializeLoaderKHR;
+    xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", (PFN_xrVoidFunction*)&xrInitializeLoaderKHR);
+    if (xrInitializeLoaderKHR != NULL)
+    {
+        XrLoaderInitInfoAndroidKHR loaderInitializeInfoAndroid;
+        memset((void*)&loaderInitializeInfoAndroid, 0, sizeof(XrLoaderInitInfoAndroidKHR));
+        loaderInitializeInfoAndroid.type = XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR;
+        loaderInitializeInfoAndroid.applicationVM = mainContext.androidApp->activity->vm;
+        loaderInitializeInfoAndroid.applicationContext = mainContext.androidApp->activity->clazz;
+        xrInitializeLoaderKHR((XrLoaderInitInfoBaseHeaderKHR*)&loaderInitializeInfoAndroid);
+    }
+#endif
 
     if (!EnumerateExtensions(extensionProps))
     {
@@ -1043,14 +1058,14 @@ XrBuddy::XrBuddy(const glm::vec2& nearFarIn)
     constructorSucceded = true;
 }
 
-bool XrBuddy::Init(const InitContext& context)
+bool XrBuddy::Init()
 {
     if (!constructorSucceded)
     {
         return false;
     }
 
-    if (!CreateSession(instance, systemId, session, context))
+    if (!CreateSession(instance, systemId, session, mainContext))
     {
         return false;
     }
