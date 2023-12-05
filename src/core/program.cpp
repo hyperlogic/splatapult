@@ -5,10 +5,18 @@
 #include <memory>
 #include <sstream>
 
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#include <GLES3/gl32.h>
+#else
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
+#endif
 
 #include "log.h"
 #include "util.h"

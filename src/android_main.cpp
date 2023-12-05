@@ -9,7 +9,7 @@
 
 #include "core/log.h"
 #include "core/xrbuddy.h"
-#include "maincontext.h"
+#include "app.h"
 
 /*
 static const int CPU_LEVEL = 2;
@@ -200,11 +200,13 @@ void android_main(struct android_app* androidApp)
             break;
         }
     }
+
     if (ctx.egl.config == 0)
     {
         Log::E("eglChooseConfig() failed: %s\n", EglErrorString(eglGetError()));
         return;
     }
+
     EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
     ctx.egl.context = eglCreateContext(ctx.egl.display, ctx.egl.config, EGL_NO_CONTEXT, contextAttribs);
     if (ctx.egl.context == EGL_NO_CONTEXT)
@@ -237,40 +239,58 @@ void android_main(struct android_app* androidApp)
     mainContext.config = ctx.egl.config;
     mainContext.context = ctx.egl.context;
     mainContext.androidApp = androidApp;
-    const float Z_NEAR = 0.1f;
-    const float Z_FAR = 1000.0f;
-    XrBuddy xrBuddy(mainContext, glm::vec2(Z_NEAR, Z_FAR));
-    if (!xrBuddy.Init())
+
+    int argc = 4;
+    const char* argv[] = {"splataplut", "-v", "-d", "data_dir"};
+    App app(mainContext);
+    if (!app.ParseArguments(argc, argv))
     {
-        Log::E("XrBuddy::Init() Failed!\n");
+        Log::E("App::ParseArguments failed!\n");
         return;
     }
 
     while (androidApp->destroyRequested == 0)
     {
         // Read all pending events.
-        for (;;) {
+        for (;;)
+        {
             int events;
             struct android_poll_source* source;
             // If the timeout is zero, returns immediately without blocking.
             // If the timeout is negative, waits indefinitely until an event appears.
-            const int timeoutMilliseconds = (ctx.resumed == false && ctx.sessionActive == false &&
-                                             androidApp->destroyRequested == 0)
-                ? -1
-                : 0;
-            if (ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void**)&source) < 0) {
+            int timeoutMilliseconds = 0;
+            if (ctx.resumed == false && ctx.sessionActive == false && androidApp->destroyRequested == 0)
+            {
+                timeoutMilliseconds = -1;
+            }
+
+            if (ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void**)&source) < 0)
+            {
                 break;
             }
 
             // Process this event.
-            if (source != NULL) {
+            if (source != NULL)
+            {
                 source->process(androidApp, source);
             }
         }
 
-        // xr stuff goes here...
+        float dt = 1.0f / 72.0f;
+        if (!app.Process(dt))
+        {
+            Log::E("App::Process failed!\n");
+            break;
+        }
+
+        if (!app.Render(dt, glm::ivec2(0.0f, 0.0f)))
+        {
+            Log::E("App::Render failed!\n");
+            return;
+        }
     }
 
+    // TODO: DESTROY STUFF
     Log::D("Finished!\n");
 
     (*androidApp->activity->vm).DetachCurrentThread();

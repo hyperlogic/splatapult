@@ -7,6 +7,12 @@
 
 class VertexArrayObject;
 
+#ifdef __ANDROID__
+// AJT: ANDROID: TODO: HACK TO WORK AROUND glBufferStorage
+#define GL_DYNAMIC_STORAGE_BIT            0x0100
+#define GL_MAP_READ_BIT                   0x0001
+#endif
+
 class BufferObject
 {
 	friend class VertexArrayObject;

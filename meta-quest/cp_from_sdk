@@ -1,0 +1,2 @@
+rm -rf splatapult
+cp -r ovr_openxr_mobile_sdk_59.0/XrSamples/splatapult splatapult

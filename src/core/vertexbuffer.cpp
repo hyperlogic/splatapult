@@ -1,12 +1,51 @@
 #include "vertexbuffer.h"
 
 #include <cassert>
+
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#else
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
+#endif
 
 #include "util.h"
+
+#ifdef __ANDROID__
+static void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfield flags)
+{
+	// AJT: ANDROID: TODO not sure if this is correct.
+	GLenum usage = 0;
+	if (flags & GL_DYNAMIC_STORAGE_BIT)
+	{
+		if (flags & GL_MAP_READ_BIT)
+		{
+			usage = GL_DYNAMIC_READ;
+		}
+		else
+		{
+			usage = GL_DYNAMIC_DRAW;
+		}
+	}
+	else
+	{
+		if (flags & GL_MAP_READ_BIT)
+		{
+			usage = GL_STATIC_READ;
+		}
+		else
+		{
+			usage = GL_STATIC_DRAW;
+		}
+	}
+	glBufferData(target, size, data, usage);
+}
+#endif
 
 BufferObject::BufferObject(int targetIn, const std::vector<float>& data, unsigned int flags)
 {
@@ -116,10 +155,12 @@ void BufferObject::Update(const std::vector<uint32_t>& data)
 void BufferObject::Read(std::vector<uint32_t>& data)
 {
 	Bind();
-	void* rawBuffer = glMapBuffer(target, GL_READ_ONLY);
+	size_t bufferSize = sizeof(uint32_t) * data.size();
+	//void* rawBuffer = glMapBuffer(target, GL_READ_ONLY);
+	void* rawBuffer = glMapBufferRange(target, 0, bufferSize, GL_MAP_READ_BIT);
 	if (rawBuffer)
 	{
-		memcpy((void*)data.data(), rawBuffer, sizeof(uint32_t) * data.size());
+		memcpy((void*)data.data(), rawBuffer, bufferSize);
 	}
 	glUnmapBuffer(target);
 	Unbind();

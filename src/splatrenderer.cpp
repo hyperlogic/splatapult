@@ -1,8 +1,22 @@
 #include "splatrenderer.h"
 
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#else
 #include <GL/glew.h>
+#endif
+
 #include <glm/gtc/matrix_transform.hpp>
+
+#ifndef __ANDROID__
 #include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
 
 #include "core/image.h"
 #include "core/log.h"

@@ -26,7 +26,7 @@ class App
 {
 public:
     App(const MainContext& mainContextIn);
-    bool ParseArguments(int argc, char* argv[]);
+    bool ParseArguments(int argc, const char* argv[]);
     bool Init();
     bool ShouldQuit() const { return shouldQuit; }
     bool IsFullscreen() const { return opt.fullscreen; }

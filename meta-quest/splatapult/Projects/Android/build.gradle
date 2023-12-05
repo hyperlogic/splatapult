@@ -2,7 +2,28 @@
 apply plugin: 'com.android.application'
 apply from: "${rootProject.projectDir}/VrApp.gradle"
 
+task copyFiles(type: Copy) {
+  copy {
+    from '../../../../../../shader'
+    into '../../assets/shader'
+  }
+  copy {
+    from '../../../../../../font'
+    into '../../assets/font'
+  }
+  copy {
+    from '../../../../../../texture'
+    into '../../assets/texture'
+  }
+  copy {
+    from '../../../../../../data/sh_test'
+    into '../../assets/data/sh_test'
+  }
+}
 
+gradle.projectsEvaluated {
+  preBuild.dependsOn(copyFiles)
+}
 
 android {
   // This is the name of the generated apk file, which will have

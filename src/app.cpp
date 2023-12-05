@@ -1,8 +1,12 @@
 #include "app.h"
 
+#ifndef __ANDROID__
 #define USE_SDL
-
 #include <GL/glew.h>
+#else
+#include <sys/stat.h>
+#endif
+
 #ifdef USE_SDL
 #include <SDL.h>
 #endif
@@ -54,9 +58,12 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 
     glEnable(GL_DEPTH_TEST);
 
+#ifndef __ANDROID__
+    // AJT: ANDROID: TODO: implement this in fragment shader, for OpenGLES I guess.
     // enable alpha test
     glEnable(GL_ALPHA_TEST);
     glAlphaFunc(GL_GREATER, 1.0f / 256.0f);
+#endif
 }
 
 // AJT: TODO FIX RESIZE
@@ -148,7 +155,7 @@ App::App(const MainContext& mainContextIn)
     virtualRoll = 0.0f;
 }
 
-bool App::ParseArguments(int argc, char* argv[])
+bool App::ParseArguments(int argc, const char* argv[])
 {
     // parse arguments
     if (argc < 2)
@@ -199,6 +206,9 @@ bool App::ParseArguments(int argc, char* argv[])
 bool App::Init()
 {
     bool isFramebufferSRGBEnabled = opt.vrMode;
+
+#ifndef __ANDROID__
+    // AJT: ANDROID: TODO: make sure colors are accurate on android.
     if (isFramebufferSRGBEnabled)
     {
         // necessary for proper color conversion
@@ -215,6 +225,7 @@ bool App::Init()
         Log::E("Error: %s\n", glewGetErrorString(err));
         return false;
     }
+#endif
 
     debugRenderer = std::make_shared<DebugRenderer>();
     if (!debugRenderer->Init())
@@ -362,6 +373,7 @@ bool App::Init()
         });
     }
 
+#ifdef USE_SDL
     inputBuddy = std::make_shared<InputBuddy>();
 
     inputBuddy->OnQuit([this]()
@@ -377,7 +389,6 @@ bool App::Init()
         Resize(newWidth, newHeight);
     });
 
-#ifdef USE_SDL
     inputBuddy->OnKey(SDLK_ESCAPE, [this](bool down, uint16_t mod)
     {
         shouldQuit = true;
@@ -495,7 +506,9 @@ bool App::Init()
 
 void App::ProcessEvent(const SDL_Event& event)
 {
+#ifdef USE_SDL
     inputBuddy->ProcessEvent(event);
+#endif
 }
 
 void App::UpdateFps(float fps)
@@ -546,7 +559,7 @@ bool App::Process(float dt)
         xrBuddy->GetActionBool("r_squeeze_click", &buttonState.rightGrip, &valid, &changed);
         magicCarpet->Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
     }
-
+#ifdef USE_SDL
     InputBuddy::Joypad joypad = inputBuddy->GetJoypad();
     float roll = 0.0f;
     roll -= joypad.lb ? 1.0f : 0.0f;
@@ -554,6 +567,7 @@ bool App::Process(float dt)
     flyCam->Process(joypad.leftStick + virtualLeftStick,
                     joypad.rightStick + virtualRightStick,
                     roll + virtualRoll, dt);
+#endif
 
     return true;
 }
@@ -577,7 +591,7 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-
+#ifndef __ANDROID__
         // render desktop.
         Clear(windowSize, true);
         RenderDesktop(windowSize, desktopProgram, xrBuddy->GetColorTexture());
@@ -589,6 +603,7 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
             glm::mat4 projMat = glm::perspective(FOVY, (float)width / (float)height, Z_NEAR, Z_FAR);
             textRenderer->Render(glm::mat4(1.0f), projMat, viewport, nearFar);
         }
+#endif
     }
     else
     {

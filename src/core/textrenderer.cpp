@@ -1,7 +1,17 @@
 #include "textrenderer.h"
 
 #include <fstream>
+
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#include <GLES3/gl32.h>
+#else
 #include <GL/glew.h>
+#endif
+
 #include <nlohmann/json.hpp>
 
 #include "core/image.h"

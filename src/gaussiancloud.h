@@ -30,8 +30,8 @@ public:
         // See 3d Gaussian Splat paper for more info
         glm::mat3 ComputeCovMat() const
         {
-            glm::quat rot(rot[0], rot[1], rot[2], rot[3]);
-            glm::mat3 R(glm::normalize(rot));
+            glm::quat q(rot[0], rot[1], rot[2], rot[3]);
+            glm::mat3 R(glm::normalize(q));
             glm::mat3 S(glm::vec3(expf(scale[0]), 0.0f, 0.0f),
                         glm::vec3(0.0f, expf(scale[1]), 0.0f),
                         glm::vec3(0.0f, 0.0f, expf(scale[2])));
