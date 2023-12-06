@@ -320,15 +320,20 @@ void PrintQuat(const glm::quat& q, const std::string& name)
 }
 
 #ifdef SHIPPING
-static const std::string ROOT_PATH("");
+static std::string rootPath("");
 #else
 // enables us to run from the build/Debug dir
-static const std::string ROOT_PATH("../../");
+static std::string rootPath("../../");
 #endif
 
 const std::string& GetRootPath()
 {
-    return ROOT_PATH;
+    return rootPath;
+}
+
+void SetRootPath(const std::string& rootPathIn)
+{
+    rootPath = rootPathIn;
 }
 
 bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm::vec3& aabbMax)

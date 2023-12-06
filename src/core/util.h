@@ -52,6 +52,7 @@ void PrintVec(const glm::vec2& v2, const std::string& name);
 void PrintQuat(const glm::quat& q, const std::string& name);
 
 const std::string& GetRootPath();
+void SetRootPath(const std::string& rootPathIn);
 
 bool PointInsideAABB(const glm::vec3& point, const glm::vec3& aabbMin, const glm::vec3& aabbMax);
 float LinearToSRGB(float linear);

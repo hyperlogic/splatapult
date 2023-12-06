@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     Log::SetAppName("splataplut");
     MainContext mainContext;
     App app(mainContext);
-    if (!app.ParseArguments(argc, argv))
+    if (!app.ParseArguments(argc, (const char**)argv))
     {
         Log::E("App::ParseArguments failed!\n");
         return 1;
