@@ -2,7 +2,7 @@
 // fullbright textured mesh
 //
 
-#version 460
+/*%%HEADER%%*/
 
 uniform mat4 modelViewProjMat;
 

@@ -103,6 +103,11 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
 
 Program::Program() : program(0), vertShader(0), geomShader(0), fragShader(0)
 {
+#ifndef __ANDROID__
+    AddMacro("HEADER", "#version 460");
+#else
+    AddMacro("HEADER", "#version 320 es\nprecision highp float;");
+#endif
 }
 
 Program::~Program()
@@ -172,6 +177,7 @@ bool Program::LoadVertGeomFrag(const std::string& vertFilename, const std::strin
 
     if (useGeomShader)
     {
+        geomSource = ExpandMacros(macros, geomSource);
         if (!CompileShader(GL_GEOMETRY_SHADER, geomSource, &geomShader, geomFilename))
         {
             Log::E("Failed to compile geometry shader \"%s\"\n", geomFilename.c_str());
@@ -256,6 +262,7 @@ bool Program::LoadCompute(const std::string& computeFilename)
         return false;
     }
 
+    computeSource = ExpandMacros(macros, computeSource);
     if (!CompileShader(GL_COMPUTE_SHADER, computeSource, &computeShader, computeFilename))
     {
         Log::E("Failed to compile compute shader \"%s\"\n", computeFilename.c_str());

@@ -1,4 +1,4 @@
-#version 460
+/*%%HEADER%%*/
 
 uniform vec4 viewport;  // x, y, WIDTH, HEIGHT
 

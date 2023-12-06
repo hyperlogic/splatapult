@@ -1,4 +1,4 @@
-#version 460
+/*%%HEADER%%*/
 
 uniform vec4 color;
 uniform sampler2D colorTexture;

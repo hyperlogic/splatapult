@@ -2,7 +2,7 @@
 // fullbright textured particle
 //
 
-#version 460
+/*%%HEADER%%*/
 
 uniform sampler2D colorTex;
 
@@ -13,7 +13,7 @@ out vec4 out_color;
 
 void main()
 {
-    vec4 texColor = texture2D(colorTex, frag_uv);
+    vec4 texColor = texture(colorTex, frag_uv);
 
     // premultiplied alpha blending
     out_color.rgb = frag_color.a * frag_color.rgb * texColor.rgb;

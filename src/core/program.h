@@ -13,6 +13,8 @@ public:
     ~Program();
 
     // used to inject #defines or other code into shaders
+    // AddMacro("FOO", "BAR");
+    // will replace the string /*%%FOO%%*/ in the source shader with BAR
     void AddMacro(const std::string& key, const std::string& value);
 
     bool LoadVertFrag(const std::string& vertFilename, const std::string& fragFilename);

@@ -61,7 +61,7 @@ static const char* EglErrorString(const EGLint error) {
 
 struct AppContext
 {
-    AppContext() : resumed(false), sessionActive(false) {}
+    AppContext() : resumed(false), sessionActive(false), assMan(nullptr), alwaysCopyAssets(true) {}
     bool resumed;
     bool sessionActive;
 
@@ -79,6 +79,7 @@ struct AppContext
     EGLInfo egl;
     AAssetManager* assMan;
     std::string externalDataPath;
+    bool alwaysCopyAssets;
 
     void Clear()
     {
@@ -258,8 +259,11 @@ struct AppContext
         struct stat sb;
         if (stat(outputFilename.c_str(), &sb) == 0)
         {
-            Log::D("UnpackAsset \"%s\" already exists\n", assetFilename.c_str());
-            return true;
+            if (!alwaysCopyAssets)
+            {
+                Log::D("UnpackAsset \"%s\" already exists\n", assetFilename.c_str());
+                return true;
+            }
         }
 
         AAsset *asset = AAssetManager_open(assMan, assetFilename.c_str(), AASSET_MODE_STREAMING);
@@ -392,6 +396,12 @@ void android_main(struct android_app* androidApp)
     if (!app.ParseArguments(argc, argv))
     {
         Log::E("App::ParseArguments failed!\n");
+        return;
+    }
+
+    if (!app.Init())
+    {
+        Log::E("App::Init failed!\n");
         return;
     }
 

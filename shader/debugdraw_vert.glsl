@@ -2,14 +2,14 @@
 // No lighting at all, solid color
 //
 
-#version 120
+/*%%HEADER%%*/
 
 uniform mat4 modelViewProjMat;
 
-attribute vec3 position;
-attribute vec4 color;
+in vec3 position;
+in vec4 color;
 
-varying vec4 frag_color;
+out vec4 frag_color;
 
 void main(void)
 {

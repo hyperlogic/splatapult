@@ -1,4 +1,4 @@
-#version 460
+/*%%HEADER%%*/
 
 layout(local_size_x = 256) in;
 
@@ -25,24 +25,25 @@ void main()
 {
     uint idx = gl_GlobalInvocationID.x;
 
-    if (idx >= positions.length())
-	{
-		return;
-	}
+	uint len = uint(positions.length());
+    if (idx >= len)
+    {
+        return;
+    }
 
-	// NOTE: alpha is encoded into the w component of the positions
-	vec4 p = modelViewProj * vec4(positions[idx].xyz, 1.0f);
-	float depth = p.w;
-	float xx = p.x / depth;
-	float yy = p.y / depth;
+    // NOTE: alpha is encoded into the w component of the positions
+    vec4 p = modelViewProj * vec4(positions[idx].xyz, 1.0f);
+    float depth = p.w;
+    float xx = p.x / depth;
+    float yy = p.y / depth;
 
-	const float CLIP = 1.5f;
-	if (depth > 0.0f && xx < CLIP && xx > -CLIP && yy < CLIP && yy > -CLIP)
-	{
-		uint count = atomicCounterIncrement(output_count);
-		// 16.16 fixed point
-		uint fixedPointZ = 0xffffffff - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
-		quantizedZs[count] = fixedPointZ;
-		indices[count] = idx;
-	}
+    const float CLIP = 1.5f;
+    if (depth > 0.0f && xx < CLIP && xx > -CLIP && yy < CLIP && yy > -CLIP)
+    {
+        uint count = atomicCounterIncrement(output_count);
+        // 16.16 fixed point
+        uint fixedPointZ = uint(0xffffffff) - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
+        quantizedZs[count] = fixedPointZ;
+        indices[count] = idx;
+    }
 }

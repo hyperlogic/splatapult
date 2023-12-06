@@ -3,7 +3,7 @@
 // 3d gaussian splat vertex shader
 //
 
-#version 460
+/*%%HEADER%%*/
 
 /*%%DEFINES%%*/
 

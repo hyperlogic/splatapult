@@ -1,4 +1,4 @@
-#version 460
+/*%%HEADER%%*/
 
 uniform float pointSize;
 uniform float invAspectRatio;
