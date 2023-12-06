@@ -19,6 +19,10 @@ task copyFiles(type: Copy) {
     from '../../../../../../data/sh_test'
     into '../../assets/data/sh_test'
   }
+  copy {
+    from '../../../../../../data/livingroom'
+    into '../../assets/data/livingroom'
+  }
 }
 
 gradle.projectsEvaluated {
