@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -28,12 +29,17 @@ public:
     App(const MainContext& mainContextIn);
     bool ParseArguments(int argc, const char* argv[]);
     bool Init();
-    bool ShouldQuit() const { return shouldQuit; }
     bool IsFullscreen() const { return opt.fullscreen; }
     void UpdateFps(float fps);
     void ProcessEvent(const SDL_Event& event);
     bool Process(float dt);
     bool Render(float dt, const glm::ivec2& windowSize);
+
+    using VoidCallback = std::function<void()>;
+    void OnQuit(const VoidCallback& cb);
+
+    using ResizeCallback = std::function<void(int, int)>;
+    void OnResize(const ResizeCallback& cb);
 
 protected:
     struct Options
@@ -69,9 +75,11 @@ protected:
     std::shared_ptr<Program> desktopProgram;
     std::shared_ptr<InputBuddy> inputBuddy;
 
-    bool shouldQuit;
     glm::vec2 virtualLeftStick;
     glm::vec2 virtualRightStick;
     float virtualRoll;
     uint32_t fpsText;
+
+    VoidCallback quitCallback;
+    ResizeCallback resizeCallback;
 };

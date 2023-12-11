@@ -25,16 +25,6 @@ struct GlobalContext
 
 GlobalContext ctx;
 
-// AJT: TODO FIX RESIZE
-/*
-void Resize(int newWidth, int newHeight)
-{
-    SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
-    glViewport(0, 0, newWidth, newHeight);
-    SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
-}
-*/
-
 int SDLCALL Watch(void *userdata, SDL_Event* event)
 {
     if (event->type == SDL_APP_WILLENTERBACKGROUND)
@@ -109,10 +99,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    bool shouldQuit = false;
+    app.OnQuit([&shouldQuit]()
+    {
+        shouldQuit = true;
+    });
+
+    app.OnResize([](int newWidth, int newHeight)
+    {
+        SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
+    });
+
     uint32_t frameCount = 1;
     uint32_t frameTicks = SDL_GetTicks();
     uint32_t lastTicks = SDL_GetTicks();
-    while (!ctx.quitting && !app.ShouldQuit())
+    while (!ctx.quitting && !shouldQuit)
     {
         // update dt
         uint32_t ticks = SDL_GetTicks();

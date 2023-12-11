@@ -66,15 +66,6 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 #endif
 }
 
-// AJT: TODO FIX RESIZE
-static void Resize(int newWidth, int newHeight)
-{
-    glViewport(0, 0, newWidth, newHeight);
-
-    // this needs to occur in main app
-    //SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
-}
-
 // Draw a textured quad over the entire screen.
 static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
 {
@@ -149,7 +140,6 @@ App::App(const MainContext& mainContextIn)
 {
     mainContext = mainContextIn;
     cameraIndex = 0;
-    shouldQuit = false;
     virtualLeftStick = glm::vec2(0.0f, 0.0f);
     virtualRightStick = glm::vec2(0.0f, 0.0f);
     virtualRoll = 0.0f;
@@ -323,7 +313,11 @@ bool App::Init()
     }
 
     splatRenderer = std::make_shared<SplatRenderer>();
+#if __ANDROID__
+    bool useFullSH = false;
+#else
     bool useFullSH = true;
+#endif
     if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH))
     {
         Log::E("Error initializing splat renderer!\n");
@@ -364,11 +358,14 @@ bool App::Init()
             }
             else
             {
-                if (viewNum == 0)
+                static uint32_t sortCount = 0;
+                if (viewNum == 0 && sortCount == 0)
                 {
                     splatRenderer->Sort(fullEyeMat, projMat, viewport, nearFar);
+                    sortCount++;
                 }
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
+
             }
         });
     }
@@ -378,20 +375,19 @@ bool App::Init()
 
     inputBuddy->OnQuit([this]()
     {
-        // AJT: TODO: forward this back to main
-        shouldQuit = true;
+        // forward this back to main
+        quitCallback();
     });
 
     inputBuddy->OnResize([this](int newWidth, int newHeight)
     {
-        // AJT: TODO FIXME
-        // Handle the resize event, e.g., adjust your viewport, etc.
-        Resize(newWidth, newHeight);
+        glViewport(0, 0, newWidth, newHeight);
+        resizeCallback(newWidth, newHeight);
     });
 
     inputBuddy->OnKey(SDLK_ESCAPE, [this](bool down, uint16_t mod)
     {
-        shouldQuit = true;
+        quitCallback();
     });
 
     inputBuddy->OnKey(SDLK_c, [this](bool down, uint16_t mod)
@@ -643,4 +639,14 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
     debugRenderer->EndFrame();
 
     return true;
+}
+
+void App::OnQuit(const VoidCallback& cb)
+{
+    quitCallback = cb;
+}
+
+void App::OnResize(const ResizeCallback& cb)
+{
+    resizeCallback = cb;
 }
