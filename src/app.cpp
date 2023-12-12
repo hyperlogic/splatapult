@@ -3,13 +3,13 @@
 #ifndef __ANDROID__
 #define USE_SDL
 #include <GL/glew.h>
-#else
-#include <sys/stat.h>
 #endif
 
 #ifdef USE_SDL
 #include <SDL.h>
 #endif
+
+#include <filesystem>
 #include <thread>
 
 #include "core/log.h"
@@ -37,6 +37,43 @@ const float ROT_SPEED = 1.0f;
 const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 const glm::vec4 BLACK = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 const int TEXT_NUM_ROWS = 25;
+
+#include <string>
+#include <filesystem>
+#include <iostream>
+
+// searches for file named configFilename, dir that contains plyFilename, it's parent and grandparent dirs.
+static std::string FindConfigFile(const std::string& plyFilename, const std::string& configFilename)
+{
+    std::filesystem::path plyPath(plyFilename);
+
+    if (!std::filesystem::exists(plyPath) || !std::filesystem::is_regular_file(plyPath))
+    {
+        Log::E("PLY file does not exist or is not a file: \"%s\"", plyFilename.c_str());
+        return "";
+    }
+
+    std::filesystem::path directory = plyPath.parent_path();
+
+    for (int i = 0; i < 3; ++i) // Check current, parent, and grandparent directories
+    {
+        std::filesystem::path configPath = directory / configFilename;
+        if (std::filesystem::exists(configPath) && std::filesystem::is_regular_file(configPath))
+        {
+            return configPath.string();
+        }
+        if (directory.has_parent_path())
+        {
+            directory = directory.parent_path();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return "";
+}
 
 static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 {
@@ -109,11 +146,12 @@ static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> deskto
     }
 }
 
-static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
+// AJT: TODO this wrapper func is not needed anymore
+static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename)
 {
     auto pointCloud = std::make_shared<PointCloud>();
 
-    if (!pointCloud->ImportPly(dataDir + "input.ply"))
+    if (!pointCloud->ImportPly(plyFilename))
     {
         Log::E("Error loading PointCloud!\n");
         return nullptr;
@@ -121,13 +159,12 @@ static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& dataDir)
     return pointCloud;
 }
 
-static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& dataDir)
+// AJT: TODO this wrapper func is not needed anymore
+static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename)
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();
 
-    // AJT: TODO: find highest iteration_# dir.
-    std::string iterationDir = dataDir + "point_cloud/iteration_30000/";
-    if (!gaussianCloud->ImportPly(iterationDir + "point_cloud.ply"))
+    if (!gaussianCloud->ImportPly(plyFilename))
     {
         Log::E("Error loading GaussianCloud!\n");
         return nullptr;
@@ -171,22 +208,15 @@ bool App::ParseArguments(int argc, const char* argv[])
                 opt.debugLogging = true;
             }
         }
-        dataDir = argv[argc - 1];
-
-        // make sure data dir ends with /
-        if (!(dataDir.back() == '/' || dataDir.back() == '\\'))
-        {
-            dataDir += "/";
-        }
+        plyFilename = argv[argc - 1];
     }
 
     Log::SetLevel(opt.debugLogging ? Log::Debug : Log::Warning);
 
-    // verify dataDir exists
-    struct stat sb;
-    if (stat(dataDir.c_str(), &sb))
+    std::filesystem::path plyPath(plyFilename);
+    if (!std::filesystem::exists(plyPath) || !std::filesystem::is_regular_file(plyPath))
     {
-        Log::E("Invalid directory \"%s\"\n", dataDir.c_str());
+        Log::E("Invalid file \"%s\"\n", plyFilename.c_str());
         return false;
     }
 
@@ -241,18 +271,34 @@ bool App::Init()
         }
     }
 
-    camerasConfig = std::make_shared<CamerasConfig>();
-    if (!camerasConfig->ImportJson(dataDir + "cameras.json"))
+    std::string filename = FindConfigFile(plyFilename, "cameras.json");
+    if (!filename.empty())
     {
-        Log::W("Error loading cameras.json\n");
-        camerasConfig.reset();
+        camerasConfig = std::make_shared<CamerasConfig>();
+        if (!camerasConfig->ImportJson(filename))
+        {
+            Log::W("Error loading cameras.json\n");
+            camerasConfig.reset();
+        }
+    }
+    else
+    {
+        Log::D("Could not find cameras.json\n");
     }
 
-    vrConfig = std::make_shared<VrConfig>();
-    if (!vrConfig->ImportJson(dataDir + "vr.json"))
+    std::string vrConfigFilename = FindConfigFile(plyFilename, "vr.json");
+    if (!filename.empty())
     {
-        Log::I("Could not load vr.json\n");
-        vrConfig.reset();
+        vrConfig = std::make_shared<VrConfig>();
+        if (!vrConfig->ImportJson(vrConfigFilename))
+        {
+            Log::I("Could not load vr.json\n");
+            vrConfig.reset();
+        }
+    }
+    else
+    {
+        Log::D("Could not find vr.json\n");
     }
 
     flyCam = std::make_shared<FlyCam>(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
@@ -291,14 +337,22 @@ bool App::Init()
         return false;
     }
 
-    pointCloud = LoadPointCloud(dataDir);
-    if (!pointCloud)
+    filename = FindConfigFile(plyFilename, "input.ply");
+    if (!filename.empty())
     {
-        Log::E("Error loading PointCloud\n");
-        return false;
+        pointCloud = LoadPointCloud(filename);
+        if (!pointCloud)
+        {
+            Log::E("Error loading PointCloud\n");
+            return false;
+        }
+    }
+    else
+    {
+        Log::D("could not find input.ply\n");
     }
 
-    gaussianCloud = LoadGaussianCloud(dataDir);
+    gaussianCloud = LoadGaussianCloud(plyFilename);
     if (!gaussianCloud)
     {
         Log::E("Error loading GaussianCloud\n");
@@ -424,14 +478,18 @@ bool App::Init()
         }
     });
 
-    inputBuddy->OnKey(SDLK_RETURN, [this](bool down, uint16_t mod)
+    inputBuddy->OnKey(SDLK_RETURN, [this, vrConfigFilename](bool down, uint16_t mod)
     {
         if (down && opt.vrMode && vrConfig)
         {
             vrConfig->SetFloorMat(magicCarpet->GetCarpetMat());
-            if (vrConfig->ExportJson(dataDir + "vr.json"))
+            if (vrConfig->ExportJson(vrConfigFilename))
             {
-                Log::I("Wrote \"%s\"\n", (dataDir + "vr.json").c_str());
+                Log::I("Wrote \"%s\"\n", vrConfigFilename.c_str());
+            }
+            else
+            {
+                Log::E("Writing \"%s\" failed\n", vrConfigFilename.c_str());
             }
         }
     });

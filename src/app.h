@@ -55,7 +55,7 @@ protected:
 
     MainContext mainContext;
     Options opt;
-    std::string dataDir;
+    std::string plyFilename;
     std::shared_ptr<DebugRenderer> debugRenderer;
     std::shared_ptr<TextRenderer> textRenderer;
     std::shared_ptr<XrBuddy> xrBuddy;

@@ -398,7 +398,7 @@ void android_main(struct android_app* androidApp)
     mainContext.context = ctx.egl.context;
     mainContext.androidApp = androidApp;
 
-    std::string dataPath = ctx.externalDataPath + "data/livingroom";
+    std::string dataPath = ctx.externalDataPath + "data/livingroom/point_cloud/iteration_30000/point_cloud.ply";
     int argc = 4;
     const char* argv[] = {"splataplut", "-v", "-d", dataPath.c_str()};
     App app(mainContext);

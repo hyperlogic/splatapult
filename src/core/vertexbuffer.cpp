@@ -19,7 +19,6 @@
 #ifdef __ANDROID__
 static void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfield flags)
 {
-	// AJT: ANDROID: TODO not sure if this is correct.
 	GLenum usage = 0;
 	if (flags & GL_DYNAMIC_STORAGE_BIT)
 	{
