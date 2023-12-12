@@ -45,6 +45,6 @@ void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn
 void FlyCam::SetCameraMat(const glm::mat4& cameraMat)
 {
     pos = glm::vec3(cameraMat[3]);
-    rot = glm::quat(glm::mat3(cameraMat));
+    rot = glm::normalize(glm::quat(glm::mat3(cameraMat)));
     vel = glm::vec3(0.0f, 0.0f, 0.0f);
 }

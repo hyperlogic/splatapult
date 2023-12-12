@@ -75,6 +75,20 @@ static std::string FindConfigFile(const std::string& plyFilename, const std::str
     return "";
 }
 
+std::string GetFilenameWithoutExtension(const std::string& filepath)
+{
+    std::filesystem::path pathObj(filepath);
+
+    // Check if the path has a stem (the part of the path before the extension)
+    if(pathObj.has_stem())
+    {
+        return pathObj.stem().string();
+    }
+
+    // If there is no stem, return an empty string
+    return "";
+}
+
 static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 {
     int width = windowSize.x;
@@ -271,11 +285,11 @@ bool App::Init()
         }
     }
 
-    std::string filename = FindConfigFile(plyFilename, "cameras.json");
-    if (!filename.empty())
+    std::string camerasConfigFilename = FindConfigFile(plyFilename, "cameras.json");
+    if (!camerasConfigFilename.empty())
     {
         camerasConfig = std::make_shared<CamerasConfig>();
-        if (!camerasConfig->ImportJson(filename))
+        if (!camerasConfig->ImportJson(camerasConfigFilename))
         {
             Log::W("Error loading cameras.json\n");
             camerasConfig.reset();
@@ -286,8 +300,10 @@ bool App::Init()
         Log::D("Could not find cameras.json\n");
     }
 
-    std::string vrConfigFilename = FindConfigFile(plyFilename, "vr.json");
-    if (!filename.empty())
+    // search for vr config file
+    // for example: if plyFilename is "input.ply", then search for "input_vr.json"
+    std::string vrConfigFilename = FindConfigFile(plyFilename, GetFilenameWithoutExtension(plyFilename) + "_vr.json");
+    if (!vrConfigFilename.empty())
     {
         vrConfig = std::make_shared<VrConfig>();
         if (!vrConfig->ImportJson(vrConfigFilename))
@@ -328,6 +344,15 @@ bool App::Init()
     if (vrConfig)
     {
         floorMat = vrConfig->GetFloorMat();
+
+        if (!camerasConfig)
+        {
+            glm::vec3 pos = floorMat[3];
+            pos += glm::mat3(floorMat) * glm::vec3(0.0f, 1.5f, 0.0f);
+            glm::mat4 adjustedFloorMat = floorMat;
+            adjustedFloorMat[3] = glm::vec4(pos, 1.0f);
+            flyCam->SetCameraMat(adjustedFloorMat);
+        }
     }
 
     magicCarpet = std::make_shared<MagicCarpet>(floorMat, MOVE_SPEED);
@@ -337,32 +362,32 @@ bool App::Init()
         return false;
     }
 
-    filename = FindConfigFile(plyFilename, "input.ply");
-    if (!filename.empty())
+    std::string pointCloudFilename = FindConfigFile(plyFilename, "input.ply");
+    if (!pointCloudFilename.empty())
     {
-        pointCloud = LoadPointCloud(filename);
+        pointCloud = LoadPointCloud(pointCloudFilename);
         if (!pointCloud)
         {
             Log::E("Error loading PointCloud\n");
             return false;
         }
+
+        pointRenderer = std::make_shared<PointRenderer>();
+        if (!pointRenderer->Init(pointCloud, isFramebufferSRGBEnabled))
+        {
+            Log::E("Error initializing point renderer!\n");
+            return false;
+        }
     }
     else
     {
-        Log::D("could not find input.ply\n");
+        Log::D("Could not find input.ply\n");
     }
 
     gaussianCloud = LoadGaussianCloud(plyFilename);
     if (!gaussianCloud)
     {
         Log::E("Error loading GaussianCloud\n");
-        return false;
-    }
-
-    pointRenderer = std::make_shared<PointRenderer>();
-    if (!pointRenderer->Init(pointCloud, isFramebufferSRGBEnabled))
-    {
-        Log::E("Error initializing point renderer!\n");
         return false;
     }
 
@@ -406,7 +431,7 @@ bool App::Init()
                 magicCarpet->Render(fullEyeMat, projMat, viewport, nearFar);
             }
 
-            if (opt.drawPointCloud)
+            if (opt.drawPointCloud && pointRenderer)
             {
                 pointRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
@@ -678,7 +703,7 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
             magicCarpet->Render(cameraMat, projMat, viewport, nearFar);
         }
 
-        if (opt.drawPointCloud)
+        if (opt.drawPointCloud && pointRenderer)
         {
             pointRenderer->Render(cameraMat, projMat, viewport, nearFar);
         }

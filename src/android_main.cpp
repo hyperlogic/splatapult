@@ -228,13 +228,8 @@ struct AppContext
         UnpackAsset("data/sh_test/vr.json");
 
         MakeDir("data/livingroom");
-        UnpackAsset("data/livingroom/cameras.json");
-        UnpackAsset("data/livingroom/cfg_args");
-        UnpackAsset("data/livingroom/input.ply");
-        MakeDir("data/livingroom/point_cloud");
-        MakeDir("data/livingroom/point_cloud/iteration_30000");
-        UnpackAsset("data/livingroom/point_cloud/iteration_30000/point_cloud.ply");
-        UnpackAsset("data/livingroom/vr.json");
+        UnpackAsset("data/livingroom/livingroom.ply");
+        UnpackAsset("data/livingroom/livingroom_vr.json");
 
         return true;
     }
