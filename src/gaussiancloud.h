@@ -16,6 +16,9 @@ public:
 
     void InitDebugCloud();
 
+    // only keep the nearest splats
+    void PruneSplats(const glm::vec3& origin, uint32_t numSplats);
+
     struct Gaussian
     {
         float position[3];  // in world space

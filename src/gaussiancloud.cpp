@@ -1,5 +1,6 @@
 #include "gaussiancloud.h"
 
+#include <algorithm>
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -274,4 +275,31 @@ void GaussianCloud::InitDebugCloud()
     g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
+}
+
+// only keep the nearest splats
+void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
+{
+    using IndexDistPair = std::pair<uint32_t, float>;
+    std::vector<IndexDistPair> indexDistVec;
+    indexDistVec.reserve(gaussianVec.size());
+    for (uint32_t i = 0; i < gaussianVec.size(); i++)
+    {
+        glm::vec3 pos(gaussianVec[i].position[0], gaussianVec[i].position[1], gaussianVec[i].position[2]);
+        indexDistVec.push_back(IndexDistPair(i, glm::distance(origin, pos)));
+    }
+
+    std::sort(indexDistVec.begin(), indexDistVec.end(), [](const IndexDistPair& a, const IndexDistPair& b)
+    {
+        return a.second < b.second;
+    });
+
+    std::vector<Gaussian> newGaussianVec;
+    newGaussianVec.reserve(numSplats);
+    for (uint32_t i = 0; i < numSplats; i++)
+    {
+        newGaussianVec.push_back(gaussianVec[indexDistVec[i].first]);
+    }
+
+    gaussianVec.swap(newGaussianVec);
 }
