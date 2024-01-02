@@ -10,6 +10,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "core/log.h"
+#include "core/util.h"
 
 #include "app.h"
 
@@ -20,7 +21,6 @@ struct GlobalContext
     bool quitting = false;
     SDL_Window* window = NULL;
     SDL_GLContext gl_context;
-    SDL_Renderer* renderer = NULL;
 };
 
 GlobalContext ctx;
@@ -73,17 +73,6 @@ int main(int argc, char *argv[])
 
     SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
 
-#ifdef SOFTWARE_SPLATS
-	ctx.renderer = SDL_CreateRenderer(ctx.window, -1, 0);
-#else
-    ctx.renderer = SDL_CreateRenderer(ctx.window, -1, SDL_RENDERER_ACCELERATED);
-#endif
-	if (!ctx.renderer)
-    {
-        Log::E("Failed to SDL Renderer: %s\n", SDL_GetError());
-		return 1;
-	}
-
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
@@ -107,7 +96,8 @@ int main(int argc, char *argv[])
 
     app.OnResize([](int newWidth, int newHeight)
     {
-        SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
+        //SDL_RenderSetLogicalSize(ctx.renderer, newWidth, newHeight);
+        // AJT: TODO resize texture?
     });
 
     uint32_t frameCount = 1;

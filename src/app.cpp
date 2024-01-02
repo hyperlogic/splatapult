@@ -19,6 +19,7 @@
 #include "core/xrbuddy.h"
 
 #include "camerasconfig.h"
+#include "dpsplatrenderer.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
 #include "magiccarpet.h"
@@ -112,8 +113,8 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 #ifndef __ANDROID__
     // AJT: ANDROID: TODO: implement this in fragment shader, for OpenGLES I guess.
     // enable alpha test
-    glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 1.0f / 256.0f);
+    //glEnable(GL_ALPHA_TEST);
+    //glAlphaFunc(GL_GREATER, 1.0f / 256.0f);
 #endif
 }
 
@@ -391,7 +392,14 @@ bool App::Init()
         return false;
     }
 
-    splatRenderer = std::make_shared<SplatRenderer>();
+#if 0
+    const uint32_t SPLAT_COUNT = 25000;
+    glm::vec3 focalPoint = flyCam->GetCameraMat()[3];
+    //gaussianCloud->PruneSplats(glm::vec3(flyCam->GetCameraMat()[3]), SPLAT_COUNT);
+    gaussianCloud->PruneSplats(focalPoint, SPLAT_COUNT);
+#endif
+
+    splatRenderer = std::make_shared<DPSplatRenderer>();
 #if __ANDROID__
     bool useFullSH = false;
 #else
@@ -407,6 +415,8 @@ bool App::Init()
     {
         // TODO: move this into a DesktopRenderer class
         desktopProgram = std::make_shared<Program>();
+        std::string defines = "#define USE_SUPERSAMPLING\n";
+        desktopProgram->AddMacro("DEFINES", defines);
         if (!desktopProgram->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
         {
             Log::E("Error loading desktop shader!\n");
@@ -437,14 +447,11 @@ bool App::Init()
             }
             else
             {
-                static uint32_t sortCount = 0;
-                if (viewNum == 0 && sortCount == 0)
+                if (viewNum == 0)
                 {
                     splatRenderer->Sort(fullEyeMat, projMat, viewport, nearFar);
-                    sortCount++;
                 }
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
-
             }
         });
     }
@@ -599,6 +606,10 @@ void App::UpdateFps(float fps)
 
 bool App::Process(float dt)
 {
+    // REMOVE:
+    // debug draw origin
+    debugRenderer->Transform(glm::mat4(1.0f), 10.0f);
+
     if (opt.vrMode)
     {
         if (!xrBuddy->PollEvents())

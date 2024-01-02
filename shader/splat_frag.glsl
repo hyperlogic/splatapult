@@ -21,4 +21,17 @@ void main()
 
     out_color.rgb = frag_color.a * g * frag_color.rgb;
     out_color.a = frag_color.a * g;
+
+    /*
+    // can be used to determine overdraw.
+    float epsilon = 1.0f / 256.0f;
+    out_color.rgb = frag_color.a * g * frag_color.rgb;
+    out_color.rgb = frag_color.rgb * 0.00000001f + vec3(epsilon, epsilon, epsilon);
+    out_color.a = 0.0f;
+    */
+
+    if ((frag_color.a * g) <= (1.0f / 256.0f))
+    {
+        discard;
+    }
 }

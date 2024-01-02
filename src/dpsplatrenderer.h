@@ -10,19 +10,14 @@
 
 #include "gaussiancloud.h"
 
-
-namespace rgc::radix_sort
-{
-    struct sorter;
-}
-
-class SplatRenderer
+// depth peeling splat renderer
+class DPSplatRenderer
 {
 public:
-    SplatRenderer();
-    ~SplatRenderer();
+    DPSplatRenderer();
+    ~DPSplatRenderer();
 
-    bool Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
+    bool Init(std::shared_ptr<GaussianCloud> GaussianCloud, bool isFramebufferSRGBEnabledIn,
               bool useFullSHIn);
 
     void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
@@ -33,23 +28,19 @@ public:
                 const glm::vec4& viewport, const glm::vec2& nearFar);
 protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
+    void FrameBufferInit(int width, int height);
 
     std::shared_ptr<Program> splatProg;
-    std::shared_ptr<Program> preSortProg;
+    std::shared_ptr<Program> desktopProg;
     std::shared_ptr<VertexArrayObject> splatVao;
 
-    std::vector<uint32_t> indexVec;
-    std::vector<uint32_t> depthVec;
     std::vector<glm::vec4> posVec;
-    std::vector<uint32_t> atomicCounterVec;
 
-    std::shared_ptr<BufferObject> keyBuffer;
-    std::shared_ptr<BufferObject> valBuffer;
-    std::shared_ptr<BufferObject> posBuffer;
-    std::shared_ptr<BufferObject> atomicCounterBuffer;
+    glm::ivec2 fboSize;
+    uint32_t fbo;
+    uint32_t fboTex;
+    uint32_t fboRbo;
 
-    std::shared_ptr<rgc::radix_sort::sorter> sorter;
-    uint32_t sortCount;
     bool isFramebufferSRGBEnabled;
     bool useFullSH;
 };
