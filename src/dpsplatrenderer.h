@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/program.h"
+#include "core/texture.h"
 #include "core/vertexbuffer.h"
 
 #include "gaussiancloud.h"
@@ -28,18 +29,24 @@ public:
                 const glm::vec4& viewport, const glm::vec2& nearFar);
 protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
-    void FrameBufferInit(int width, int height);
+    void FrameBufferInit();
+    void ComposeLayers();
 
     std::shared_ptr<Program> splatProg;
+    std::shared_ptr<Program> peelProg;
     std::shared_ptr<Program> desktopProg;
     std::shared_ptr<VertexArrayObject> splatVao;
 
     std::vector<glm::vec4> posVec;
 
     glm::ivec2 fboSize;
-    uint32_t fbo;
-    uint32_t fboTex;
-    uint32_t fboRbo;
+    std::vector<uint32_t> fboVec;
+    std::vector<uint32_t> rboVec;
+    std::vector<std::shared_ptr<Texture>> colorTexVec;
+    std::vector<std::shared_ptr<Texture>> depthTexVec;
+
+    // AJT: HACK REMOVE
+    std::shared_ptr<Texture> carpetTex;
 
     bool isFramebufferSRGBEnabled;
     bool useFullSH;

@@ -33,6 +33,8 @@ struct Texture
     };
 
     Texture(const Image& image, const Params& params);
+    Texture::Texture(uint32_t width, uint32_t height, uint32_t internalFormat,
+                     uint32_t format, uint32_t type, const Params& params);
     ~Texture();
 
     void Bind(int unit) const;

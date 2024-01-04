@@ -23,69 +23,21 @@
 #include "core/texture.h"
 #include "core/util.h"
 
-// Draw a textured quad over the entire screen.
-static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
-{
-    int width = windowSize.x;
-    int height = windowSize.y;
+static const uint32_t NUM_PASSES = 25;
 
-    //glViewport(0, 0, width, height);
-    //glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    //glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glm::mat4 projMat = glm::ortho(0.0f, (float)width, 0.0f, (float)height, -10.0f, 10.0f);
-
-    if (colorTexture > 0)
-    {
-        desktopProgram->Bind();
-        desktopProgram->SetUniform("modelViewProjMat", projMat);
-        desktopProgram->SetUniform("color", glm::vec4(1.0f));
-
-        // use texture unit 0 for colorTexture
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, colorTexture);
-        desktopProgram->SetUniform("colorTexture", 0);
-
-        glm::vec2 xyLowerLeft(0.0f, 0.0f);
-        glm::vec2 xyUpperRight((float)width, (float)height);
-        glm::vec2 uvLowerLeft(0.0f, 0.0f);
-        glm::vec2 uvUpperRight(1.0f, 1.0f);
-
-        float depth = -9.0f;
-        glm::vec3 positions[] = {glm::vec3(xyLowerLeft, depth), glm::vec3(xyUpperRight.x, xyLowerLeft.y, depth),
-                                 glm::vec3(xyUpperRight, depth), glm::vec3(xyLowerLeft.x, xyUpperRight.y, depth)};
-        desktopProgram->SetAttrib("position", positions);
-
-        glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
-                           uvUpperRight, glm::vec2(uvLowerLeft.x, uvUpperRight.y)};
-        desktopProgram->SetAttrib("uv", uvs);
-
-        const size_t NUM_INDICES = 6;
-        uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
-        glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
-    }
-}
-
-DPSplatRenderer::DPSplatRenderer() : fboSize(0, 0), fbo(0), fboTex(0), fboRbo(0)
+DPSplatRenderer::DPSplatRenderer() : fboSize(0, 0)
 {
 }
 
 DPSplatRenderer::~DPSplatRenderer()
 {
-    if (fboRbo)
+    for (auto& rbo : rboVec)
     {
-        glDeleteRenderbuffers(1, &fboRbo);
-        fboRbo = 0;
+        glDeleteRenderbuffers(1, &rbo);
     }
-    if (fboTex)
-    {
-        glDeleteTextures(1, &fboTex);
-        fboTex = 0;
-    }
-    if (fbo)
+    for (auto& fbo : fboVec)
     {
         glDeleteFramebuffers(1, &fbo);
-        fbo = 0;
     }
 }
 
@@ -116,6 +68,26 @@ bool DPSplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool is
         return false;
     }
 
+    peelProg = std::make_shared<Program>();
+    if (isFramebufferSRGBEnabled || useFullSH)
+    {
+        std::string defines = "";
+        if (isFramebufferSRGBEnabled)
+        {
+            defines += "#define FRAMEBUFFER_SRGB\n";
+        }
+        if (useFullSH)
+        {
+            defines += "#define FULL_SH\n";
+        }
+        peelProg->AddMacro("DEFINES", defines);
+    }
+    if (!peelProg->LoadVertGeomFrag("shader/splat_vert.glsl", "shader/splat_geom.glsl", "shader/splat_peel_frag.glsl"))
+    {
+        Log::E("Error loading splat peel shaders!\n");
+        return false;
+    }
+
     desktopProg = std::make_shared<Program>();
     if (!desktopProg->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
     {
@@ -125,8 +97,23 @@ bool DPSplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool is
 
     BuildVertexArrayObject(gaussianCloud);
 
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    for (uint32_t i = 0; i < NUM_PASSES; i++)
+    {
+        uint32_t fbo;
+        glGenFramebuffers(1, &fbo);
+        fboVec.push_back(fbo);
+    }
+
+    // AJT: HACK REMOVE
+    Image carpetImg;
+    if (!carpetImg.Load("texture/carpet.png"))
+    {
+        Log::E("Error loading carpet.png\n");
+        return false;
+    }
+    carpetImg.isSRGB = isFramebufferSRGBEnabledIn;
+    Texture::Params texParams = {FilterType::LinearMipmapLinear, FilterType::Linear, WrapType::Repeat, WrapType::Repeat};
+    carpetTex = std::make_shared<Texture>(carpetImg, texParams);
 
     GL_ERROR_CHECK("SplatRenderer::Init() end");
 
@@ -144,52 +131,59 @@ void DPSplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMa
 {
     ZoneScoped;
 
-    int WIDTH = (int)viewport.z;
-    int HEIGHT = (int)viewport.w;
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (fboSize.x != WIDTH || fboSize.y != HEIGHT)
+    glm::ivec2 viewportSize(viewport.z, viewport.w);
+    if (viewportSize != fboSize)
     {
-        FrameBufferInit(WIDTH, HEIGHT);
-        fboSize.x = WIDTH;
-        fboSize.y = HEIGHT;
+        fboSize = viewportSize;
+        FrameBufferInit();
     }
 
     GL_ERROR_CHECK("DPSplatRenderer::Render() begin");
 
+    float aspectRatio = (float)fboSize.x / (float)fboSize.y;
+    glm::mat4 viewMat = glm::inverse(cameraMat);
+    glm::vec3 eye = glm::vec3(cameraMat[3]);
+
     {
         ZoneScopedNC("draw", tracy::Color::Red4);
-        float width = viewport.z;
-        float height = viewport.w;
-        float aspectRatio = width / height;
-        glm::mat4 viewMat = glm::inverse(cameraMat);
-        glm::vec3 eye = glm::vec3(cameraMat[3]);
 
-        splatProg->Bind();
-        splatProg->SetUniform("viewMat", viewMat);
-        splatProg->SetUniform("projMat", projMat);
-        splatProg->SetUniform("viewport", viewport);
-        splatProg->SetUniform("projParams", glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f));
-        splatProg->SetUniform("eye", eye);
+        glDisable(GL_BLEND);
 
-        splatVao->Bind();
-        glDrawArrays(GL_POINTS, 0, (GLsizei)posVec.size());
-        splatVao->Unbind();
+        for (uint32_t i = 0; i < NUM_PASSES; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, fboVec[i]);
 
-        GL_ERROR_CHECK("DPSplatRenderer::Render() draw");
+            glm::vec4 clearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            std::shared_ptr<Program> prog = (i == 0) ? splatProg : peelProg;
+
+            prog->Bind();
+            prog->SetUniform("viewMat", viewMat);
+            prog->SetUniform("projMat", projMat);
+            prog->SetUniform("viewport", viewport);
+            prog->SetUniform("projParams", glm::vec4(0.0f, nearFar.x, nearFar.y, 0.0f));
+            prog->SetUniform("eye", eye);
+
+            if (i > 0)
+            {
+                depthTexVec[i - 1]->Bind(0);
+                //carpetTex->Bind(0);
+                prog->SetUniform("depthTex", 0);
+            }
+
+            splatVao->Bind();
+            glDrawArrays(GL_POINTS, 0, (GLsizei)posVec.size());
+            splatVao->Unbind();
+
+            GL_ERROR_CHECK("DPSplatRenderer::Render() pass");
+        }
     }
 
-    // swap z-buffers.
-    {
-    }
-
+    glEnable(GL_BLEND);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    RenderDesktop(glm::ivec2(WIDTH, HEIGHT), desktopProg, fboTex);
+    ComposeLayers();
 }
 
 void DPSplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud)
@@ -303,44 +297,77 @@ void DPSplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaus
     splatVao->SetAttribBuffer(splatProg->GetAttribLoc("cov3_col2"), cov3_col2Buffer);
 }
 
-void DPSplatRenderer::FrameBufferInit(int width, int height)
+void DPSplatRenderer::FrameBufferInit()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    Texture::Params texParams = {FilterType::Linear, FilterType::Linear, WrapType::ClampToEdge, WrapType::ClampToEdge};
 
-    if (fboTex)
+    for (auto& rbo : rboVec)
     {
-        glDeleteTextures(1, &fboTex);
-        fboTex = 0;
+        glDeleteRenderbuffers(1, &rbo);
     }
 
-    glGenTextures(1, &fboTex);
-    glBindTexture(GL_TEXTURE_2D, fboTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Attach it to the framebuffer
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTex, 0);
-
-    // AJT: TODO: I DON"T NEED STENCIL.
-    if (fboRbo)
+    for (uint32_t i = 0; i < NUM_PASSES; i++)
     {
-        glDeleteRenderbuffers(1, &fboRbo);
-        fboRbo = 0;
-    }
-    glGenRenderbuffers(1, &fboRbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, fboRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fboRbo);
+        colorTexVec.push_back(std::make_shared<Texture>(fboSize.x, fboSize.y, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, texParams));
+        depthTexVec.push_back(std::make_shared<Texture>(fboSize.x, fboSize.y, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT, texParams));
 
-    uint32_t fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-    {
-        Log::E("DPSplatRenderer bad fbo status = %d\n", fboStatus);
+        // Attach it to the framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, fboVec[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexVec[i]->texture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexVec[i]->texture, 0);
+
+        /*
+        uint32_t rbo;
+        glGenRenderbuffers(1, &rbo);
+        rboVec.push_back(rbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32F, fboSize.x, fboSize.y);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+        */
+
+        uint32_t fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+        {
+            Log::E("DPSplatRenderer bad fbo[%d] status = %d\n", i, fboStatus);
+        }
     }
 
     GL_ERROR_CHECK("DPSplatRenderer::FrameBufferInit()");
+}
+
+void DPSplatRenderer::ComposeLayers()
+{
+    glDisable(GL_DEPTH_TEST);
+    for (int32_t i = (int32_t)NUM_PASSES - 1; i >= 0; i--)
+    {
+        glm::mat4 projMat = glm::ortho(0.0f, (float)fboSize.x, 0.0f, (float)fboSize.y, -10.0f, 10.0f);
+
+        desktopProg->Bind();
+        desktopProg->SetUniform("modelViewProjMat", projMat);
+        desktopProg->SetUniform("color", glm::vec4(1.0f));
+
+        // use texture unit 0 for colorTexture
+        colorTexVec[i]->Bind(0);
+        desktopProg->SetUniform("colorTexture", 0);
+
+        glm::vec2 xyLowerLeft(0.0f, 0.0f);
+        glm::vec2 xyUpperRight((float)fboSize.x, (float)fboSize.y);
+        glm::vec2 uvLowerLeft(0.0f, 0.0f);
+        glm::vec2 uvUpperRight(1.0f, 1.0f);
+
+        float depth = -9.0f;
+        glm::vec3 positions[] = {glm::vec3(xyLowerLeft, depth), glm::vec3(xyUpperRight.x, xyLowerLeft.y, depth),
+                                 glm::vec3(xyUpperRight, depth), glm::vec3(xyLowerLeft.x, xyUpperRight.y, depth)};
+        desktopProg->SetAttrib("position", positions);
+
+        glm::vec2 uvs[] = {uvLowerLeft, glm::vec2(uvUpperRight.x, uvLowerLeft.y),
+                           uvUpperRight, glm::vec2(uvLowerLeft.x, uvUpperRight.y)};
+        desktopProg->SetAttrib("uv", uvs);
+
+        const size_t NUM_INDICES = 6;
+        uint16_t indices[NUM_INDICES] = {0, 1, 2, 0, 2, 3};
+        glDrawElements(GL_TRIANGLES, NUM_INDICES, GL_UNSIGNED_SHORT, indices);
+    }
+    glEnable(GL_DEPTH_TEST);
 }

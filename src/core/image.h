@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-enum class PixelFormat {
+enum class PixelFormat
+{
     R = 0,  // intensity
     RA,     // intensity alpha
     RGB,

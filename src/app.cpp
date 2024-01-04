@@ -400,6 +400,7 @@ bool App::Init()
 #endif
 
     splatRenderer = std::make_shared<DPSplatRenderer>();
+    //splatRenderer = std::make_shared<SplatRenderer>();
 #if __ANDROID__
     bool useFullSH = false;
 #else

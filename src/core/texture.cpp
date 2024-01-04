@@ -12,7 +12,7 @@
 #include <SDL_opengl_glext.h>
 #endif
 
-#include "image.h"
+#include "core/image.h"
 
 static GLenum filterTypeToGL[] = {
     GL_NEAREST,
@@ -75,6 +75,20 @@ Texture::Texture(const Image& image, const Params& params)
     {
         hasAlphaChannel = true;
     }
+}
+
+Texture::Texture(uint32_t width, uint32_t height, uint32_t internalFormat,
+                 uint32_t format, uint32_t type, const Params& params)
+{
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filterTypeToGL[(int)params.minFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterTypeToGL[(int)params.magFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapTypeToGL[(int)params.sWrap]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapTypeToGL[(int)params.tWrap]);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, nullptr);
 }
 
 Texture::~Texture()
