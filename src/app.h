@@ -9,7 +9,6 @@
 
 class CamerasConfig;
 class DebugRenderer;
-class DPSplatRenderer;
 class FlyCam;
 class GaussianCloud;
 class InputBuddy;
@@ -71,7 +70,7 @@ protected:
     std::shared_ptr<PointCloud> pointCloud;
     std::shared_ptr<GaussianCloud> gaussianCloud;
     std::shared_ptr<PointRenderer> pointRenderer;
-    std::shared_ptr<DPSplatRenderer> splatRenderer;
+    std::shared_ptr<SplatRenderer> splatRenderer;
 
     std::shared_ptr<Program> desktopProgram;
     std::shared_ptr<InputBuddy> inputBuddy;

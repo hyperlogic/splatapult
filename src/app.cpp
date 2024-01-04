@@ -19,7 +19,6 @@
 #include "core/xrbuddy.h"
 
 #include "camerasconfig.h"
-#include "dpsplatrenderer.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
 #include "magiccarpet.h"
@@ -399,8 +398,7 @@ bool App::Init()
     gaussianCloud->PruneSplats(focalPoint, SPLAT_COUNT);
 #endif
 
-    splatRenderer = std::make_shared<DPSplatRenderer>();
-    //splatRenderer = std::make_shared<SplatRenderer>();
+    splatRenderer = std::make_shared<SplatRenderer>();
 #if __ANDROID__
     bool useFullSH = false;
 #else
@@ -607,10 +605,6 @@ void App::UpdateFps(float fps)
 
 bool App::Process(float dt)
 {
-    // REMOVE:
-    // debug draw origin
-    debugRenderer->Transform(glm::mat4(1.0f), 10.0f);
-
     if (opt.vrMode)
     {
         if (!xrBuddy->PollEvents())
