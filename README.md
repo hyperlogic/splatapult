@@ -20,6 +20,7 @@ Desktop Controls
 * p - jump to previous camera
 * wasd - move
 * arrow keys - look
+* right mouse button - hold down for mouse look.
 
 Vr Controls
 --------------
