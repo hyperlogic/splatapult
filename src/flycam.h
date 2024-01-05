@@ -7,7 +7,7 @@
 class FlyCam
 {
 public:
-    FlyCam(const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn);
+    FlyCam(const glm::vec3& worldUpIn, const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn);
 
     void Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn, float dt);
     const glm::mat4& GetCameraMat() const { return cameraMat; }
@@ -17,6 +17,7 @@ protected:
 
     float speed;  // units per sec
     float rotSpeed; // radians per sec
+    glm::vec3 worldUp;
     glm::vec3 pos;
     glm::vec3 vel;
     glm::quat rot;

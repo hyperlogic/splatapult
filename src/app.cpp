@@ -16,6 +16,7 @@
 #include "core/debugrenderer.h"
 #include "core/inputbuddy.h"
 #include "core/textrenderer.h"
+#include "core/util.h"
 #include "core/xrbuddy.h"
 
 #include "camerasconfig.h"
@@ -32,7 +33,7 @@ const float Z_FAR = 1000.0f;
 const float FOVY = glm::radians(45.0f);
 
 const float MOVE_SPEED = 2.5f;
-const float ROT_SPEED = 1.0f;
+const float ROT_SPEED = 1.15f;
 
 const glm::vec4 WHITE = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 const glm::vec4 BLACK = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -193,7 +194,10 @@ App::App(const MainContext& mainContextIn)
     cameraIndex = 0;
     virtualLeftStick = glm::vec2(0.0f, 0.0f);
     virtualRightStick = glm::vec2(0.0f, 0.0f);
+    mouseLookStick = glm::vec2(0.0f, 0.0f);
+    mouseLook = false;
     virtualRoll = 0.0f;
+    frameNum = 0;
 }
 
 bool App::ParseArguments(int argc, const char* argv[])
@@ -317,12 +321,12 @@ bool App::Init()
         Log::D("Could not find vr.json\n");
     }
 
-    flyCam = std::make_shared<FlyCam>(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), MOVE_SPEED, ROT_SPEED);
+    glm::mat4 flyCamMat(1.0f);
     glm::mat4 floorMat(1.0f);
     cameraIndex = 0;
     if (camerasConfig)
     {
-        flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+        flyCamMat = camerasConfig->GetCameraVec()[cameraIndex];
 
         // initialize magicCarpet from first camera and estimated floor position.
         if (camerasConfig->GetNumCameras() > 0)
@@ -351,9 +355,15 @@ bool App::Init()
             pos += glm::mat3(floorMat) * glm::vec3(0.0f, 1.5f, 0.0f);
             glm::mat4 adjustedFloorMat = floorMat;
             adjustedFloorMat[3] = glm::vec4(pos, 1.0f);
-            flyCam->SetCameraMat(adjustedFloorMat);
+            flyCamMat = adjustedFloorMat;
         }
     }
+
+    glm::vec3 flyCamPos, flyCamScale, floorMatUp;
+    glm::quat flyCamRot;
+    floorMatUp = glm::vec3(floorMat[1]);
+    Decompose(flyCamMat, &flyCamScale, &flyCamRot, &flyCamPos);
+    flyCam = std::make_shared<FlyCam>(floorMatUp, flyCamPos, flyCamRot, MOVE_SPEED, ROT_SPEED);
 
     magicCarpet = std::make_shared<MagicCarpet>(floorMat, MOVE_SPEED);
     if (!magicCarpet->Init(isFramebufferSRGBEnabled))
@@ -582,6 +592,28 @@ bool App::Init()
     {
         virtualRoll += down ? 1.0f : -1.0f;
     });
+
+    inputBuddy->OnMouseButton([this](uint8_t button, bool down, glm::ivec2 pos)
+    {
+        if (button == 3) // right button
+        {
+            if (mouseLook != down)
+            {
+                inputBuddy->SetRelativeMouseMode(down);
+            }
+            mouseLook = down;
+        }
+    });
+
+    inputBuddy->OnMouseMotion([this](glm::ivec2 pos, glm::ivec2 rel)
+    {
+        if (mouseLook)
+        {
+            const float MOUSE_SENSITIVITY = 0.1f;
+            mouseLookStick.x += rel.x * MOUSE_SENSITIVITY;
+            mouseLookStick.y -= rel.y * MOUSE_SENSITIVITY;
+        }
+    });
 #endif // USE_SDL
 
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, "fps:");
@@ -645,15 +677,17 @@ bool App::Process(float dt)
         magicCarpet->Process(headPose, leftPose, rightPose, leftStick, rightStick, buttonState, dt);
     }
 #ifdef USE_SDL
+
     InputBuddy::Joypad joypad = inputBuddy->GetJoypad();
     float roll = 0.0f;
     roll -= joypad.lb ? 1.0f : 0.0f;
     roll += joypad.rb ? 1.0f : 0.0f;
-    flyCam->Process(joypad.leftStick + virtualLeftStick,
-                    joypad.rightStick + virtualRightStick,
-                    roll + virtualRoll, dt);
-#endif
+    flyCam->Process(glm::clamp(joypad.leftStick + virtualLeftStick, -1.0f, 1.0f),
+                    glm::clamp(joypad.rightStick + virtualRightStick, -1.0f, 1.0f) + mouseLookStick,
+                    glm::clamp(roll + virtualRoll, -1.0f, 1.0f), dt);
+    mouseLookStick = glm::vec2(0.0f, 0.0f);
 
+#endif
     return true;
 }
 
@@ -726,6 +760,8 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
     }
 
     debugRenderer->EndFrame();
+
+    frameNum++;
 
     return true;
 }

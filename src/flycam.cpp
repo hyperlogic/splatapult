@@ -3,17 +3,18 @@
 #include "core/log.h"
 #include "core/util.h"
 
-FlyCam::FlyCam(const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn) :
-    pos(posIn), vel(0.0f, 0.0f, 0.0f), rot(rotIn), cameraMat(MakeMat4(rot, pos)), speed(speedIn), rotSpeed(rotSpeedIn)
+FlyCam::FlyCam(const glm::vec3& worldUpIn, const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn) :
+    worldUp(worldUpIn), pos(posIn), vel(0.0f, 0.0f, 0.0f), rot(rotIn),
+    cameraMat(MakeMat4(rot, pos)), speed(speedIn), rotSpeed(rotSpeedIn)
 {
 
 }
 
 void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn, float dt)
 {
-    glm::vec2 leftStick = glm::clamp(leftStickIn, -1.0f, 1.0f);
-    glm::vec2 rightStick = glm::clamp(rightStickIn, -1.0f, 1.0f);
-    float rollAmount = glm::clamp(rollAmountIn, -1.0f, 1.0f);
+    glm::vec2 leftStick = leftStickIn;
+    glm::vec2 rightStick = rightStickIn;
+    float rollAmount = rollAmountIn;
 
     const float STIFF = 15.0f;
     const float K = STIFF / speed;
@@ -29,18 +30,39 @@ void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn
     vel = v;
 
     // right stick controls orientation
-    glm::vec3 up = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::vec3 up = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
     glm::vec3 right = glm::rotate(rot, glm::vec3(1.0f, 0.0f, 0.0f));
     glm::vec3 forward = glm::rotate(rot, glm::vec3(0.0f, 0.0f, -1.0f));
-    glm::quat yaw = glm::angleAxis(rotSpeed * dt * -rightStick.x, up);
+    glm::quat yaw = glm::angleAxis(rotSpeed * dt * -rightStick.x, worldUp);
     glm::quat pitch = glm::angleAxis(rotSpeed * dt * rightStick.y, right);
-    glm::quat roll = glm::angleAxis(rotSpeed * dt * rollAmount, forward);
-    rot = (yaw * pitch * roll) * rot;
+    rot = (yaw * pitch) * rot;
 
+    // axes of new cameraMat
     glm::vec3 x = glm::rotate(rot, glm::vec3(1.0f, 0.0f, 0.0f));
     glm::vec3 y = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
     glm::vec3 z = glm::rotate(rot, glm::vec3(0.0f, 0.0f, 1.0f));
-    cameraMat = glm::mat4(glm::vec4(x, 0.0f), glm::vec4(y, 0.0f), glm::vec4(z, 0.0f), glm::vec4(pos, 1.0f));
+
+    // apply roll to worldUp
+    if (fabs(rollAmountIn) > 0.1f)
+    {
+        worldUp = glm::vec3(cameraMat[1]);
+        glm::quat roll = glm::angleAxis(rotSpeed * dt * rollAmount, forward);
+        worldUp = roll * worldUp;
+    }
+
+    // make sure that cameraMat will be orthogonal, and aligned with world up.
+    if (glm::dot(z, worldUp) < 0.999f) // if w are aren't looking stright up.
+    {
+        glm::vec3 xx = glm::normalize(glm::cross(worldUp, z));
+        glm::vec3 yy = glm::normalize(glm::cross(z, xx));
+        cameraMat = glm::mat4(glm::vec4(xx, 0.0f), glm::vec4(yy, 0.0f), glm::vec4(z, 0.0f), glm::vec4(pos, 1.0f));
+    }
+    else
+    {
+        cameraMat = glm::mat4(glm::vec4(x, 0.0f), glm::vec4(y, 0.0f), glm::vec4(z, 0.0f), glm::vec4(pos, 1.0f));
+    }
+    glm::vec3 unusedScale;
+    Decompose(cameraMat, &unusedScale, &rot);
 }
 
 void FlyCam::SetCameraMat(const glm::mat4& cameraMat)

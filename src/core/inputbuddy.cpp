@@ -55,6 +55,18 @@ void InputBuddy::ProcessEvent(const SDL_Event& event)
             resizeCallback(event.window.data1, event.window.data2);
         }
         break;
+
+    case SDL_MOUSEBUTTONDOWN:
+    case SDL_MOUSEBUTTONUP:
+        if (event.button.clicks == 1)
+        {
+            mouseButtonCallback(event.button.button, event.button.state == SDL_PRESSED,
+                                glm::ivec2(event.button.x, event.button.y));
+        }
+        break;
+    case SDL_MOUSEMOTION:
+        mouseMotionCallback(glm::ivec2(event.motion.x, event.motion.y), glm::ivec2(event.motion.xrel, event.motion.yrel));
+        break;
     }
 }
 
@@ -71,6 +83,21 @@ void InputBuddy::OnQuit(const VoidCallback& cb)
 void InputBuddy::OnResize(const ResizeCallback& cb)
 {
     resizeCallback = cb;
+}
+
+void InputBuddy::OnMouseButton(const MouseButtonCallback& cb)
+{
+    mouseButtonCallback = cb;
+}
+
+void InputBuddy::OnMouseMotion(const MouseMotionCallback& cb)
+{
+    mouseMotionCallback = cb;
+}
+
+void InputBuddy::SetRelativeMouseMode(bool val)
+{
+    SDL_SetRelativeMouseMode(val ? SDL_TRUE : SDL_FALSE);
 }
 
 const uint8_t LEFT_STICK_X_AXIS = 0;

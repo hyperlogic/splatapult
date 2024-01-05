@@ -20,12 +20,18 @@ public:
     using VoidCallback = std::function<void()>;
     using KeyCallback = std::function<void(bool, uint16_t)>;
     using ResizeCallback = std::function<void(int, int)>;
+    using MouseButtonCallback = std::function<void(uint8_t, bool, glm::ivec2)>; // button 1 = LEFT, 2 = MIDDLE, 3 = RIGHT
+    using MouseMotionCallback = std::function<void(glm::ivec2, glm::ivec2)>;
 
     void ProcessEvent(const SDL_Event& event);
 
     void OnKey(Keycode key, const KeyCallback& cb);
     void OnQuit(const VoidCallback& cb);
     void OnResize(const ResizeCallback& cb);
+    void OnMouseButton(const MouseButtonCallback& cb);
+    void OnMouseMotion(const MouseMotionCallback& cb);
+
+    void SetRelativeMouseMode(bool val);
 
     // based on an xbox controler
     struct Joypad
@@ -65,5 +71,7 @@ protected:
     std::map<Keycode, KeyCallback> keyCallbackMap;
     VoidCallback quitCallback;
     ResizeCallback resizeCallback;
+    MouseButtonCallback mouseButtonCallback;
+    MouseMotionCallback mouseMotionCallback;
     Joypad joypad;
 };

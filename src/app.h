@@ -77,8 +77,11 @@ protected:
 
     glm::vec2 virtualLeftStick;
     glm::vec2 virtualRightStick;
+    glm::vec2 mouseLookStick;
+    bool mouseLook;
     float virtualRoll;
     uint32_t fpsText;
+    uint32_t frameNum;
 
     VoidCallback quitCallback;
     ResizeCallback resizeCallback;
