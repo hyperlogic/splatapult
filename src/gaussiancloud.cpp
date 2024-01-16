@@ -211,7 +211,7 @@ void GaussianCloud::InitDebugCloud()
     // make an debug GaussianClound, that contain red, green and blue axes.
     //
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 1;
+    const int NUM_SPLATS = 5;
     const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
     const float S = logf(0.05f);
     const float SH_C0 = 0.28209479177387814f;
@@ -272,7 +272,7 @@ void GaussianCloud::InitDebugCloud()
     // white
     g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ONE;
     g.opacity = 100.0f;
-    g.scale[0] = S * 0.5f; g.scale[1] = S; g.scale[2] = S;
+    g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
     g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
     gaussianVec.push_back(g);
 }
