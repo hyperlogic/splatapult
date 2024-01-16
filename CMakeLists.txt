@@ -1,7 +1,7 @@
 # mkdir build
 # cd build
-# cmake -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\hyperlogic\code\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
-# cmake --build .
+# cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\hyperlogic\code\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
+# cmake --build . --config Release
 
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 set(PROJECT_NAME splatapult)
@@ -87,5 +87,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenXR::openxr_loader
 )
 
+option(SHIPPING "Build for shipping" OFF)
 
+if(SHIPPING)
+    add_definitions(-DSHIPPING)
 
+    # Copy required data directories to the executable directory
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/font
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/font
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/shader
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/shader
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/texture
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/texture
+    )
+endif()
