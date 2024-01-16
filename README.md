@@ -1,5 +1,8 @@
+
 Splatapult
 ----------------------------------------------
+![Splatapult logo](/splatapult.svg)
+
 A program to display 3d gaussian splats files
 
 splatapult [OPTIONS] ply_filename
@@ -33,33 +36,35 @@ Vr Controls
 * triple grab - (double grab while trigger is depressed) scale, rotate and translate the world.
 * return - save the current position and orientation/scale of the world into a vr.json file.
 
-config files
+Config Files
 ----------------------
-If a "cameras.json" file is found in the same dir as the ply_filename or it's parent dirs, it will be loaded.
-In desktop mode the 'n' and 'p' keys can be used to cycle thru the camera viewpoints.
-
 If a "_vr.json" file is found, it will be used to determine the proper starting position, scale and orienation for vr mode.
 You can create your own _vr.json file by manipulating the scene via grab in vr mode, then press return to save.
 
-These search paths are setup to support the same dir structure that [Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting) code will output.
-input.ply should contain the point cloud and cameras.json will contain the camera orientations from the SfM stage.
+Splatapult supports the same dir structure that [Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting) code will output.
+Which is as follows:
 
 ```
 dir/
     point_cloud/
-	    iteration_30000/
-			point_cloud.py
-			point_cloud_vr.json
-	input.ply
-	cameras.json
+        iteration_30000/
+            point_cloud.py
+            point_cloud_vr.json
+    input.ply
+    cameras.json
 ```
+
+input.ply contains the point cloud and cameras.json will contain the camera orientations from the SfM stage.
+
+If the "cameras.json" file is found in the same dir as the ply_filename or it's parent dirs, it will be loaded.
+If found the 'n' and 'p' keys can be used to cycle thru the camera viewpoints.
 
 It will also support files downloaded from lumalabs.ai, but in this case there will be no point clouds or cameras.
 
 ```
 dir/
     mycapture.ply
-	mycapture_vr.json
+    mycapture_vr.json
 ```
 
 
