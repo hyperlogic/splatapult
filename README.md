@@ -1,7 +1,7 @@
 
 Splatapult
 ----------------------------------------------
-![Splatapult logo](/splatapult.svg)
+![Splatapult logo](/splatapult.png)
 
 A program to display 3d gaussian splats files
 
