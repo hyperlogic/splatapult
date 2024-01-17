@@ -20,8 +20,23 @@ Windows Build
 Use visual studio to open and build the project.
 Or build from the command line: `cmake --build . --config=Release`
 
-Meta Quest
---------------
+Windows Shipping Builds
+-------------------------
+The SHIPPING cmake option is used to create a release version of splataplut.
+A post build step will copy all of the the data folders (font, shader, texture) into the build directory.
+And the resulting exe will use that copy.  You can then zip up the folder and distrubute it to users.
+
+* To create a shipping build:
+    - `mkdir build`
+    - `cd build`
+    - `cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
+    - `cmake --build . --config=Release`
+
+Meta Quest Build
+----------------
+NOTE: Although the quest build functions it is much to slow for most scenes.
+A Quest2 headset can only run a scene consisting of 25k splats.
+
 * Use vcpkg to install the following packages:
     - `vcpkg install glm:arm64-android`
     - `vcpkg install libpng:arm64-android`
