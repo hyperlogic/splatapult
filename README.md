@@ -57,7 +57,7 @@ dir/
 input.ply contains the point cloud and cameras.json will contain the camera orientations from the SfM stage.
 
 If the "cameras.json" file is found in the same dir as the ply_filename or it's parent dirs, it will be loaded.
-If found the 'n' and 'p' keys can be used to cycle thru the camera viewpoints.
+The 'n' and 'p' keys can then be used to cycle thru the camera viewpoints.
 
 It will also support files downloaded from lumalabs.ai, but in this case there will be no point clouds or cameras.
 
