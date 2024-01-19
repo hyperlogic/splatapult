@@ -1,3 +1,8 @@
+/*
+    Copyright (c) 2024 Anthony J. Thibault
+    This software is licensed under the MIT License. See LICENSE for more details.
+*/
+
 #include "image.h"
 //#include "util.h"
 #include "log.h"

@@ -1,3 +1,8 @@
+/*
+    Copyright (c) 2024 Anthony J. Thibault
+    This software is licensed under the MIT License. See LICENSE for more details.
+*/
+
 #include <android/native_window_jni.h> // for native window JNI
 #include <android_native_app_glue.h>
 #include <EGL/egl.h>
