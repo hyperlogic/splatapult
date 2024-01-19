@@ -49,20 +49,13 @@ add_executable(${PROJECT_NAME}
 
     src/app.cpp
     src/camerasconfig.cpp
-    src/debug_splat_vert.cpp
-    src/debug_splat_geom.cpp
-    src/debug_splat_frag.cpp
-    src/dpsplatrenderer.cpp
     src/flycam.cpp
     src/gaussiancloud.cpp
     src/magiccarpet.cpp
     src/ply.cpp
     src/pointcloud.cpp
     src/pointrenderer.cpp
-    src/raymarchrenderer.cpp
     src/sdl_main.cpp
-    src/shaderdebugrenderer.cpp
-    src/softwarerenderer.cpp
     src/splatrenderer.cpp
     src/vrconfig.cpp
 )
