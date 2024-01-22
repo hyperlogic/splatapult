@@ -32,7 +32,15 @@ class App
 {
 public:
     App(const MainContext& mainContextIn);
-    bool ParseArguments(int argc, const char* argv[]);
+
+    enum ParseResult
+    {
+        SUCCESS_RESULT,
+        ERROR_RESULT,
+        QUIT_RESULT
+    };
+
+    ParseResult ParseArguments(int argc, const char* argv[]);
     bool Init();
     bool IsFullscreen() const { return opt.fullscreen; }
     void UpdateFps(float fps);

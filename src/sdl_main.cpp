@@ -45,10 +45,16 @@ int main(int argc, char *argv[])
     Log::SetAppName("splataplut");
     MainContext mainContext;
     App app(mainContext);
-    if (!app.ParseArguments(argc, (const char**)argv))
+    App::ParseResult parseResult = app.ParseArguments(argc, (const char**)argv);
+    switch (parseResult)
     {
+    case App::SUCCESS_RESULT:
+        break;
+    case App::ERROR_RESULT:
         Log::E("App::ParseArguments failed!\n");
         return 1;
+    case App::QUIT_RESULT:
+        return 0;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK) != 0)

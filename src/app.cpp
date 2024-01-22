@@ -20,6 +20,7 @@
 #include "core/log.h"
 #include "core/debugrenderer.h"
 #include "core/inputbuddy.h"
+#include "core/optionparser.h"
 #include "core/textrenderer.h"
 #include "core/util.h"
 #include "core/xrbuddy.h"
@@ -32,6 +33,26 @@
 #include "pointrenderer.h"
 #include "splatrenderer.h"
 #include "vrconfig.h"
+
+enum optionIndex
+{
+    UNKNOWN,
+    OPENXR,
+    FULLSCREEN,
+    DEBUG,
+    HELP
+};
+
+const option::Descriptor usage[] =
+{
+    { UNKNOWN, 0, "", "", option::Arg::None, "USAGE: splatapult [options] FILE.ply\n\nOptions:" },
+    { HELP, 0, "h", "help", option::Arg::None,            "  -h, --help        Print usage and exit." },
+    { OPENXR, 0, "v", "openxr", option::Arg::None,        "  -v, --openxr      Launch app in vr mode, using openxr runtime." },
+    { FULLSCREEN, 0, "f", "fullscren", option::Arg::None, "  -f, --fullscreen  Launch window in fullscreen." },
+    { DEBUG, 0, "d", "debug", option::Arg::None,          "  -d, --debug       Enable verbose debug logging." },
+    { UNKNOWN, 0, "", "", option::Arg::None,              "\nExamples:\n  splataplut data/test.ply\n  splatapult -v data/test.ply" },
+    { 0, 0, 0, 0, 0, 0}
+};
 
 const float Z_NEAR = 0.1f;
 const float Z_FAR = 1000.0f;
@@ -81,7 +102,7 @@ static std::string FindConfigFile(const std::string& plyFilename, const std::str
     return "";
 }
 
-std::string GetFilenameWithoutExtension(const std::string& filepath)
+static std::string GetFilenameWithoutExtension(const std::string& filepath)
 {
     std::filesystem::path pathObj(filepath);
 
@@ -193,6 +214,33 @@ static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFi
     return gaussianCloud;
 }
 
+static void PrintControls()
+{
+    fprintf(stdout, "\
+\n\
+Desktop Controls\n\
+--------------------\n\
+* wasd - move\n\
+* arrow keys - look\n\
+* right mouse button - hold down for mouse look.\n\
+* gamepad - if present, right stick to rotate, left stick to move, bumpers to roll\n\
+* c - toggle between initial SfM point cloud (if present) and gaussian splats.\n\
+* n - jump to next camera\n\
+* p - jump to previous camera\n\
+\n\
+VR Controls\n\
+---------------\n\
+* c - toggle between initial SfM point cloud (if present) and gaussian splats.\n\
+* left stick - move\n\
+* right stick - snap turn\n\
+* f - show hide floor carpet.\n\
+* single grab - translate the world.\n\
+* double grab - rotate and translate the world.\n\
+* triple grab - (double grab while trigger is depressed) scale, rotate and translate the world.\n\
+* return - save the current position and orientation/scale of the world into a vr.json file.\n\
+\n");
+}
+
 App::App(const MainContext& mainContextIn)
 {
     mainContext = mainContextIn;
@@ -205,33 +253,65 @@ App::App(const MainContext& mainContextIn)
     frameNum = 0;
 }
 
-bool App::ParseArguments(int argc, const char* argv[])
+App::ParseResult App::ParseArguments(int argc, const char* argv[])
 {
-    // parse arguments
-    if (argc < 2)
+    // skip program name
+    if (argc > 0)
     {
-        Log::E("Missing FILENAME argument\n");
-        // AJT: TODO print usage
-        return false;
+        argc--;
+        argv++;
+    }
+    option::Stats stats(usage, argc, argv);
+    std::vector<option::Option> options(stats.options_max);
+    std::vector<option::Option> buffer(stats.buffer_max);
+    option::Parser parse(usage, argc, argv, options.data(), buffer.data());
+
+    if (parse.error())
+    {
+        return ERROR_RESULT;
+    }
+
+    if (options[HELP] || argc == 0)
+    {
+        option::printUsage(std::cout, usage);
+        PrintControls();
+        return QUIT_RESULT;
+    }
+
+    if (options[OPENXR])
+    {
+        opt.vrMode = true;
+    }
+
+    if (options[FULLSCREEN])
+    {
+        opt.fullscreen = true;
+    }
+
+    if (options[DEBUG])
+    {
+        opt.debugLogging = true;
+    }
+
+    bool unknownOptionFound = false;
+    for (option::Option* opt = options[UNKNOWN]; opt; opt = opt->next())
+    {
+        unknownOptionFound = true;
+        std::cout << "Unknown option: " << std::string(opt->name,opt->namelen) << "\n";
+    }
+    if (unknownOptionFound)
+    {
+        return ERROR_RESULT;
+    }
+
+    if (parse.nonOptionsCount() == 0)
+    {
+        std::cout << "Expected filename argument\n";
+        return ERROR_RESULT;
     }
     else
     {
-        for (int i = 1; i < (argc - 1); i++)
-        {
-            if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--openxr"))
-            {
-                opt.vrMode = true;
-            }
-            else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--fullscreen"))
-            {
-                opt.fullscreen = true;
-            }
-            else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--debug"))
-            {
-                opt.debugLogging = true;
-            }
-        }
-        plyFilename = argv[argc - 1];
+        plyFilename = parse.nonOption(0);
     }
 
     Log::SetLevel(opt.debugLogging ? Log::Debug : Log::Warning);
@@ -240,10 +320,10 @@ bool App::ParseArguments(int argc, const char* argv[])
     if (!std::filesystem::exists(plyPath) || !std::filesystem::is_regular_file(plyPath))
     {
         Log::E("Invalid file \"%s\"\n", plyFilename.c_str());
-        return false;
+        return ERROR_RESULT;
     }
 
-    return true;
+    return SUCCESS_RESULT;
 }
 
 bool App::Init()

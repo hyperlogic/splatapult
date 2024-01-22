@@ -402,9 +402,15 @@ void android_main(struct android_app* androidApp)
     int argc = 4;
     const char* argv[] = {"splataplut", "-v", "-d", dataPath.c_str()};
     App app(mainContext);
-    if (!app.ParseArguments(argc, argv))
+    App::ParseResult parseResult = app.ParseArguments(argc, argv);
+    switch (parseResult)
     {
+    case App::SUCCESS_RESULT:
+        break;
+    case App::ERROR_RESULT:
         Log::E("App::ParseArguments failed!\n");
+        return;
+    case App::QUIT_RESULT:
         return;
     }
 

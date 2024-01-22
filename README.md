@@ -15,18 +15,24 @@ Options
 -f, --fullscreen
     launch window in fullscreen
 
+-d, --debug
+    enable debug logging
+
+-h, --help
+    show help
+
 Desktop Controls
--------------
-* joystick - fly around the scene
-* c - toggle between initial SfM point cloud (if present) and gaussian splats.
-* n - jump to next camera
-* p - jump to previous camera
+--------------------
 * wasd - move
 * arrow keys - look
 * right mouse button - hold down for mouse look.
+* gamepad - if present, right stick to rotate, left stick to move, bumpers to roll
+* c - toggle between initial SfM point cloud (if present) and gaussian splats.
+* n - jump to next camera
+* p - jump to previous camera
 
-Vr Controls
---------------
+VR Controls
+---------------
 * c - toggle between initial SfM point cloud (if present) and gaussian splats.
 * left stick - move
 * right stick - snap turn
