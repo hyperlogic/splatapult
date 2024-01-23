@@ -3,9 +3,7 @@ Splatapult
 ----------------------------------------------
 ![Splatapult logo](/splatapult.png)
 
-[![Splatapult Demo]          // Title
-(https://i.ytimg.com/vi/18DuNJRZbzQ/maxresdefault.jpg)] // Thumbnail
-(https://www.youtube.com/watch?v=18DuNJRZbzQ "Splatapult Demo")    // Video Link
+[<img src="https://i.ytimg.com/vi/18DuNJRZbzQ/maxresdefault.jpg" width="50%">](https://www.youtube.com/watch?v=18DuNJRZbzQ "Splatapult Demo")
 
 A program to display 3d gaussian splats files
 
