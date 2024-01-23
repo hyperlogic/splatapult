@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     {
         windowFlags |= SDL_WINDOW_RESIZABLE;
     }
-    ctx.window = SDL_CreateWindow("3dgstoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
+    ctx.window = SDL_CreateWindow("splatapult", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
 
     ctx.gl_context = SDL_GL_CreateContext(ctx.window);
 
