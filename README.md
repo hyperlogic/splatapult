@@ -3,6 +3,10 @@ Splatapult
 ----------------------------------------------
 ![Splatapult logo](/splatapult.png)
 
+[![Splatapult Demo]          // Title
+(https://i.ytimg.com/vi/18DuNJRZbzQ/maxresdefault.jpg)] // Thumbnail
+(https://www.youtube.com/watch?v=18DuNJRZbzQ "Splatapult Demo")    // Video Link
+
 A program to display 3d gaussian splats files
 
 splatapult [OPTIONS] ply_filename
