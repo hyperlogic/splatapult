@@ -107,13 +107,22 @@ static std::string GetFilenameWithoutExtension(const std::string& filepath)
     std::filesystem::path pathObj(filepath);
 
     // Check if the path has a stem (the part of the path before the extension)
-    if(pathObj.has_stem())
+    if (pathObj.has_stem())
     {
         return pathObj.stem().string();
     }
 
     // If there is no stem, return an empty string
     return "";
+}
+
+static std::string MakeVrConfigFilename(const std::string& plyFilename)
+{
+    std::filesystem::path plyPath(plyFilename);
+    std::filesystem::path directory = plyPath.parent_path();
+    std::string plyNoExt = GetFilenameWithoutExtension(plyFilename) + "_vr.json";
+    std::filesystem::path configPath = directory / plyNoExt;
+    return configPath.string();
 }
 
 static void Clear(glm::ivec2 windowSize, bool setViewport = true)
@@ -391,7 +400,8 @@ bool App::Init()
 
     // search for vr config file
     // for example: if plyFilename is "input.ply", then search for "input_vr.json"
-    std::string vrConfigFilename = FindConfigFile(plyFilename, GetFilenameWithoutExtension(plyFilename) + "_vr.json");
+    std::string vrConfigBaseFilename = GetFilenameWithoutExtension(plyFilename) + "_vr.json";
+    std::string vrConfigFilename = FindConfigFile(plyFilename, vrConfigBaseFilename);
     if (!vrConfigFilename.empty())
     {
         vrConfig = std::make_shared<VrConfig>();
@@ -403,7 +413,9 @@ bool App::Init()
     }
     else
     {
-        Log::D("Could not find vr.json\n");
+        Log::D("Could not find %s\n", vrConfigFilename.c_str());
+        // Where we'd like the vr config file to exist.
+        vrConfigFilename = MakeVrConfigFilename(plyFilename);
     }
 
     glm::mat4 flyCamMat(1.0f);
@@ -606,8 +618,12 @@ bool App::Init()
 
     inputBuddy->OnKey(SDLK_RETURN, [this, vrConfigFilename](bool down, uint16_t mod)
     {
-        if (down && opt.vrMode && vrConfig)
+        if (down && opt.vrMode)
         {
+            if (!vrConfig)
+            {
+                vrConfig = std::make_shared<VrConfig>();
+            }
             vrConfig->SetFloorMat(magicCarpet->GetCarpetMat());
             if (vrConfig->ExportJson(vrConfigFilename))
             {
