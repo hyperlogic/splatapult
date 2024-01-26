@@ -120,7 +120,7 @@ protected:
 
     XrInstance instance = XR_NULL_HANDLE;
     XrSystemId systemId = XR_NULL_SYSTEM_ID;
-    XrSystemProperties systemProperties;
+    XrSystemProperties systemProperties = {};
     XrSession session = XR_NULL_HANDLE;
     XrActionSet actionSet = XR_NULL_HANDLE;
 
@@ -128,8 +128,8 @@ protected:
 
     XrSpace stageSpace = XR_NULL_HANDLE;
     XrSpace viewSpace = XR_NULL_HANDLE;
-    XrSpaceLocation viewSpaceLocation;
-    XrSpaceVelocity viewSpaceVelocity;
+    XrSpaceLocation viewSpaceLocation = {};
+    XrSpaceVelocity viewSpaceVelocity = {};
 
     std::vector<SwapchainInfo> swapchains;
     std::vector<std::vector<SwapchainImage>> swapchainImages;
