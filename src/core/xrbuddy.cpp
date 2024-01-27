@@ -851,31 +851,38 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
         }
     }
 
-    uint64_t desiredFormat = GL_RGBA8;
-    //uint64_t desiredFormat = GL_SRGB8_ALPHA8;
+    std::vector<uint64_t> formats = {GL_R11F_G11F_B10F_EXT, GL_RGB16F_EXT, GL_RGBA};
     uint32_t foundFormatIndex = swapchainFormatCount;
-    for (uint32_t i = 0; i < swapchainFormatCount; i++)
+    for (auto&& desiredFormat : formats)
     {
-        if (swapchainFormats[i] == desiredFormat)
+        foundFormatIndex = swapchainFormatCount;
+        for (uint32_t i = 0; i < swapchainFormatCount; i++)
         {
-            foundFormatIndex = i;
+            if (swapchainFormats[i] == desiredFormat)
+            {
+                if (printAll)
+                {
+                    Log::D("found desired framebuffer format 0x%x!\n", desiredFormat);
+                }
+                foundFormatIndex = i;
+                break;
+            }
+            i++;
+        }
+        if (foundFormatIndex != swapchainFormatCount)
+        {
             break;
         }
-        i++;
     }
 
     int64_t format;
     if (foundFormatIndex == swapchainFormatCount)
     {
-        Log::W("could not find desired swapchain format 0x%x!\n", desiredFormat);
+        Log::W("could not find any desired swapchain format!\n");
         format = swapchainFormats[0];
     }
     else
     {
-        if (printAll)
-        {
-            Log::D("found desiredFormat 0x%x!\n", desiredFormat);
-        }
         format = swapchainFormats[foundFormatIndex];
     }
 
