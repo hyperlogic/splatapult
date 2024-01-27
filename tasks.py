@@ -8,8 +8,12 @@ VCPKG_DIR = os.getenv("VCPKG_DIR")
 
 
 @task
-def build(c):
+def clean(c):
     c.run("rm -rf build")
+
+
+@task
+def build(c):
     c.run("mkdir build")
     with c.cd("build"):
         c.run(
@@ -17,9 +21,11 @@ def build(c):
         )
         c.run(f"cmake --build . --config Release")
 
+
 @task
 def archive(c):
     shutil.make_archive(RELEASE_NAME, "zip", "build/Release")
+
 
 @task
 def deploy(c):
@@ -28,3 +34,11 @@ def deploy(c):
         c.run(f"git add files/{RELEASE_NAME}.zip")
         c.run(f'git commit -m "Automated deploy of {RELEASE_NAME}"')
         c.run("git push")
+
+
+@task
+def all(c):
+    clean(c)
+    build(c)
+    archive(c)
+    deploy(c)
