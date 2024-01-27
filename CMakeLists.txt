@@ -96,5 +96,8 @@ if(SHIPPING)
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${CMAKE_SOURCE_DIR}/texture
                 $<TARGET_FILE_DIR:${PROJECT_NAME}>/texture
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_SOURCE_DIR}/data/test.ply
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/data/test.ply
     )
 endif()
