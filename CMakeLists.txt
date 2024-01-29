@@ -7,6 +7,8 @@ cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 set(PROJECT_NAME splatapult)
 project(${PROJECT_NAME} LANGUAGES CXX)
 
+option(SHIPPING "Build for shipping" OFF)
+
 # opengl
 find_package(OpenGL REQUIRED)
 include_directories(${GL_INCLUDE_DIRS})
@@ -27,8 +29,13 @@ find_package(PNG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # tracy
-find_package(Tracy CONFIG REQUIRED)
-#add_compile_definitions(TRACY_ENABLE)
+if(NOT SHIPPING)
+    find_package(Tracy CONFIG REQUIRED)
+    add_compile_definitions(TRACY_ENABLE)
+    set(TRACY_LIBRARIES, Tracy::TracyClient)
+else()
+    set(TRACY_LIBRARIES, "")
+endif()
 
 # openxr-loader
 find_package(OpenXR CONFIG REQUIRED)
@@ -67,23 +74,35 @@ if(WIN32)
     # set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${OPENGL_LIBRARIES}
-    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
-    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-    GLEW::GLEW
-    glm::glm
-    PNG::PNG
-    nlohmann_json::nlohmann_json
-    Tracy::TracyClient
-    OpenXR::headers
-    OpenXR::openxr_loader
-)
-
-option(SHIPPING "Build for shipping" OFF)
+if(SHIPPING)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${OPENGL_LIBRARIES}
+        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+        $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+        GLEW::GLEW
+        glm::glm
+        PNG::PNG
+        nlohmann_json::nlohmann_json
+        OpenXR::headers
+        OpenXR::openxr_loader
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${OPENGL_LIBRARIES}
+        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+        $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+        GLEW::GLEW
+        glm::glm
+        PNG::PNG
+        nlohmann_json::nlohmann_json
+        Tracy::TracyClient
+        OpenXR::headers
+        OpenXR::openxr_loader
+    )
+endif()
 
 if(SHIPPING)
-    add_definitions(-DSHIPPING)
+    add_compile_definitions(SHIPPING)
 
     # Copy required data directories to the executable directory
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

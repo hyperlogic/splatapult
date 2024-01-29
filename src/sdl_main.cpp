@@ -12,7 +12,12 @@
 #include <SDL_opengl.h>
 #include <stdint.h>
 #include <thread>
+
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#else
+#define FrameMark do {} while(0)
+#endif
 
 #include "core/log.h"
 #include "core/util.h"

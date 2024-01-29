@@ -16,7 +16,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#ifndef __ANDROID__
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 #else
 #define ZoneScoped
