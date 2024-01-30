@@ -64,7 +64,9 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     {
         if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
         {
-            Log::E("Error parsing ply file \"%s\", missing f_rest property\n", plyFilename.c_str());
+            // f_rest properties are optional
+            Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
+            break;
         }
     }
 

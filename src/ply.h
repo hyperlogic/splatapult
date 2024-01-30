@@ -18,6 +18,7 @@ public:
 
     enum class Type
     {
+        Unknown,
         Char,
         UChar,
         Short,
@@ -30,12 +31,26 @@ public:
 
     struct Property
     {
+        Property() : type(Type::Unknown) {}
+        Property(size_t offsetIn, size_t sizeIn, Type typeIn) : offset(offsetIn), size(sizeIn), type(typeIn) {}
+
         size_t offset;
         size_t size;
         Type type;
 
         template <typename T>
-        const T Get(const uint8_t* data) const { assert(size == sizeof(T)); return *reinterpret_cast<const T*>(data + offset); }
+        const T Get(const uint8_t* data) const
+        {
+            if (type == Type::Unknown)
+            {
+                return 0;
+            }
+            else
+            {
+                assert(size == sizeof(T));
+                return *reinterpret_cast<const T*>(data + offset);
+            }
+        }
     };
 
     bool GetProperty(const std::string& key, Property& propertyOut) const;
