@@ -19,8 +19,8 @@
 #else
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
+#include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_opengl_glext.h>
 #endif
 
 #include "log.h"
@@ -108,10 +108,10 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
 
 Program::Program() : program(0), vertShader(0), geomShader(0), fragShader(0)
 {
-#ifndef __ANDROID__
-    AddMacro("HEADER", "#version 460");
-#else
+#ifdef __ANDROID__
     AddMacro("HEADER", "#version 320 es\nprecision highp float;");
+#else
+    AddMacro("HEADER", "#version 460");
 #endif
 }
 

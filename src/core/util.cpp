@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <fstream>
+#include <string.h>
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -15,9 +16,9 @@
 #ifndef __ANDROID__
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_opengl_glext.h>
 #else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -327,8 +328,13 @@ void PrintQuat(const glm::quat& q, const std::string& name)
 #ifdef SHIPPING
 static std::string rootPath("");
 #else
+#ifdef __linux__
+// enables us to run from the build dir
+static std::string rootPath("../");
+#else
 // enables us to run from the build/Debug dir
 static std::string rootPath("../../");
+#endif
 #endif
 
 const std::string& GetRootPath()
@@ -475,7 +481,7 @@ void CreateProjection(float* m, GraphicsAPI graphicsApi, const float tanAngleLef
 
 void StrCpy_s(char* dest, size_t destsz, const char* src)
 {
-#ifndef __ANDROID__
+#ifdef WIN32
     strcpy_s(dest, destsz, src);
 #else
     strcpy(dest, src);

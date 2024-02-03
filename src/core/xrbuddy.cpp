@@ -402,11 +402,29 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
         }
     }
 
+#ifdef WIN32
     XrGraphicsBindingOpenGLWin32KHR glBinding = {};
     glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR;
     glBinding.next = NULL;
     glBinding.hDC = wglGetCurrentDC();
     glBinding.hGLRC = wglGetCurrentContext();
+#else
+
+    // AJT: TODO: need to collect all the x11 stuff from the app and SDL.
+
+    XrGraphicsBindingOpenGLXlibKHR glBinding = {};
+    glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR;
+    glBinding.next = NULL;
+    /*
+    glBinding.xDisplay = xDisplay;
+    glBinding.visualid = ??;
+    glBinding.glxFBConfig = ??;
+    glBinding.glxDrawable = ??;
+    glBinding.glxContext = ??;
+    */
+    Log::E("OpenXR support not implemented!\n");
+    return false;
+#endif
 
 #elif defined (XR_USE_GRAPHICS_API_OPENGL_ES)
     XrGraphicsRequirementsOpenGLESKHR reqs = {};

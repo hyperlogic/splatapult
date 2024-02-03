@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <map>
 #include <stdint.h>
+#include <string.h>
 
 union SDL_Event;
 struct SDL_JoyAxisEvent;

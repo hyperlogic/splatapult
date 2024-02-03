@@ -1,13 +1,19 @@
-# mkdir build
-# cd build
-# cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\hyperlogic\code\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
-# cmake --build . --config Release
+# See BUILD.md for more info
+# Windows cheat sheet
+# > mkdir build
+# > cd build
+# > cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\msys64\home\hyperlogic\code\vcpkg\scripts\buildsystems\vcpkg.cmake" ..
+# > cmake --build . --config Release
 
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 set(PROJECT_NAME splatapult)
 project(${PROJECT_NAME} LANGUAGES CXX)
 
 option(SHIPPING "Build for shipping" OFF)
+
+if(UNIX)
+    find_package(X11 REQUIRED)
+endif()
 
 # opengl
 find_package(OpenGL REQUIRED)
@@ -26,10 +32,12 @@ find_package(glm REQUIRED)
 find_package(PNG REQUIRED)
 
 # nlohmann-json
-find_package(nlohmann_json CONFIG REQUIRED)
+if (WIN32)
+    find_package(nlohmann_json CONFIG REQUIRED)
+endif()
 
 # tracy
-if(NOT SHIPPING)
+if(WIN32 AND NOT SHIPPING)
     find_package(Tracy CONFIG REQUIRED)
     add_compile_definitions(TRACY_ENABLE)
     set(TRACY_LIBRARIES, Tracy::TracyClient)
@@ -74,18 +82,33 @@ if(WIN32)
     # set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
 endif()
 
-if(SHIPPING)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        ${OPENGL_LIBRARIES}
-        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
-        $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-        GLEW::GLEW
-        glm::glm
-        PNG::PNG
-        nlohmann_json::nlohmann_json
-        OpenXR::headers
-        OpenXR::openxr_loader
-    )
+if(WIN32)
+    if(SHIPPING)
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+            ${OPENGL_LIBRARIES}
+            $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+            $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+            GLEW::GLEW
+            glm::glm
+            PNG::PNG
+            nlohmann_json::nlohmann_json
+            OpenXR::headers
+            OpenXR::openxr_loader
+        )
+    elseif()
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+            ${OPENGL_LIBRARIES}
+            $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+            $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+            GLEW::GLEW
+            glm::glm
+            PNG::PNG
+            nlohmann_json::nlohmann_json
+            Tracy::TracyClient
+            OpenXR::headers
+            OpenXR::openxr_loader
+        )
+    endif()
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE
         ${OPENGL_LIBRARIES}
@@ -94,10 +117,10 @@ else()
         GLEW::GLEW
         glm::glm
         PNG::PNG
-        nlohmann_json::nlohmann_json
-        Tracy::TracyClient
+        # nlohmann_json::nlohmann_json
         OpenXR::headers
         OpenXR::openxr_loader
+        ${X11_LIBRARIES}
     )
 endif()
 
