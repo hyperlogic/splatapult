@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string.h>
 
 #include "core/log.h"
 #include "core/util.h"

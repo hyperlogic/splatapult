@@ -32,6 +32,25 @@ And the resulting exe will use that copy.  You can then zip up the folder and di
     - `cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
     - `cmake --build . --config=Release`
 
+*EXPERIMENTAL* Linux Build (Ubuntu)
+--------------------
+    - `sudo apt-get install clang`
+    - `sudo apt-get install cmake`
+    - `sudo apt-get install freeglut3-dev`
+    - `sudo apt-get install libsdl2-dev`
+    - `sudo apt-get install libglew-dev`
+    - `sudo apt-get install libglm-dev`
+    - `sudo apt-get install libpng-dev`
+    - `sudo apt-get install nlohmann-json3-dev`
+    - `sudo apt-get install libopenxr-dev`
+
+* To create a shipping build:
+    - `mkdir build`
+    - `cd build`
+    - `cmake -DSHIPPING=ON ..`
+    - `cmake --build . --config=Release`
+
+
 *EXPERIMENTAL* Meta Quest Build
 --------------------
 NOTE: Although the quest build functions it is much to slow for most scenes.
@@ -50,3 +69,4 @@ A Quest2 headset can only run a scene consisting of 25k splats.
 * Copy the meta-quest/splatapult dir to ovr_openxr_mobile_sdk_59.0/XrSamples/splataplut
 * Open the ovr_openxr_mobile_sdk_59.0/XrSamples/splatapult in AndroidStudio.
 * Sync and Build
+

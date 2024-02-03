@@ -6,6 +6,7 @@
 #include "vertexbuffer.h"
 
 #include <cassert>
+#include <string.h>
 
 #ifdef __ANDROID__
 #include <EGL/egl.h>
@@ -15,8 +16,8 @@
 #else
 #include <GL/glew.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
+#include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_opengl_glext.h>
 #endif
 
 #include "util.h"

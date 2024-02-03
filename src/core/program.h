@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 
 #include "core/log.h"
 
