@@ -259,6 +259,7 @@ App::App(const MainContext& mainContextIn)
     mouseLookStick = glm::vec2(0.0f, 0.0f);
     mouseLook = false;
     virtualRoll = 0.0f;
+    virtualUp = 0.0f;
     frameNum = 0;
 }
 
@@ -694,6 +695,16 @@ bool App::Init()
         virtualRoll += down ? 1.0f : -1.0f;
     });
 
+    inputBuddy->OnKey(SDLK_t, [this](bool down, uint16_t mod)
+    {
+        virtualUp += down ? 1.0f : -1.0f;
+    });
+
+    inputBuddy->OnKey(SDLK_g, [this](bool down, uint16_t mod)
+    {
+        virtualUp += down ? -1.0f : 1.0f;
+    });
+
     inputBuddy->OnMouseButton([this](uint8_t button, bool down, glm::ivec2 pos)
     {
         if (button == 3) // right button
@@ -785,7 +796,7 @@ bool App::Process(float dt)
     roll += joypad.rb ? 1.0f : 0.0f;
     flyCam->Process(glm::clamp(joypad.leftStick + virtualLeftStick, -1.0f, 1.0f),
                     glm::clamp(joypad.rightStick + virtualRightStick, -1.0f, 1.0f) + mouseLookStick / (dt > 0.0f ? dt : 1.0f),
-                    glm::clamp(roll + virtualRoll, -1.0f, 1.0f), dt);
+                    glm::clamp(roll + virtualRoll, -1.0f, 1.0f), glm::clamp(virtualUp, -1.0f, 1.0f), dt);
     mouseLookStick = glm::vec2(0.0f, 0.0f);
 
 #endif

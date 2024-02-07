@@ -15,7 +15,8 @@ FlyCam::FlyCam(const glm::vec3& worldUpIn, const glm::vec3& posIn, const glm::qu
 
 }
 
-void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn, float dt)
+void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn,
+                     float upAmountIn, float dt)
 {
     glm::vec2 leftStick = leftStickIn;
     glm::vec2 rightStick = rightStickIn;
@@ -25,7 +26,7 @@ void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn
     const float K = STIFF / speed;
 
     // left stick controls position
-    glm::vec3 stick = rot * glm::vec3(leftStick.x, 0.0f, -leftStick.y);
+    glm::vec3 stick = rot * glm::vec3(leftStick.x, upAmountIn, -leftStick.y);
     glm::vec3 s_over_k = (stick * STIFF) / K;
     glm::vec3 s_over_k_sq = (stick * STIFF) / (K * K);
     float e_neg_kt = exp(-K * dt);

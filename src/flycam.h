@@ -14,7 +14,8 @@ class FlyCam
 public:
     FlyCam(const glm::vec3& worldUpIn, const glm::vec3& posIn, const glm::quat& rotIn, float speedIn, float rotSpeedIn);
 
-    void Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn, float dt);
+    void Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn, float rollAmountIn,
+                 float upAmountIn, float dt);
     const glm::mat4& GetCameraMat() const { return cameraMat; }
     void SetCameraMat(const glm::mat4& cameraMat);
 

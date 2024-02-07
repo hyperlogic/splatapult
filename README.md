@@ -26,6 +26,8 @@ Options
 Desktop Controls
 --------------------
 * wasd - move
+* q, e - roll
+* t, g - up, down
 * arrow keys - look
 * right mouse button - hold down for mouse look.
 * gamepad - if present, right stick to rotate, left stick to move, bumpers to roll

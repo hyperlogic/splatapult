@@ -93,6 +93,7 @@ protected:
     glm::vec2 mouseLookStick;
     bool mouseLook;
     float virtualRoll;
+    float virtualUp;
     uint32_t fpsText;
     uint32_t frameNum;
 
