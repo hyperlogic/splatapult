@@ -106,7 +106,7 @@ static bool CompileShader(GLenum type, const std::string& source, GLint* shaderO
     return true;
 }
 
-Program::Program() : program(0), vertShader(0), geomShader(0), fragShader(0)
+Program::Program() : program(0), vertShader(0), geomShader(0), fragShader(0), computeShader(0)
 {
 #ifdef __ANDROID__
     AddMacro("HEADER", "#version 320 es\nprecision highp float;");
@@ -260,12 +260,16 @@ bool Program::LoadCompute(const std::string& computeFilename)
 
     debugName = computeFilename;
 
+    GL_ERROR_CHECK("Program::LoadCompute begin");
+
     std::string computeSource;
     if (!LoadFile(computeFilename, computeSource))
     {
         Log::E("Failed to load compute shader \"%s\"\n", computeFilename.c_str());
         return false;
     }
+
+    GL_ERROR_CHECK("Program::LoadCompute LoadFile");
 
     computeSource = ExpandMacros(macros, computeSource);
     if (!CompileShader(GL_COMPUTE_SHADER, computeSource, &computeShader, computeFilename))
@@ -274,9 +278,13 @@ bool Program::LoadCompute(const std::string& computeFilename)
         return false;
     }
 
+    GL_ERROR_CHECK("Program::LoadCompute CompileShader");
+
     program = glCreateProgram();
     glAttachShader(program, computeShader);
     glLinkProgram(program);
+
+    GL_ERROR_CHECK("Program::LoadCompute Attach and Link");
 
     if (!CheckLinkStatus())
     {
@@ -304,6 +312,8 @@ bool Program::LoadCompute(const std::string& computeFilename)
         v.loc = loc;
         uniforms[name] = v;
     }
+
+    GL_ERROR_CHECK("Program::LoadCompute get uniforms");
 
     // TODO: build reflection info on shader storage blocks
 
