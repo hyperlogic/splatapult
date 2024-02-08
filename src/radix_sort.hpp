@@ -366,7 +366,7 @@ namespace rgc::radix_sort
 				size_t glob_counts_size = RGC_RADIX_SORT_BITSET_SIZE * sizeof(GLuint);
 				ZeroBuffer(GL_SHADER_STORAGE_BUFFER, glob_counts_size);
 #else
-				glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, &k_zero);
+				glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &k_zero);
 #endif
 
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_local_offsets_buf);
@@ -374,7 +374,7 @@ namespace rgc::radix_sort
 				size_t local_offsets_size = round_to_power_of_2(calc_thread_blocks_num(arr_len)) * RGC_RADIX_SORT_BITSET_SIZE * sizeof(GLuint);
 				ZeroBuffer(GL_SHADER_STORAGE_BUFFER, local_offsets_size);
 #else
-				glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, &k_zero);
+				glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &k_zero);
 #endif
 
 				// ------------------------------------------------------------------------------------------------
