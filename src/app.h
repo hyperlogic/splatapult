@@ -31,7 +31,7 @@ union SDL_Event;
 class App
 {
 public:
-    App(const MainContext& mainContextIn);
+    App(MainContext& mainContextIn);
 
     enum ParseResult
     {
@@ -66,7 +66,7 @@ protected:
         bool drawFps = true;
     };
 
-    MainContext mainContext;
+    MainContext& mainContext;
     Options opt;
     std::string plyFilename;
     std::shared_ptr<DebugRenderer> debugRenderer;

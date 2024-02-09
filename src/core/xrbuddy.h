@@ -51,7 +51,7 @@
 class XrBuddy
 {
 public:
-    XrBuddy(const MainContext& mainContextIn, const glm::vec2& nearFarIn);
+    XrBuddy(MainContext& mainContextIn, const glm::vec2& nearFarIn);
 
     bool Init();
     bool PollEvents();
@@ -124,7 +124,7 @@ protected:
                     uint32_t colorTexture, uint32_t depthTexture, int32_t viewNum);
 
     bool constructorSucceded = false;
-    MainContext mainContext;
+    MainContext& mainContext;
     XrSessionState state = XR_SESSION_STATE_UNKNOWN;
     std::vector<XrExtensionProperties> extensionProps;
     std::vector<XrApiLayerProperties> layerProps;

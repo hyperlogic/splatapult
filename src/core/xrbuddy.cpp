@@ -409,21 +409,12 @@ static bool CreateSession(XrInstance instance, XrSystemId systemId, XrSession& s
     glBinding.hDC = wglGetCurrentDC();
     glBinding.hGLRC = wglGetCurrentContext();
 #else
-
-    // AJT: TODO: need to collect all the x11 stuff from the app and SDL.
-
     XrGraphicsBindingOpenGLXlibKHR glBinding = {};
     glBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR;
     glBinding.next = NULL;
-    /*
-    glBinding.xDisplay = xDisplay;
-    glBinding.visualid = ??;
-    glBinding.glxFBConfig = ??;
-    glBinding.glxDrawable = ??;
-    glBinding.glxContext = ??;
-    */
-    Log::E("OpenXR support not implemented!\n");
-    return false;
+    glBinding.xDisplay = mainContext.xdisplay;
+    glBinding.glxDrawable = mainContext.glxDrawable;
+    glBinding.glxContext = mainContext.glxContext;
 #endif
 
 #elif defined (XR_USE_GRAPHICS_API_OPENGL_ES)
@@ -982,9 +973,9 @@ static GLuint CreateDepthTexture(GLuint colorTexture, GLint width, GLint height)
     return depthTexture;
 }
 
-XrBuddy::XrBuddy(const MainContext& mainContextIn, const glm::vec2& nearFarIn)
+XrBuddy::XrBuddy(MainContext& mainContextIn, const glm::vec2& nearFarIn):
+    mainContext(mainContextIn)
 {
-    mainContext = mainContextIn;
     nearFar = nearFarIn;
 
 #ifdef XR_USE_GRAPHICS_API_OPENGL

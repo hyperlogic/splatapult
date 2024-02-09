@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_syswm.h>
 #include <stdint.h>
 #include <thread>
 
@@ -88,6 +89,21 @@ int main(int argc, char *argv[])
     ctx.gl_context = SDL_GL_CreateContext(ctx.window);
 
     SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
+
+    // Initialize context from the SDL window
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version)
+    auto ret = SDL_GetWindowWMInfo(ctx.window, &info);
+    if (ret != SDL_TRUE)
+    {
+        Log::W("Failed to retrieve SDL window info: %s\n", SDL_GetError());
+    }
+    else
+    {
+        mainContext.xdisplay = info.info.x11.display;
+        mainContext.glxDrawable = (GLXWindow)info.info.x11.window;
+        mainContext.glxContext = (GLXContext)ctx.gl_context;
+    }
 
     GLenum err = glewInit();
     if (GLEW_OK != err)

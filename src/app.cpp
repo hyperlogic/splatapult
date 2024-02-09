@@ -250,9 +250,9 @@ VR Controls\n\
 \n");
 }
 
-App::App(const MainContext& mainContextIn)
+App::App(MainContext& mainContextIn):
+    mainContext(mainContextIn)
 {
-    mainContext = mainContextIn;
     cameraIndex = 0;
     virtualLeftStick = glm::vec2(0.0f, 0.0f);
     virtualRightStick = glm::vec2(0.0f, 0.0f);
