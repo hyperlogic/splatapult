@@ -885,7 +885,6 @@ static bool CreateSwapchains(XrInstance instance, XrSession session,
                 foundFormatIndex = i;
                 break;
             }
-            i++;
         }
         if (foundFormatIndex != swapchainFormatCount)
         {
