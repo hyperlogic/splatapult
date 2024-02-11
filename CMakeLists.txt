@@ -15,6 +15,11 @@ if(UNIX)
     find_package(X11 REQUIRED)
 endif()
 
+if(WIN32)
+    # kind of a hack, I want to be able to include glm/glm.hpp on windows and linux
+    include_directories(${VCPKG_INSTALLED_DIR}/x64-windows/include)
+endif()
+
 # opengl
 find_package(OpenGL REQUIRED)
 include_directories(${GL_INCLUDE_DIRS})
@@ -95,7 +100,7 @@ if(WIN32)
             OpenXR::headers
             OpenXR::openxr_loader
         )
-    elseif()
+    else()
         target_link_libraries(${PROJECT_NAME} PRIVATE
             ${OPENGL_LIBRARIES}
             $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
