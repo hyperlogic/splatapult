@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
 
     SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
 
+#ifdef __linux__
     // Initialize context from the SDL window
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version)
@@ -104,6 +105,7 @@ int main(int argc, char *argv[])
         mainContext.glxDrawable = (GLXWindow)info.info.x11.window;
         mainContext.glxContext = (GLXContext)ctx.gl_context;
     }
+#endif
 
     GLenum err = glewInit();
     if (GLEW_OK != err)
