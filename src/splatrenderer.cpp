@@ -29,6 +29,14 @@
 #include "core/util.h"
 
 #include "radix_sort.hpp"
+#include "sortbuddy.h"
+
+#ifdef SOFTWARE_SORT
+static void SoftwareSort(size_t numElements)
+{
+    Log::E("got numElements! = %d\n", (int)numElements);
+}
+#endif
 
 SplatRenderer::SplatRenderer()
 {
@@ -66,14 +74,18 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
         return false;
     }
 
+#ifndef SOFTWARE_SORT
     preSortProg = std::make_shared<Program>();
     if (!preSortProg->LoadCompute("shader/presort_compute.glsl"))
     {
         Log::E("Error loading point pre-sort compute shader!\n");
         return false;
     }
+#endif
 
     BuildVertexArrayObject(gaussianCloud);
+
+#ifndef SOFTWARE_SORT
     depthVec.resize(gaussianCloud->size());
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
@@ -83,6 +95,10 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
 
     atomicCounterVec.resize(1, 0);
     atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
+#else
+    sortBuddy = std::make_shared<SortBuddy>(gaussianCloud);
+    sortId = 0;
+#endif
 
     GL_ERROR_CHECK("SplatRenderer::Init() end");
 
@@ -96,9 +112,10 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
     GL_ERROR_CHECK("SplatRenderer::Sort() begin");
 
-    const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
+#ifndef SOFTWARE_SORT
+    const size_t numPoints = posVec.size();
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
@@ -125,9 +142,9 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         ZoneScopedNC("get-count", tracy::Color::Green);
 
         atomicCounterBuffer->Read(atomicCounterVec);
-        sortCount = atomicCounterVec[0];
+        numElements = atomicCounterVec[0];
 
-        assert(sortCount <= (uint32_t)numPoints);
+        assert(numElements <= (uint32_t)numPoints);
 
         GL_ERROR_CHECK("SplatRenderer::Render() get-count");
     }
@@ -135,7 +152,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), sortCount);
+        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), numElements);
 
         GL_ERROR_CHECK("SplatRenderer::Sort() sort");
     }
@@ -145,10 +162,25 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
         glBindBuffer(GL_COPY_READ_BUFFER, valBuffer->GetObj());
         glBindBuffer(GL_COPY_WRITE_BUFFER, splatVao->GetElementBuffer()->GetObj());
-        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sortCount * sizeof(uint32_t));
+        glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, numElements * sizeof(uint32_t));
 
         GL_ERROR_CHECK("SplatRenderer::Sort() copy-sorted");
     }
+#else
+    // if there's a new index buffer order
+    sortBuddy->SetLatestCamera(cameraMat);
+    sortBuddy->GetSortWithLock([this](const std::vector<uint32_t>& indexVec, uint32_t id)
+    {
+        if (id > sortId)
+        {
+            // copy indexVec into element buffer.
+            splatVao->GetElementBuffer()->Update(indexVec);
+            numElements = (uint32_t)indexVec.size();
+            sortId = id;
+        }
+    });
+#endif
+
 }
 
 void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
@@ -174,7 +206,7 @@ void SplatRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
         splatProg->SetUniform("eye", eye);
 
         splatVao->Bind();
-        glDrawElements(GL_POINTS, sortCount, GL_UNSIGNED_INT, nullptr);
+        glDrawElements(GL_POINTS, numElements, GL_UNSIGNED_INT, nullptr);
         splatVao->Unbind();
 
         GL_ERROR_CHECK("SplatRenderer::Render() draw");

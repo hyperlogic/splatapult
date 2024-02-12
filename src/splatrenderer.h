@@ -15,11 +15,16 @@
 
 #include "gaussiancloud.h"
 
-
 namespace rgc::radix_sort
 {
     struct sorter;
 }
+
+#define SOFTWARE_SORT
+
+#ifdef SOFTWARE_SORT
+class SortBuddy;
+#endif
 
 class SplatRenderer
 {
@@ -40,12 +45,18 @@ protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 
     std::shared_ptr<Program> splatProg;
-    std::shared_ptr<Program> preSortProg;
     std::shared_ptr<VertexArrayObject> splatVao;
 
-    std::vector<uint32_t> indexVec;
-    std::vector<uint32_t> depthVec;
+    bool isFramebufferSRGBEnabled;
+    bool useFullSH;
+    uint32_t numElements;
     std::vector<glm::vec4> posVec;
+    std::vector<uint32_t> indexVec;
+
+#ifndef SOFTWARE_SORT
+    std::shared_ptr<Program> preSortProg;
+
+    std::vector<uint32_t> depthVec;
     std::vector<uint32_t> atomicCounterVec;
 
     std::shared_ptr<BufferObject> keyBuffer;
@@ -55,6 +66,8 @@ protected:
 
     std::shared_ptr<rgc::radix_sort::sorter> sorter;
     uint32_t sortCount;
-    bool isFramebufferSRGBEnabled;
-    bool useFullSH;
+#else
+    std::shared_ptr<SortBuddy> sortBuddy;
+    uint32_t sortId;
+#endif
 };

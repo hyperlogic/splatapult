@@ -76,6 +76,7 @@ add_executable(${PROJECT_NAME}
     src/pointcloud.cpp
     src/pointrenderer.cpp
     src/sdl_main.cpp
+    src/sortbuddy.cpp
     src/splatrenderer.cpp
     src/vrconfig.cpp
 )
@@ -148,3 +149,5 @@ if(SHIPPING)
                 $<TARGET_FILE_DIR:${PROJECT_NAME}>/data/test.ply
     )
 endif()
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)

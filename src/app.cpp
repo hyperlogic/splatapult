@@ -3,6 +3,9 @@
     This software is licensed under the MIT License. See LICENSE for more details.
 */
 
+// prevent windows from defining min and max
+#define NOMINMAX
+
 #include "app.h"
 
 #ifndef __ANDROID__
