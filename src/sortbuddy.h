@@ -30,6 +30,7 @@ protected:
     std::vector<glm::vec3> posVec;
     ThreadSafeValue<std::vector<uint32_t>> lockedIndexVec;
     std::atomic<uint32_t> sortId;
+    std::atomic<bool> sortThreadShouldQuit;
     std::shared_ptr<std::thread> sortThread;
     std::binary_semaphore cameraSignal;
 

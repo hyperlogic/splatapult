@@ -9,7 +9,7 @@ static void SortThreadFunc(SortBuddy* sortBuddy)
 
 }
 
-SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSignal(0)
+SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSignal(0), sortThreadShouldQuit(false)
 {
     size_t numPoints = gaussianCloud->size();
     assert(numPoints <= std::numeric_limits<uint32_t>::max());
@@ -33,15 +33,9 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
 
     sortThread = std::make_shared<std::thread>([this, numPoints]()
     {
-        //
-        // NOTE: This code runs on sort thread!
-        //
-
-        bool done = false;  // AJT: TODO fix me!
-
         sortId++;
 
-        while (!done)
+        while (!sortThreadShouldQuit)
         {
             cameraSignal.acquire();
             glm::mat4 cameraMat = lockedCameraMat.Get();
@@ -74,12 +68,12 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
             sortId++;
         }
     });
-    sortThread->detach();
 }
 
 SortBuddy::~SortBuddy()
 {
-    // TODO:
+    sortThreadShouldQuit = true;
+    sortThread->join();
 }
 
 // thread-safe
