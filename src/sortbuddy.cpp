@@ -2,6 +2,13 @@
 
 #include <algorithm>
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
+
 #include "core/log.h"
 
 static void SortThreadFunc(SortBuddy* sortBuddy)
@@ -33,37 +40,60 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
 
     sortThread = std::make_shared<std::thread>([this, numPoints]()
     {
+#ifdef TRACY_ENABLE
+        tracy::SetThreadName("sort thread");
+#endif
+
         sortId++;
 
         while (!sortThreadShouldQuit)
         {
-            cameraSignal.acquire();
-            glm::mat4 cameraMat = lockedCameraMat.Get();
-            glm::vec3 cameraPos = glm::vec3(cameraMat[3]);
-            glm::vec3 forward = glm::normalize(glm::vec3(cameraMat[2]));
+            FrameMark;
+
+            {
+                ZoneScopedNC("sort signal", tracy::Color::Red4);
+                cameraSignal.acquire();
+            }
 
             using IndexDistPair = std::pair<uint32_t, float>;
             std::vector<IndexDistPair> indexDistVec;
-            indexDistVec.reserve(numPoints);
-            for (uint32_t i = 0; i < numPoints; i++)
+
             {
-                indexDistVec.push_back(IndexDistPair(i, glm::dot(forward, posVec[i] - cameraPos)));
+                ZoneScopedNC("sort pre-sort", tracy::Color::Green);
+
+                glm::mat4 cameraMat = lockedCameraMat.Get();
+                glm::vec3 cameraPos = glm::vec3(cameraMat[3]);
+                glm::vec3 forward = glm::normalize(glm::vec3(cameraMat[2]));
+
+
+                indexDistVec.reserve(numPoints);
+                for (uint32_t i = 0; i < numPoints; i++)
+                {
+                    indexDistVec.push_back(IndexDistPair(i, glm::dot(forward, posVec[i] - cameraPos)));
+                }
             }
 
-            std::sort(indexDistVec.begin(), indexDistVec.end(), [](const IndexDistPair& a, const IndexDistPair& b)
             {
-                return a.second < b.second;
-            });
+                ZoneScopedNC("sort", tracy::Color::Blue);
+                std::sort(indexDistVec.begin(), indexDistVec.end(), [](const IndexDistPair& a, const IndexDistPair& b)
+                {
+                    return a.second < b.second;
+                });
+            }
 
             // copy result
-            lockedIndexVec.WithLock([&indexDistVec](std::vector<uint32_t>& indexVec)
             {
-                assert(indexVec.size() == indexDistVec.size());
-                for (size_t i = 0; i < indexVec.size(); i++)
+                ZoneScopedNC("sort copy", tracy::Color::Red4);
+                lockedIndexVec.WithLock([&indexDistVec](std::vector<uint32_t>& indexVec)
                 {
-                    indexVec[i] = indexDistVec[i].first;
-                }
-            });
+                    ZoneScopedNC("sort copy body", tracy::Color::Green);
+                    assert(indexVec.size() == indexDistVec.size());
+                    for (size_t i = 0; i < indexVec.size(); i++)
+                    {
+                        indexVec[i] = indexDistVec[i].first;
+                    }
+                });
+            }
 
             sortId++;
         }

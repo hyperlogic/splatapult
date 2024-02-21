@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
         frameCount++;
 
-        FrameMark;
+        //FrameMark;
     }
 
     SDL_DelEventWatch(Watch, NULL);
