@@ -650,6 +650,7 @@ static bool CreateActions(XrInstance instance, XrSystemId systemId, XrSession se
 
             {actionMap["l_trackpad_click"].action, pathCache["/user/hand/left/input/trackpad/click"]},
             {actionMap["r_trackpad_click"].action, pathCache["/user/hand/right/input/trackpad/click"]},
+
             {actionMap["l_trackpad_x"].action, pathCache["/user/hand/left/input/trackpad/x"]},
             {actionMap["r_trackpad_x"].action, pathCache["/user/hand/right/input/trackpad/x"]},
             {actionMap["l_trackpad_y"].action, pathCache["/user/hand/left/input/trackpad/y"]},
