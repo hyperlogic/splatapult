@@ -128,7 +128,7 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
 
                 glm::mat4 cameraMat = lockedCameraMat.Get();
                 glm::vec3 cameraPos = glm::vec3(cameraMat[3]);
-                glm::vec3 forward = -glm::normalize(glm::vec3(cameraMat[2]));
+                glm::vec3 forward = glm::normalize(glm::vec3(cameraMat[2]));
 
                 keyVec.clear();
                 valVec.clear();
@@ -139,9 +139,9 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
                 {
                     float z = glm::dot(forward, posVec[i] - cameraPos);
                     KeyType key;
-                    if (z > 0)
+                    if (z < 0)
                     {
-                        key = static_cast<KeyType>((z / Z_FAR) * KEY_MAX);
+                        key = static_cast<KeyType>(((z - Z_FAR) / Z_FAR) * KEY_MAX);
                     }
                     else
                     {
@@ -158,11 +158,11 @@ SortBuddy::SortBuddy(std::shared_ptr<GaussianCloud> gaussianCloud) : cameraSigna
                 /*
                 std::sort(valVec.begin(), valVec.end(), [&keyVec](const uint32_t& a, const uint32_t& b)
                 {
-                    return keyVec[a] > keyVec[b];
+                    return keyVec[a] < keyVec[b];
                 });
                 */
 
-                RadixSort(keyVec, valVec, true);
+                RadixSort(keyVec, valVec, false);
             }
 
             // copy result
