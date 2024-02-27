@@ -82,9 +82,11 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
 
     BuildVertexArrayObject(gaussianCloud);
     depthVec.resize(gaussianCloud->size());
+    // TODO: remove GL_MAP_READ_BIT for perf
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
     keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
-    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
+    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
+    valBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
 
     sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
@@ -144,13 +146,22 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         ZoneScopedNC("sort", tracy::Color::Red4);
 
         // DUMP KEYS before sort
-        {
+        if (false) {
             std::vector<uint32_t> unsortedKeyVec(sortCount, 0);
             keyBuffer->Read(unsortedKeyVec);
-            printf("keys0  = [");
+            printf("keys0 = [");
             for (uint32_t i = 0; i < sortCount; i++)
             {
                 printf("%u ", unsortedKeyVec[i]);
+            }
+            printf("]\n");
+
+            std::vector<uint32_t> unsortedValVec(sortCount, 0);
+            valBuffer->Read(unsortedValVec);
+            printf("vals0 = [");
+            for (uint32_t i = 0; i < sortCount; i++)
+            {
+                printf("%u ", unsortedValVec[i]);
             }
             printf("]\n");
         }
@@ -161,6 +172,8 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         sortProg->SetUniform("g_num_elements", (uint32_t)sortCount);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer2->GetObj());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, valBuffer2->GetObj());
 
         const int WORKGROUP_SIZE = 256;
         glDispatchCompute(WORKGROUP_SIZE, 1, 1);
@@ -170,7 +183,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         GL_ERROR_CHECK("SplatRenderer::Sort() sort");
 
         // DUMP KEYS after sort
-        {
+        if (false) {
             std::vector<uint32_t> sortedKeyVec(sortCount, 0);
             keyBuffer->Read(sortedKeyVec);
             printf("keys1 = [");
@@ -180,11 +193,12 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
             }
             printf("]\n");
 
-            keyBuffer2->Read(sortedKeyVec);
-            printf("keys2 = [");
+            std::vector<uint32_t> sortedValVec(sortCount, 0);
+            valBuffer->Read(sortedValVec);
+            printf("vals1 = [");
             for (uint32_t i = 0; i < sortCount; i++)
             {
-                printf("%u ", sortedKeyVec[i]);
+                printf("%u ", sortedValVec[i]);
             }
             printf("]\n");
 

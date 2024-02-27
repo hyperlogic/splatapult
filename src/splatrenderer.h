@@ -52,6 +52,7 @@ protected:
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> keyBuffer2;
     std::shared_ptr<BufferObject> valBuffer;
+    std::shared_ptr<BufferObject> valBuffer2;
     std::shared_ptr<BufferObject> posBuffer;
     std::shared_ptr<BufferObject> atomicCounterBuffer;
 

@@ -25,6 +25,14 @@ layout (std430, set = 0, binding = 1) buffer elements_out {
     uint g_elements_out[];
 };
 
+layout (std430, set = 0, binding = 2) buffer indices_in {
+    uint g_indices_in[];
+};
+
+layout (std430, set = 0, binding = 3) buffer indices_out {
+    uint g_indices_out[];
+};
+
 shared uint[RADIX_SORT_BINS] histogram;
 shared uint[RADIX_SORT_BINS / SUBGROUP_SIZE] sums;// subgroup reductions
 shared uint[RADIX_SORT_BINS] local_offsets;// local exclusive scan (prefix sum) (inside subgroups)
@@ -36,6 +44,7 @@ struct BinFlags {
 shared BinFlags[RADIX_SORT_BINS] bin_flags;
 
 #define ELEMENT_IN(index, iteration) (iteration % 2 == 0 ? g_elements_in[index] : g_elements_out[index])
+#define INDEX_IN(index, iteration) (iteration % 2 == 0 ? g_indices_in[index] : g_indices_out[index])
 
 void main() {
     uint lID = gl_LocalInvocationID.x;
@@ -100,10 +109,12 @@ void main() {
             barrier();
 
             uint element_in = 0;
+            uint index_in = 0;
             uint binID = 0;
             uint binOffset = 0;
             if (ID < g_num_elements) {
                 element_in = ELEMENT_IN(ID, iteration);
+                index_in = INDEX_IN(ID, iteration);
                 binID = (element_in >> shift) & uint(RADIX_SORT_BINS - 1);
                 // offset for group
                 binOffset = global_offsets[binID];
@@ -126,8 +137,10 @@ void main() {
                 }
                 if (iteration % 2 == 0) {
                     g_elements_out[binOffset + prefix] = element_in;
+                    g_indices_out[binOffset + prefix] = index_in;
                 } else {
                     g_elements_in[binOffset + prefix] = element_in;
+                    g_indices_in[binOffset + prefix] = index_in;
                 }
                 if (prefix == count - 1) {
                     atomicAdd(global_offsets[binID], count);
