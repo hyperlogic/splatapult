@@ -355,65 +355,70 @@ int Program::GetAttribLoc(const std::string& name) const
     }
 }
 
-void Program::SetUniform(int loc, int value) const
+void Program::SetUniformRaw(int loc, uint32_t value) const
+{
+    glUniform1ui(loc, value);
+}
+
+void Program::SetUniformRaw(int loc, int32_t value) const
 {
     glUniform1i(loc, value);
 }
 
-void Program::SetUniform(int loc, float value) const
+void Program::SetUniformRaw(int loc, float value) const
 {
     glUniform1f(loc, value);
 }
 
-void Program::SetUniform(int loc, const glm::vec2& value) const
+void Program::SetUniformRaw(int loc, const glm::vec2& value) const
 {
     glUniform2fv(loc, 1, (float*)&value);
 }
 
-void Program::SetUniform(int loc, const glm::vec3& value) const
+void Program::SetUniformRaw(int loc, const glm::vec3& value) const
 {
     glUniform3fv(loc, 1, (float*)&value);
 }
 
-void Program::SetUniform(int loc, const glm::vec4& value) const
+void Program::SetUniformRaw(int loc, const glm::vec4& value) const
 {
     glUniform4fv(loc, 1, (float*)&value);
 }
 
-void Program::SetUniform(int loc, const glm::mat2& value) const
+void Program::SetUniformRaw(int loc, const glm::mat2& value) const
 {
     glUniformMatrix2fv(loc, 1, GL_FALSE, (float*)&value);
 }
 
-void Program::SetUniform(int loc, const glm::mat3& value) const
+void Program::SetUniformRaw(int loc, const glm::mat3& value) const
 {
     glUniformMatrix3fv(loc, 1, GL_FALSE, (float*)&value);
 }
 
-void Program::SetUniform(int loc, const glm::mat4& value) const
+void Program::SetUniformRaw(int loc, const glm::mat4& value) const
 {
     glUniformMatrix4fv(loc, 1, GL_FALSE, (float*)&value);
 }
 
-void Program::SetAttrib(int loc, float* values, size_t stride) const
+void Program::SetAttribRaw(int loc, float* values, size_t stride) const
 {
     glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, (GLsizei)stride, values);
     glEnableVertexAttribArray(loc);
 }
 
-void Program::SetAttrib(int loc, glm::vec2* values, size_t stride) const
+void Program::SetAttribRaw(int loc, glm::vec2* values, size_t stride) const
 {
     glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, (GLsizei)stride, values);
     glEnableVertexAttribArray(loc);
 }
 
-void Program::SetAttrib(int loc, glm::vec3* values, size_t stride) const
+void Program::SetAttribRaw(int loc, glm::vec3* values, size_t stride) const
 {
     glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, (GLsizei)stride, values);
     glEnableVertexAttribArray(loc);
 }
 
-void Program::SetAttrib(int loc, glm::vec4* values, size_t stride) const
+void Program::SetAttribRaw(int loc, glm::vec4* values, size_t stride) const
 {
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, (GLsizei)stride, values);
     glEnableVertexAttribArray(loc);

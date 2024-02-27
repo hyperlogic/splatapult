@@ -37,7 +37,7 @@ public:
         auto iter = uniforms.find(name);
         if (iter != uniforms.end())
         {
-            SetUniform(iter->second.loc, value);
+            SetUniformRaw(iter->second.loc, value);
         }
         else
         {
@@ -45,14 +45,15 @@ public:
         }
     }
 
-    void SetUniform(int loc, int value) const;
-    void SetUniform(int loc, float value) const;
-    void SetUniform(int loc, const glm::vec2& value) const;
-    void SetUniform(int loc, const glm::vec3& value) const;
-    void SetUniform(int loc, const glm::vec4& value) const;
-    void SetUniform(int loc, const glm::mat2& value) const;
-    void SetUniform(int loc, const glm::mat3& value) const;
-    void SetUniform(int loc, const glm::mat4& value) const;
+    void SetUniformRaw(int loc, int32_t value) const;
+    void SetUniformRaw(int loc, uint32_t value) const;
+    void SetUniformRaw(int loc, float value) const;
+    void SetUniformRaw(int loc, const glm::vec2& value) const;
+    void SetUniformRaw(int loc, const glm::vec3& value) const;
+    void SetUniformRaw(int loc, const glm::vec4& value) const;
+    void SetUniformRaw(int loc, const glm::mat2& value) const;
+    void SetUniformRaw(int loc, const glm::mat3& value) const;
+    void SetUniformRaw(int loc, const glm::mat4& value) const;
 
     template <typename T>
     void SetAttrib(const std::string& name, T* values, size_t stride = 0) const
@@ -60,7 +61,7 @@ public:
         auto iter = attribs.find(name);
         if (iter != attribs.end())
         {
-            SetAttrib(iter->second.loc, values, stride);
+            SetAttribRaw(iter->second.loc, values, stride);
         }
         else
         {
@@ -68,10 +69,10 @@ public:
         }
     }
 
-    void SetAttrib(int loc, float* values, size_t stride = 0) const;
-    void SetAttrib(int loc, glm::vec2* values, size_t stride = 0) const;
-    void SetAttrib(int loc, glm::vec3* values, size_t stride = 0) const;
-    void SetAttrib(int loc, glm::vec4* values, size_t stride = 0) const;
+    void SetAttribRaw(int loc, float* values, size_t stride = 0) const;
+    void SetAttribRaw(int loc, glm::vec2* values, size_t stride = 0) const;
+    void SetAttribRaw(int loc, glm::vec3* values, size_t stride = 0) const;
+    void SetAttribRaw(int loc, glm::vec4* values, size_t stride = 0) const;
 
 protected:
 
