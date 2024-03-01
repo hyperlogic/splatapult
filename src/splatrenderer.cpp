@@ -28,7 +28,7 @@
 #include "core/texture.h"
 #include "core/util.h"
 
-#include "radix_sort.hpp"
+static const uint32_t NUM_BLOCKS_PER_WORKGROUP = 32;
 
 SplatRenderer::SplatRenderer()
 {
@@ -74,9 +74,16 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
     }
 
     sortProg = std::make_shared<Program>();
-    if (!sortProg->LoadCompute("shader/single_radixsort.glsl"))
+    if (!sortProg->LoadCompute("shader/multi_radixsort.glsl"))
     {
         Log::E("Error loading sort compute shader!\n");
+        return false;
+    }
+
+    histogramProg = std::make_shared<Program>();
+    if (!histogramProg->LoadCompute("shader/multi_radixsort_histograms.glsl"))
+    {
+        Log::E("Error loading histogram compute shader!\n");
         return false;
     }
 
@@ -84,14 +91,19 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
 
     depthVec.resize(gaussianCloud->size());
 
-    // TODO: remove GL_MAP_READ_BIT for perf
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
     keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+
+    const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(gaussianCloud->size());
+    const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + NUM_BLOCKS_PER_WORKGROUP - 1) / NUM_BLOCKS_PER_WORKGROUP;
+    const uint32_t RADIX_SORT_BINS = 256;
+
+    std::vector<uint32_t> histogramVec(NUM_WORKGROUPS * RADIX_SORT_BINS, 0);
+    histogramBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, histogramVec, GL_DYNAMIC_STORAGE_BIT);
+
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
     valBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
-
-    sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
 
     atomicCounterVec.resize(1, 0);
     atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
@@ -110,15 +122,6 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
     const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
-
-    std::vector<uint32_t> zeroVec(numPoints, 0);
-    keyBuffer->Update(zeroVec);
-    keyBuffer2->Update(zeroVec);
-    valBuffer->Update(zeroVec);
-    valBuffer2->Update(zeroVec);
-
-    // AJT: HACK REMOVE
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
@@ -140,9 +143,6 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 
         GL_ERROR_CHECK("SplatRenderer::Sort() pre-sort");
-
-        // AJT: HACK REMOVE
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
     }
 
     {
@@ -162,20 +162,59 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        GL_ERROR_CHECK("SplatRenderer::Sort() read keyVec");
+        const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(numPoints);
+        const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + NUM_BLOCKS_PER_WORKGROUP - 1) / NUM_BLOCKS_PER_WORKGROUP;
 
         sortProg->Bind();
-        sortProg->SetUniform("g_num_elements", (uint32_t)sortCount);
+        sortProg->SetUniform("g_num_elements", NUM_ELEMENTS);
+        sortProg->SetUniform("g_num_workgroups", NUM_WORKGROUPS);
+        sortProg->SetUniform("g_num_blocks_per_workgroup", NUM_BLOCKS_PER_WORKGROUP);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer2->GetObj());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, valBuffer2->GetObj());
+        histogramProg->Bind();
+        histogramProg->SetUniform("g_num_elements", NUM_ELEMENTS);
+        //histogramProg->SetUniform("g_num_workgroups", NUM_WORKGROUPS);
+        histogramProg->SetUniform("g_num_blocks_per_workgroup", NUM_BLOCKS_PER_WORKGROUP);
 
-        const int NUM_WORKGROUPS = 256;
-        glDispatchCompute(NUM_WORKGROUPS, 1, 1);
+        const uint32_t NUM_ITERATIONS = 4;
+        for (uint32_t i = 0; i < NUM_ITERATIONS; i++)
+        {
+            histogramProg->Bind();
+            histogramProg->SetUniform("g_shift", 8 * i);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            if (i == 0 || i == 2)
+            {
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
+            }
+            else
+            {
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer2->GetObj());
+            }
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, histogramBuffer->GetObj());
+
+            glDispatchCompute(NUM_WORKGROUPS, 1, 1);
+
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+            sortProg->Bind();
+            sortProg->SetUniform("g_shift", 8 * i);
+
+            if (i == 0 || i == 2)
+            {
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer2->GetObj());
+            }
+            else
+            {
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer2->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
+            }
+
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histogramBuffer->GetObj());
+
+            glDispatchCompute(NUM_WORKGROUPS, 1, 1);
+
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        }
 
         GL_ERROR_CHECK("SplatRenderer::Sort() sort");
 

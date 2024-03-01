@@ -15,12 +15,6 @@
 
 #include "gaussiancloud.h"
 
-
-namespace rgc::radix_sort
-{
-    struct sorter;
-}
-
 class SplatRenderer
 {
 public:
@@ -41,6 +35,7 @@ protected:
 
     std::shared_ptr<Program> splatProg;
     std::shared_ptr<Program> preSortProg;
+    std::shared_ptr<Program> histogramProg;
     std::shared_ptr<Program> sortProg;
     std::shared_ptr<VertexArrayObject> splatVao;
 
@@ -51,12 +46,12 @@ protected:
 
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> keyBuffer2;
+    std::shared_ptr<BufferObject> histogramBuffer;
     std::shared_ptr<BufferObject> valBuffer;
     std::shared_ptr<BufferObject> valBuffer2;
     std::shared_ptr<BufferObject> posBuffer;
     std::shared_ptr<BufferObject> atomicCounterBuffer;
 
-    std::shared_ptr<rgc::radix_sort::sorter> sorter;
     uint32_t sortCount;
     bool isFramebufferSRGBEnabled;
     bool useFullSH;

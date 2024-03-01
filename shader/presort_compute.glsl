@@ -43,7 +43,8 @@ void main()
     float yy = p.y / depth;
 
     const float CLIP = 1.5f;
-    if (depth > 0.0f && xx < CLIP && xx > -CLIP && yy < CLIP && yy > -CLIP)
+    //if (depth > 0.0f && xx < CLIP && xx > -CLIP && yy < CLIP && yy > -CLIP)
+	if (true)
     {
         uint count = atomicCounterIncrement(output_count);
         // 16.16 fixed point
