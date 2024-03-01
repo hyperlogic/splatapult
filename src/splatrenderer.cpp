@@ -162,7 +162,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
-        const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(numPoints);
+        const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(sortCount);
         const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + NUM_BLOCKS_PER_WORKGROUP - 1) / NUM_BLOCKS_PER_WORKGROUP;
 
         sortProg->Bind();
