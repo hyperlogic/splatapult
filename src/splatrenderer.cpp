@@ -28,7 +28,7 @@
 #include "core/texture.h"
 #include "core/util.h"
 
-static const uint32_t NUM_BLOCKS_PER_WORKGROUP = 32;
+static const uint32_t NUM_BLOCKS_PER_WORKGROUP = 1024;
 
 SplatRenderer::SplatRenderer()
 {
