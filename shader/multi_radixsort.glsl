@@ -29,7 +29,15 @@ layout (std430, set = 1, binding = 1) buffer elements_out {
     uint g_elements_out[];
 };
 
-layout (std430, set = 1, binding = 2) buffer histograms {
+layout (std430, set = 1, binding = 2) buffer indices_in {
+    uint g_indices_in[];
+};
+
+layout (std430, set = 1, binding = 3) buffer indices_out {
+    uint g_indices_out[];
+};
+
+layout (std430, set = 1, binding = 4) buffer histograms {
 // [histogram_of_workgroup_0 | histogram_of_workgroup_1 | ... ]
     uint g_histograms[];// |g_histograms| = RADIX_SORT_BINS * #WORKGROUPS = RADIX_SORT_BINS * g_num_workgroups
 };
@@ -92,10 +100,12 @@ void main() {
         barrier();
 
         uint element_in = 0;
+        uint index_in = 0;
         uint binID = 0;
         uint binOffset = 0;
         if (elementId < g_num_elements) {
             element_in = g_elements_in[elementId];
+            index_in = g_indices_in[elementId];
             binID = (element_in >> g_shift) & uint(RADIX_SORT_BINS - 1);
             // offset for group
             binOffset = global_offsets[binID];
@@ -117,6 +127,7 @@ void main() {
                 count += full_count;
             }
             g_elements_out[binOffset + prefix] = element_in;
+            g_indices_out[binOffset + prefix] = index_in;
             if (prefix == count - 1) {
                 atomicAdd(global_offsets[binID], count);
             }

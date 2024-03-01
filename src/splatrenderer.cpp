@@ -202,14 +202,17 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
             {
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer2->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, valBuffer2->GetObj());
             }
             else
             {
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer2->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer2->GetObj());
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, valBuffer->GetObj());
             }
-
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histogramBuffer->GetObj());
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, histogramBuffer->GetObj());
 
             glDispatchCompute(NUM_WORKGROUPS, 1, 1);
 
