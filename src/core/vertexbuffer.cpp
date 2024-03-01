@@ -161,6 +161,7 @@ void BufferObject::Read(std::vector<uint32_t>& data)
 {
 	Bind();
 	size_t bufferSize = sizeof(uint32_t) * data.size();
+	assert(bufferSize == (elementSize * sizeof(uint32_t) * numElements));
 	//void* rawBuffer = glMapBuffer(target, GL_READ_ONLY);
 	void* rawBuffer = glMapBufferRange(target, 0, bufferSize, GL_MAP_READ_BIT);
 	if (rawBuffer)

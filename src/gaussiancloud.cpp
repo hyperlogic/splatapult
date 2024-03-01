@@ -288,6 +288,11 @@ void GaussianCloud::InitDebugCloud()
 // only keep the nearest splats
 void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
 {
+    if (static_cast<size_t>(numSplats) >= gaussianVec.size())
+    {
+        return;
+    }
+
     using IndexDistPair = std::pair<uint32_t, float>;
     std::vector<IndexDistPair> indexDistVec;
     indexDistVec.reserve(gaussianVec.size());
