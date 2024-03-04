@@ -30,6 +30,8 @@ public:
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
                 const glm::vec4& viewport, const glm::vec2& nearFar);
+public:
+    uint32_t numBlocksPerWorkgroup = 1024;
 protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 

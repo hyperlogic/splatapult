@@ -114,6 +114,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // AJT: TODO REMOVE disable vsync for benchmarks
+    SDL_GL_SetSwapInterval(0);
+
     SDL_AddEventWatch(Watch, NULL);
 
     if (!app.Init())

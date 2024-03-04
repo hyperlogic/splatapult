@@ -99,4 +99,6 @@ protected:
 
     VoidCallback quitCallback;
     ResizeCallback resizeCallback;
+
+    std::vector<float> fpsVec;
 };

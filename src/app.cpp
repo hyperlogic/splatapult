@@ -745,6 +745,39 @@ void App::UpdateFps(float fps)
     std::string text = "fps: " + std::to_string((int)fps);
     textRenderer->RemoveText(fpsText);
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, BLACK, text);
+
+#define FIND_BEST_NUM_BLOCKS_PER_WORKGROUP
+#ifdef FIND_BEST_NUM_BLOCKS_PER_WORKGROUP
+    Log::E("%s\n", text.c_str());
+    fpsVec.push_back(fps);
+    const uint32_t STEP_SIZE = 64;
+    if (fpsVec.size() == 2)
+    {
+        float dFps = fpsVec[1] - fpsVec[0];
+
+        uint32_t x = splatRenderer->numBlocksPerWorkgroup - STEP_SIZE;
+        Log::E("    (%.3f -> %.3f) dFps = %.3f, x = %u\n", fpsVec[0], fpsVec[1], dFps, x);
+        if (dFps < 0)
+        {
+            Log::E("    FPS DOWN, new x = %u\n", x - STEP_SIZE);
+            if (splatRenderer->numBlocksPerWorkgroup > STEP_SIZE)
+            {
+                splatRenderer->numBlocksPerWorkgroup = x - STEP_SIZE;
+            }
+        }
+        else
+        {
+            Log::E("    FPS UP, new x = %u\n", x + STEP_SIZE);
+            splatRenderer->numBlocksPerWorkgroup = x + STEP_SIZE;
+        }
+
+        fpsVec.clear();
+    }
+    else
+    {
+        splatRenderer->numBlocksPerWorkgroup = splatRenderer->numBlocksPerWorkgroup + STEP_SIZE;
+    }
+#endif
 }
 
 bool App::Process(float dt)

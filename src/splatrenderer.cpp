@@ -95,7 +95,7 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
     keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
 
     const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(gaussianCloud->size());
-    const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + NUM_BLOCKS_PER_WORKGROUP - 1) / NUM_BLOCKS_PER_WORKGROUP;
+    const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + numBlocksPerWorkgroup - 1) / numBlocksPerWorkgroup;
     const uint32_t RADIX_SORT_BINS = 256;
 
     std::vector<uint32_t> histogramVec(NUM_WORKGROUPS * RADIX_SORT_BINS, 0);
@@ -163,17 +163,17 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         ZoneScopedNC("sort", tracy::Color::Red4);
 
         const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(sortCount);
-        const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + NUM_BLOCKS_PER_WORKGROUP - 1) / NUM_BLOCKS_PER_WORKGROUP;
+        const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + numBlocksPerWorkgroup - 1) / numBlocksPerWorkgroup;
 
         sortProg->Bind();
         sortProg->SetUniform("g_num_elements", NUM_ELEMENTS);
         sortProg->SetUniform("g_num_workgroups", NUM_WORKGROUPS);
-        sortProg->SetUniform("g_num_blocks_per_workgroup", NUM_BLOCKS_PER_WORKGROUP);
+        sortProg->SetUniform("g_num_blocks_per_workgroup", numBlocksPerWorkgroup);
 
         histogramProg->Bind();
         histogramProg->SetUniform("g_num_elements", NUM_ELEMENTS);
         //histogramProg->SetUniform("g_num_workgroups", NUM_WORKGROUPS);
-        histogramProg->SetUniform("g_num_blocks_per_workgroup", NUM_BLOCKS_PER_WORKGROUP);
+        histogramProg->SetUniform("g_num_blocks_per_workgroup", numBlocksPerWorkgroup);
 
         const uint32_t NUM_ITERATIONS = 4;
         for (uint32_t i = 0; i < NUM_ITERATIONS; i++)
