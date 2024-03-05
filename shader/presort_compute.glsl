@@ -8,6 +8,8 @@
 layout(local_size_x = 256) in;
 
 uniform mat4 modelViewProj;
+uniform vec2 nearFar;
+uniform uint keyMax;
 
 layout(binding = 4, offset = 0) uniform atomic_uint output_count;
 
@@ -47,7 +49,8 @@ void main()
     {
         uint count = atomicCounterIncrement(output_count);
         // 16.16 fixed point
-        uint fixedPointZ = uint(0xffffffff) - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
+        //uint fixedPointZ = uint(0xffffffff) - uint(clamp(depth, 0.0f, 65535.0f) * 65536.0f);
+		uint fixedPointZ = keyMax - uint((depth / nearFar.y) * keyMax);
         quantizedZs[count] = fixedPointZ;
         indices[count] = idx;
     }

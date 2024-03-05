@@ -148,6 +148,8 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
         preSortProg->Bind();
         preSortProg->SetUniform("modelViewProj", projMat * modelViewMat);
+        preSortProg->SetUniform("nearFar", nearFar);
+        preSortProg->SetUniform("keyMax", std::numeric_limits<uint32_t>::max());
 
         // reset counter back to zero
         atomicCounterVec[0] = 0;
