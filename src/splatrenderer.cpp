@@ -143,13 +143,17 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
+    // use a 24 bit radix sort for multi_radixsort compute shader.
+    const uint32_t NUM_BYTES = GLEW_KHR_shader_subgroup ? 3 : 4;
+    const uint32_t MAX_DEPTH = GLEW_KHR_shader_subgroup ? 16777215 : std::numeric_limits<uint32_t>::max();
+
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
         preSortProg->Bind();
         preSortProg->SetUniform("modelViewProj", projMat * modelViewMat);
         preSortProg->SetUniform("nearFar", nearFar);
-        preSortProg->SetUniform("keyMax", std::numeric_limits<uint32_t>::max());
+        preSortProg->SetUniform("keyMax", MAX_DEPTH);
 
         // reset counter back to zero
         atomicCounterVec[0] = 0;
@@ -176,9 +180,6 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         assert(sortCount <= (uint32_t)numPoints);
 
         GL_ERROR_CHECK("SplatRenderer::Render() get-count");
-
-        // AJT: HACK REMOVE
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
     }
 
     if (GLEW_KHR_shader_subgroup)
@@ -198,8 +199,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         //histogramProg->SetUniform("g_num_workgroups", NUM_WORKGROUPS);
         histogramProg->SetUniform("g_num_blocks_per_workgroup", numBlocksPerWorkgroup);
 
-        const uint32_t NUM_ITERATIONS = 4;
-        for (uint32_t i = 0; i < NUM_ITERATIONS; i++)
+        for (uint32_t i = 0; i < NUM_BYTES; i++)
         {
             histogramProg->Bind();
             histogramProg->SetUniform("g_shift", 8 * i);
@@ -221,14 +221,14 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
             sortProg->Bind();
             sortProg->SetUniform("g_shift", 8 * i);
 
-            if (i == 0 || i == 2)
+            if ((i % 2) == 0)  // even
             {
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer2->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, valBuffer->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, valBuffer2->GetObj());
             }
-            else
+            else  // odd
             {
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keyBuffer2->GetObj());
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, keyBuffer->GetObj());
@@ -274,7 +274,14 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("copy-sorted", tracy::Color::DarkGreen);
 
-        glBindBuffer(GL_COPY_READ_BUFFER, valBuffer->GetObj());
+        if (GLEW_KHR_shader_subgroup && (NUM_BYTES % 2) == 1)  // odd
+        {
+            glBindBuffer(GL_COPY_READ_BUFFER, valBuffer2->GetObj());
+        }
+        else
+        {
+            glBindBuffer(GL_COPY_READ_BUFFER, valBuffer->GetObj());
+        }
         glBindBuffer(GL_COPY_WRITE_BUFFER, splatVao->GetElementBuffer()->GetObj());
         glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sortCount * sizeof(uint32_t));
 
