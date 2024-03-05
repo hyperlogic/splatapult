@@ -36,17 +36,17 @@ void FlyCam::Process(const glm::vec2& leftStickIn, const glm::vec2& rightStickIn
     vel = v;
 
     // right stick controls orientation
-    //glm::vec3 up = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::vec3 right = glm::rotate(rot, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 forward = glm::rotate(rot, glm::vec3(0.0f, 0.0f, -1.0f));
+    //glm::vec3 up = rot * glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = rot * glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 forward = rot * glm::vec3(0.0f, 0.0f, -1.0f);
     glm::quat yaw = glm::angleAxis(rotSpeed * dt * -rightStick.x, worldUp);
     glm::quat pitch = glm::angleAxis(rotSpeed * dt * rightStick.y, right);
     rot = (yaw * pitch) * rot;
 
     // axes of new cameraMat
-    glm::vec3 x = glm::rotate(rot, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 y = glm::rotate(rot, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::vec3 z = glm::rotate(rot, glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::vec3 x = rot * glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 y = rot * glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 z = rot * glm::vec3(0.0f, 0.0f, 1.0f);
 
     // apply roll to worldUp
     if (fabs(rollAmountIn) > 0.1f)
