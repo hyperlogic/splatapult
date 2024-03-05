@@ -15,6 +15,11 @@
 
 #include "gaussiancloud.h"
 
+namespace rgc::radix_sort
+{
+    struct sorter;
+}
+
 class SplatRenderer
 {
 public:
@@ -35,6 +40,7 @@ public:
 protected:
     void BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussianCloud);
 
+    std::shared_ptr<rgc::radix_sort::sorter> sorter;
     std::shared_ptr<Program> splatProg;
     std::shared_ptr<Program> preSortProg;
     std::shared_ptr<Program> histogramProg;

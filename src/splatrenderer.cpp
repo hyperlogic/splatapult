@@ -28,6 +28,8 @@
 #include "core/texture.h"
 #include "core/util.h"
 
+#include "radix_sort.hpp"
+
 static const uint32_t NUM_BLOCKS_PER_WORKGROUP = 1024;
 
 SplatRenderer::SplatRenderer()
@@ -73,37 +75,55 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
         return false;
     }
 
-    sortProg = std::make_shared<Program>();
-    if (!sortProg->LoadCompute("shader/multi_radixsort.glsl"))
+    if (GLEW_KHR_shader_subgroup)
     {
-        Log::E("Error loading sort compute shader!\n");
-        return false;
-    }
+        sortProg = std::make_shared<Program>();
+        if (!sortProg->LoadCompute("shader/multi_radixsort.glsl"))
+        {
+            Log::E("Error loading sort compute shader!\n");
+            return false;
+        }
 
-    histogramProg = std::make_shared<Program>();
-    if (!histogramProg->LoadCompute("shader/multi_radixsort_histograms.glsl"))
+        histogramProg = std::make_shared<Program>();
+        if (!histogramProg->LoadCompute("shader/multi_radixsort_histograms.glsl"))
+        {
+            Log::E("Error loading histogram compute shader!\n");
+            return false;
+        }
+    }
+    else
     {
-        Log::E("Error loading histogram compute shader!\n");
-        return false;
     }
 
     BuildVertexArrayObject(gaussianCloud);
 
     depthVec.resize(gaussianCloud->size());
 
-    keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
-    keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+    if (GLEW_KHR_shader_subgroup)
+    {
+        keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+        keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
 
-    const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(gaussianCloud->size());
-    const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + numBlocksPerWorkgroup - 1) / numBlocksPerWorkgroup;
-    const uint32_t RADIX_SORT_BINS = 256;
+        const uint32_t NUM_ELEMENTS = static_cast<uint32_t>(gaussianCloud->size());
+        const uint32_t NUM_WORKGROUPS = (NUM_ELEMENTS + numBlocksPerWorkgroup - 1) / numBlocksPerWorkgroup;
+        const uint32_t RADIX_SORT_BINS = 256;
 
-    std::vector<uint32_t> histogramVec(NUM_WORKGROUPS * RADIX_SORT_BINS, 0);
-    histogramBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, histogramVec, GL_DYNAMIC_STORAGE_BIT);
+        std::vector<uint32_t> histogramVec(NUM_WORKGROUPS * RADIX_SORT_BINS, 0);
+        histogramBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, histogramVec, GL_DYNAMIC_STORAGE_BIT);
 
-    valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
-    valBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
-    posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
+        valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
+        valBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
+        posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
+    }
+    else
+    {
+        Log::W("GL_KHR_shader_subgroup extension not present\n");
+        keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
+        valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
+        posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
+
+        sorter = std::make_shared<rgc::radix_sort::sorter>(gaussianCloud->size());
+    }
 
     atomicCounterVec.resize(1, 0);
     atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
@@ -159,6 +179,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         glMemoryBarrier(GL_ALL_BARRIER_BITS);
     }
 
+    if (GLEW_KHR_shader_subgroup)
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
@@ -241,6 +262,11 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
             printf("%s", sorted ? "o" : "x");
         }
+    }
+    else
+    {
+        ZoneScopedNC("sort", tracy::Color::Red4);
+        sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), sortCount);
     }
 
     {

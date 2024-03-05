@@ -746,7 +746,7 @@ void App::UpdateFps(float fps)
     textRenderer->RemoveText(fpsText);
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, BLACK, text);
 
-#define FIND_BEST_NUM_BLOCKS_PER_WORKGROUP
+//#define FIND_BEST_NUM_BLOCKS_PER_WORKGROUP
 #ifdef FIND_BEST_NUM_BLOCKS_PER_WORKGROUP
     Log::E("%s\n", text.c_str());
     fpsVec.push_back(fps);
