@@ -75,7 +75,9 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
         return false;
     }
 
-    if (GLEW_KHR_shader_subgroup)
+    bool useMultiRadixSort = GLEW_KHR_shader_subgroup;
+
+    if (useMultiRadixSort)
     {
         sortProg = std::make_shared<Program>();
         if (!sortProg->LoadCompute("shader/multi_radixsort.glsl"))
@@ -91,15 +93,12 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
             return false;
         }
     }
-    else
-    {
-    }
 
     BuildVertexArrayObject(gaussianCloud);
 
     depthVec.resize(gaussianCloud->size());
 
-    if (GLEW_KHR_shader_subgroup)
+    if (useMultiRadixSort)
     {
         keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
         keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
@@ -143,9 +142,11 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
+    bool useMultiRadixSort = GLEW_KHR_shader_subgroup;
+
     // use a 24 bit radix sort for multi_radixsort compute shader.
-    const uint32_t NUM_BYTES = GLEW_KHR_shader_subgroup ? 3 : 4;
-    const uint32_t MAX_DEPTH = GLEW_KHR_shader_subgroup ? 16777215 : std::numeric_limits<uint32_t>::max();
+    const uint32_t NUM_BYTES = useMultiRadixSort ? 3 : 4;
+    const uint32_t MAX_DEPTH = useMultiRadixSort ? 16777215 : std::numeric_limits<uint32_t>::max();
 
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
@@ -182,7 +183,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
         GL_ERROR_CHECK("SplatRenderer::Render() get-count");
     }
 
-    if (GLEW_KHR_shader_subgroup)
+    if (useMultiRadixSort)
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
 
@@ -274,7 +275,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("copy-sorted", tracy::Color::DarkGreen);
 
-        if (GLEW_KHR_shader_subgroup && (NUM_BYTES % 2) == 1)  // odd
+        if (useMultiRadixSort && (NUM_BYTES % 2) == 1)  // odd
         {
             glBindBuffer(GL_COPY_READ_BUFFER, valBuffer2->GetObj());
         }
