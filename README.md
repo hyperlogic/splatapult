@@ -34,6 +34,7 @@ Desktop Controls
 * c - toggle between initial SfM point cloud (if present) and gaussian splats.
 * n - jump to next camera
 * p - jump to previous camera
+* return - save the current position and orientation of the world into a vr.json file.
 
 VR Controls
 ---------------

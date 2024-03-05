@@ -619,13 +619,27 @@ bool App::Init()
 
     inputBuddy->OnKey(SDLK_RETURN, [this, vrConfigFilename](bool down, uint16_t mod)
     {
-        if (down && opt.vrMode)
+        if (down)
         {
             if (!vrConfig)
             {
                 vrConfig = std::make_shared<VrConfig>();
             }
-            vrConfig->SetFloorMat(magicCarpet->GetCarpetMat());
+
+            if (opt.vrMode)
+            {
+                vrConfig->SetFloorMat(magicCarpet->GetCarpetMat());
+            }
+            else
+            {
+                glm::mat4 headMat = flyCam->GetCameraMat();
+                glm::vec3 pos = headMat[3];
+                pos -= glm::mat3(headMat) * glm::vec3(0.0f, 1.5f, 0.0f);
+                glm::mat4 floorMat = headMat;
+                floorMat[3] = glm::vec4(pos, 1.0f);
+                vrConfig->SetFloorMat(floorMat);
+            }
+
             if (vrConfig->ExportJson(vrConfigFilename))
             {
                 Log::I("Wrote \"%s\"\n", vrConfigFilename.c_str());
