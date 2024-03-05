@@ -23,6 +23,16 @@ def build(c):
 
 
 @task
+def build_debug(c):
+    c.run("mkdir build")
+    with c.cd("build"):
+        c.run(
+            f'cmake -DSHIPPING=OFF -DCMAKE_TOOLCHAIN_FILE="{VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake" ..'
+        )
+        c.run(f"cmake --build . --config Debug")
+
+
+@task
 def archive(c):
     shutil.make_archive(RELEASE_NAME, "zip", "build/Release")
 
