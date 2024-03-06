@@ -3,6 +3,7 @@ meta-quest/ovr_openxr_mobile_sdk_59.0/
 meta-quest/ovr_openxr_mobile_sdk_59.0.zip
 data/*
 !data/test.ply
+!data/test_vr.json
 
 # ignore archived release zip
 splatapult*.zip
