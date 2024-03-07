@@ -27,7 +27,7 @@ public:
     ~SplatRenderer();
 
     bool Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
-              bool useFullSHIn);
+              bool useFullSHIn, bool useRgcSortOverrideIn);
 
     void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
                  const glm::vec4& viewport, const glm::vec2& nearFar);
@@ -63,4 +63,5 @@ protected:
     uint32_t sortCount;
     bool isFramebufferSRGBEnabled;
     bool useFullSH;
+    bool useRgcSortOverride;
 };

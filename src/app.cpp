@@ -143,6 +143,7 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // NOTE: if depth buffer has less then 24 bits, it can mess up splat rendering.
     glEnable(GL_DEPTH_TEST);
 
 #ifndef __ANDROID__
@@ -509,10 +510,21 @@ bool App::Init()
     splatRenderer = std::make_shared<SplatRenderer>();
 #if __ANDROID__
     bool useFullSH = false;
+    bool useRgcSortOverride = true;
 #else
     bool useFullSH = true;
+    bool useRgcSortOverride = false;
+
+    std::string glRenderer((const char*)glGetString(GL_RENDERER));
+
+    // don't use multiRadix sort on Intel UHD
+    if (glRenderer.find("Intel(R)") != std::string::npos &&
+        glRenderer.find("UHD") != std::string::npos)
+    {
+        useRgcSortOverride = true;
+    }
 #endif
-    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH))
+    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH, useRgcSortOverride))
     {
         Log::E("Error initializing splat renderer!\n");
         return false;

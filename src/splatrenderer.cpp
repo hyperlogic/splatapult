@@ -41,12 +41,13 @@ SplatRenderer::~SplatRenderer()
 }
 
 bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
-                         bool useFullSHIn)
+                         bool useFullSHIn, bool useRgcSortOverrideIn)
 {
     GL_ERROR_CHECK("SplatRenderer::Init() begin");
 
     isFramebufferSRGBEnabled = isFramebufferSRGBEnabledIn;
     useFullSH = useFullSHIn;
+    useRgcSortOverride = useRgcSortOverrideIn;
 
     splatProg = std::make_shared<Program>();
     if (isFramebufferSRGBEnabled || useFullSH)
@@ -75,7 +76,7 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
         return false;
     }
 
-    bool useMultiRadixSort = GLEW_KHR_shader_subgroup;
+    bool useMultiRadixSort = GLEW_KHR_shader_subgroup && !useRgcSortOverride;
 
     if (useMultiRadixSort)
     {
@@ -100,6 +101,8 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
 
     if (useMultiRadixSort)
     {
+        Log::I("using multi_radixsort.glsl\n");
+
         keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
         keyBuffer2 = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
 
@@ -116,7 +119,7 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
     }
     else
     {
-        Log::W("GL_KHR_shader_subgroup extension not present\n");
+        Log::I("using rgc::radix_sort\n");
         keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
         valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
         posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
@@ -142,7 +145,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
-    bool useMultiRadixSort = GLEW_KHR_shader_subgroup;
+    bool useMultiRadixSort = GLEW_KHR_shader_subgroup && !useRgcSortOverride;
 
     // use a 24 bit radix sort for multi_radixsort compute shader.
     const uint32_t NUM_BYTES = useMultiRadixSort ? 3 : 4;
@@ -270,6 +273,7 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
     {
         ZoneScopedNC("sort", tracy::Color::Red4);
         sorter->sort(keyBuffer->GetObj(), valBuffer->GetObj(), sortCount);
+        GL_ERROR_CHECK("SplatRenderer::Sort() rgc sort");
     }
 
     {

@@ -284,7 +284,9 @@ namespace rgc::radix_sort
 
 			glGenBuffers(1, &m_glob_counts_buf);
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_glob_counts_buf);
-			glBufferStorage(GL_SHADER_STORAGE_BUFFER, GLsizeiptr(RGC_RADIX_SORT_BITSET_SIZE * sizeof(GLuint)), nullptr, 0);
+			// The spec says we don't need the GL_DYNAMIC_STORAGE_BIT.
+			// but if we don't include it for Intel UHD graphics glClearBufferData will fail
+			glBufferStorage(GL_SHADER_STORAGE_BUFFER, GLsizeiptr(RGC_RADIX_SORT_BITSET_SIZE * sizeof(GLuint)), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
 			glGenBuffers(1, &m_keys_scratch_buf);
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_keys_scratch_buf);
@@ -362,6 +364,7 @@ namespace rgc::radix_sort
 				// ------------------------------------------------------------------------------------------------
 
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_glob_counts_buf);
+
 #ifdef __ANDROID__
 				size_t glob_counts_size = RGC_RADIX_SORT_BITSET_SIZE * sizeof(GLuint);
 				ZeroBuffer(GL_SHADER_STORAGE_BUFFER, glob_counts_size);
