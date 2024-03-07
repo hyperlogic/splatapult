@@ -514,15 +514,6 @@ bool App::Init()
 #else
     bool useFullSH = true;
     bool useRgcSortOverride = false;
-
-    std::string glRenderer((const char*)glGetString(GL_RENDERER));
-
-    // don't use multiRadix sort on Intel UHD
-    if (glRenderer.find("Intel(R)") != std::string::npos &&
-        glRenderer.find("UHD") != std::string::npos)
-    {
-        useRgcSortOverride = true;
-    }
 #endif
     if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH, useRgcSortOverride))
     {
