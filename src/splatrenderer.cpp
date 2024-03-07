@@ -147,9 +147,11 @@ void SplatRenderer::Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
 
     bool useMultiRadixSort = GLEW_KHR_shader_subgroup && !useRgcSortOverride;
 
-    // use a 24 bit radix sort for multi_radixsort compute shader.
-    const uint32_t NUM_BYTES = useMultiRadixSort ? 3 : 4;
-    const uint32_t MAX_DEPTH = useMultiRadixSort ? 16777215 : std::numeric_limits<uint32_t>::max();
+    // 24 bit radix sort still has some artifacts on some datasets, so use 32 bit sort.
+    //const uint32_t NUM_BYTES = useMultiRadixSort ? 3 : 4;
+    //const uint32_t MAX_DEPTH = useMultiRadixSort ? 16777215 : std::numeric_limits<uint32_t>::max();
+    const uint32_t NUM_BYTES = 4;
+    const uint32_t MAX_DEPTH = std::numeric_limits<uint32_t>::max();
 
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
