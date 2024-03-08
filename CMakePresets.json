@@ -23,7 +23,7 @@
             "displayName": "Microsoft Visual Studio Config",
             "description": "Configure with vcpkg toolchain and generate Visual Studio solution",
             "binaryDir": "${sourceDir}/builds/${presetName}",
-            "generator": " Visual Studio 17 2022",
+            "generator": "Visual Studio 17 2022",
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "SHIPPING": "ON"
