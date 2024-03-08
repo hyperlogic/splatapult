@@ -1,4 +1,4 @@
-name: build
+name: Linux/Windows Build
 run-name: ${{ github.actor }} is building splatapult
 on: [push]
 jobs:
