@@ -25,4 +25,4 @@ jobs:
           configurePreset: 'make-vcpkg'
           buildPreset: 'make-vcpkg-release'
       - name: Dump contents of build
-        run: tree splatapult
+        run: tree -I vcpkg
