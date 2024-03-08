@@ -10,7 +10,7 @@ jobs:
           submodules: true
       - uses: ConorMacBride/install-package@v1
         with:
-          apt: libgl-dev
+          apt: libgl-dev mesa-common-dev
       - uses: lukka/get-cmake@latest
       - uses: lukka/run-vcpkg@v11
         with:
