@@ -21,23 +21,23 @@ uniform uint g_shift;
 uniform uint g_num_workgroups;
 uniform uint g_num_blocks_per_workgroup;
 
-layout (std430, set = 1, binding = 0) buffer elements_in {
+layout (std430, binding = 0) buffer elements_in {
     uint g_elements_in[];
 };
 
-layout (std430, set = 1, binding = 1) buffer elements_out {
+layout (std430, binding = 1) buffer elements_out {
     uint g_elements_out[];
 };
 
-layout (std430, set = 1, binding = 2) buffer indices_in {
+layout (std430, binding = 2) buffer indices_in {
     uint g_indices_in[];
 };
 
-layout (std430, set = 1, binding = 3) buffer indices_out {
+layout (std430, binding = 3) buffer indices_out {
     uint g_indices_out[];
 };
 
-layout (std430, set = 1, binding = 4) buffer histograms {
+layout (std430, binding = 4) buffer histograms {
 // [histogram_of_workgroup_0 | histogram_of_workgroup_1 | ... ]
     uint g_histograms[];// |g_histograms| = RADIX_SORT_BINS * #WORKGROUPS = RADIX_SORT_BINS * g_num_workgroups
 };

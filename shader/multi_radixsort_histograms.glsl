@@ -15,11 +15,11 @@ uniform uint g_num_blocks_per_workgroup;
 
 layout (local_size_x = WORKGROUP_SIZE) in;
 
-layout (std430, set = 0, binding = 0) buffer elements_in {
+layout (std430, binding = 0) buffer elements_in {
     uint g_elements_in[];
 };
 
-layout (std430, set = 0, binding = 1) buffer histograms {
+layout (std430, binding = 1) buffer histograms {
     // [histogram_of_workgroup_0 | histogram_of_workgroup_1 | ... ]
     uint g_histograms[]; // |g_histograms| = RADIX_SORT_BINS * #WORKGROUPS
 };
