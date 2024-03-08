@@ -5,17 +5,24 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: ConorMacBride/install-package@v1
+      - name: Install System Packages
+        uses: ConorMacBride/install-package@v1
         with:
           apt: libgl-dev libxcb-glx0-dev libglu1-mesa-dev libxxf86vm-dev libxrandr-dev
-      - uses: lukka/get-cmake@latest
-      - uses: lukka/run-vcpkg@v11
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+      - name: Install Vcpkg Packages
+        uses: lukka/run-vcpkg@v11
         with:
           vcpkgJsonGlob: 'vcpkg.json'
-      - uses: lukka/run-cmake@v10
+      - name: Configure and Build
+        uses: lukka/run-cmake@v10
         with:
           configurePreset: 'make-vcpkg'
           buildPreset: 'make-vcpkg-release'
+      - name: Dump contents of build
+        run: tree splatapult
