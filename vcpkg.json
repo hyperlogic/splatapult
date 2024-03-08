@@ -1,10 +1,6 @@
 {
   "name": "main",
   "version-string": "latest",
-  "default-registry": {
-    "kind": "builtin",
-    "baseline": " c0bc859e696a769b72b5525bfe18899ae3411ef5"
-  },
   "dependencies": [
     "sdl2",
     "glew",
