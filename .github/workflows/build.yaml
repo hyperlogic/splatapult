@@ -1,0 +1,16 @@
+name: build
+run-name: ${{ github.actor }} is building splatapult
+on: [push]
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: 'vcpkg.json'
+      - uses: lukka/run-cmake@v10
+        with:
+          configurePreset: 'make-vcpkg'
+          buildPreset: 'make-vcpkg-release'
