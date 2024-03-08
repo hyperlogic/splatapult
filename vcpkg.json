@@ -1,0 +1,12 @@
+{
+  "name": "main",
+  "version-string": "latest",
+  "dependencies": [
+    "sdl2",
+    "glew",
+    "glm",
+    "libpng",
+    "nlohmann-json",
+    "openxr-loader"
+  ]
+}

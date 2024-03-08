@@ -1,0 +1,49 @@
+{
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "make-vcpkg",
+            "displayName": "Unix Make Config",
+            "description": "Configure with vcpkg toolchain and generate makefile",
+            "binaryDir": "${sourceDir}/builds/${presetName}",
+            "generator": "Unix Makefiles",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "SHIPPING": "ON"
+            }
+        },
+        {
+            "name": "msvc-vcpkg",
+            "displayName": "Microsoft Visual Studio Config",
+            "description": "Configure with vcpkg toolchain and generate Visual Studio solution",
+            "binaryDir": "${sourceDir}/builds/${presetName}",
+            "generator": "Visual Studio 17 2022",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "SHIPPING": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "make-vcpkg-release",
+            "configurePreset": "make-vcpkg",
+            "displayName": "Build (Release)",
+            "description": "Build with Make/vcpkg (Release)",
+            "configuration": "Release"
+        },
+        {
+            "name": "msvc-vcpkg-release",
+            "configurePreset": "msvc-vcpkg",
+            "displayName": "Build (Release)",
+            "description": "Build with msvc/vcpkg (Release)",
+            "configuration": "Release"
+        }
+    ]
+}
