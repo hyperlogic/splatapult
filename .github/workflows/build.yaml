@@ -45,4 +45,4 @@ jobs:
         with:
           configurePreset: 'msvc-vcpkg'
           buildPreset: 'msvc-vcpkg-release'
-      - run: dir builds
+      - run: Get-ChildItem -Path . -Recurse
