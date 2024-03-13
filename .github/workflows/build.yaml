@@ -45,5 +45,9 @@ jobs:
         with:
           configurePreset: 'msvc-vcpkg'
           buildPreset: 'msvc-vcpkg-release'
-      - run: dir builds/msvc-vcpkg/Release
-      - run: dir builds/msvc-vcpkg/splatapult.dir
+      - name: Upload Artifiacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: builds/msvc-vcpkg/Release
+
