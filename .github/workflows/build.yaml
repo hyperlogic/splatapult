@@ -45,4 +45,5 @@ jobs:
         with:
           configurePreset: 'msvc-vcpkg'
           buildPreset: 'msvc-vcpkg-release'
-      - run: dir builds/msvc-vcpkg
+      - run: dir builds/msvc-vcpkg/Release
+      - run: dir builds/msvc-vcpkg/splatapult.dir
