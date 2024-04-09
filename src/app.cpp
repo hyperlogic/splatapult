@@ -70,6 +70,19 @@ const int TEXT_NUM_ROWS = 25;
 #include <filesystem>
 #include <iostream>
 
+static std::string replaceHashWithNumber(const std::string& input, int number)
+{
+    // Find the first occurrence of '#'
+    size_t pos = input.find('#');
+    if (pos != std::string::npos)
+    {
+        // If '#' is found, create a new string with '#' replaced by `number`
+        return input.substr(0, pos) + std::to_string(number) + input.substr(pos + 1);
+    }
+    // If '#' is not found, return the original string
+    return input;
+}
+
 // searches for file named configFilename, dir that contains plyFilename, it's parent and grandparent dirs.
 static std::string FindConfigFile(const std::string& plyFilename, const std::string& configFilename)
 {
@@ -263,6 +276,7 @@ App::App(MainContext& mainContextIn):
     virtualRoll = 0.0f;
     virtualUp = 0.0f;
     frameNum = 0;
+    currentIteration = 0;
 }
 
 App::ParseResult App::ParseArguments(int argc, const char* argv[])
@@ -323,17 +337,20 @@ App::ParseResult App::ParseArguments(int argc, const char* argv[])
     }
     else
     {
-        plyFilename = parse.nonOption(0);
+        plyFilenamePattern = parse.nonOption(0);
     }
 
     Log::SetLevel(opt.debugLogging ? Log::Debug : Log::Warning);
 
+    // AJT: VINS disable checking
+    /*
     std::filesystem::path plyPath(plyFilename);
     if (!std::filesystem::exists(plyPath) || !std::filesystem::is_regular_file(plyPath))
     {
         Log::E("Invalid file \"%s\"\n", plyFilename.c_str());
         return ERROR_RESULT;
     }
+    */
 
     return SUCCESS_RESULT;
 }
@@ -341,6 +358,10 @@ App::ParseResult App::ParseArguments(int argc, const char* argv[])
 bool App::Init()
 {
     bool isFramebufferSRGBEnabled = opt.vrMode;
+
+    // AJT: VINS HACK:
+    plyFilename = replaceHashWithNumber(plyFilenamePattern, currentIteration);
+    currentIteration++;
 
 #ifndef __ANDROID__
     // AJT: ANDROID: TODO: make sure colors are accurate on android.
@@ -472,13 +493,15 @@ bool App::Init()
     glm::quat flyCamRot;
     floorMatUp = glm::vec3(floorMat[1]);
     Decompose(flyCamMat, &flyCamScale, &flyCamRot, &flyCamPos);
-    flyCam = std::make_shared<FlyCam>(floorMatUp, flyCamPos, flyCamRot, MOVE_SPEED, ROT_SPEED);
-
-    magicCarpet = std::make_shared<MagicCarpet>(floorMat, MOVE_SPEED);
-    if (!magicCarpet->Init(isFramebufferSRGBEnabled))
+    if (currentIteration == 1)  // AJT: VINS HACK
     {
-        Log::E("Error initalizing MagicCarpet\n");
-        return false;
+        flyCam = std::make_shared<FlyCam>(floorMatUp, flyCamPos, flyCamRot, MOVE_SPEED, ROT_SPEED);
+        magicCarpet = std::make_shared<MagicCarpet>(floorMat, MOVE_SPEED);
+        if (!magicCarpet->Init(isFramebufferSRGBEnabled))
+        {
+            Log::E("Error initalizing MagicCarpet\n");
+            return false;
+        }
     }
 
     std::string pointCloudFilename = FindConfigFile(plyFilename, "input.ply");
@@ -763,6 +786,15 @@ bool App::Init()
         virtualUp += down ? -1.0f : 1.0f;
     });
 
+    inputBuddy->OnKey(SDLK_PERIOD, [this](bool down, uint16_t mod)
+    {
+        // AJT: VINS hack
+        if (down)
+        {
+            Init();
+        }
+    });
+
     inputBuddy->OnMouseButton([this](uint8_t button, bool down, glm::ivec2 pos)
     {
         if (button == 3) // right button
@@ -786,7 +818,8 @@ bool App::Init()
     });
 #endif // USE_SDL
 
-    fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, "fps:");
+    std::string text = "iter: " + std::to_string(currentIteration - 1);
+    fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, text);
 
     return true;
 }
@@ -800,7 +833,7 @@ void App::ProcessEvent(const SDL_Event& event)
 
 void App::UpdateFps(float fps)
 {
-    std::string text = "fps: " + std::to_string((int)fps);
+    std::string text = "iter: " + std::to_string(currentIteration - 1) + " fps: " + std::to_string((int)fps);
     textRenderer->RemoveText(fpsText);
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, BLACK, text);
 

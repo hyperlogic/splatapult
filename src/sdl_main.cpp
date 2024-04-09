@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     Log::SetAppName("splataplut");
     MainContext mainContext;
     App app(mainContext);
+
     App::ParseResult parseResult = app.ParseArguments(argc, (const char**)argv);
     switch (parseResult)
     {

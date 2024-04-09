@@ -71,6 +71,7 @@ protected:
 
     MainContext& mainContext;
     Options opt;
+    std::string plyFilenamePattern;
     std::string plyFilename;
     std::shared_ptr<DebugRenderer> debugRenderer;
     std::shared_ptr<CameraPathRenderer> cameraPathRenderer;
@@ -105,4 +106,6 @@ protected:
     ResizeCallback resizeCallback;
 
     std::vector<float> fpsVec;
+
+    int currentIteration;
 };
