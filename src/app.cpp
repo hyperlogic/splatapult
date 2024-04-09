@@ -422,7 +422,6 @@ bool App::Init()
 
     glm::mat4 flyCamMat(1.0f);
     glm::mat4 floorMat(1.0f);
-    cameraIndex = 0;
     if (camerasConfig)
     {
         flyCamMat = camerasConfig->GetCameraVec()[cameraIndex];
@@ -598,7 +597,11 @@ bool App::Init()
     {
         if (down && camerasConfig)
         {
-            cameraIndex = (cameraIndex + 1) % camerasConfig->GetNumCameras();
+            cameraIndex++;
+            if (cameraIndex >= (int)camerasConfig->GetNumCameras())
+            {
+                cameraIndex -= (int)camerasConfig->GetNumCameras();
+            }
             flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
         }
     });
@@ -607,7 +610,11 @@ bool App::Init()
     {
         if (down && camerasConfig)
         {
-            cameraIndex = (cameraIndex - 1) % camerasConfig->GetNumCameras();
+            cameraIndex--;
+            if (cameraIndex < 0)
+            {
+                cameraIndex += (int)camerasConfig->GetNumCameras();
+            }
             flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
         }
     });
