@@ -818,7 +818,7 @@ bool App::Init()
     });
 #endif // USE_SDL
 
-    std::string text = "iter: " + std::to_string(currentIteration - 1);
+    std::string text = "cam: " + std::to_string(cameraIndex) + " iter: " + std::to_string(currentIteration - 1);
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), (int)TEXT_NUM_ROWS, WHITE, BLACK, text);
 
     return true;
@@ -833,7 +833,7 @@ void App::ProcessEvent(const SDL_Event& event)
 
 void App::UpdateFps(float fps)
 {
-    std::string text = "iter: " + std::to_string(currentIteration - 1) + " fps: " + std::to_string((int)fps);
+    std::string text = "cam: " + std::to_string(cameraIndex) + " iter: " + std::to_string(currentIteration - 1) + " fps: " + std::to_string((int)fps);
     textRenderer->RemoveText(fpsText);
     fpsText = textRenderer->AddScreenTextWithDropShadow(glm::ivec2(0, 0), TEXT_NUM_ROWS, WHITE, BLACK, text);
 
