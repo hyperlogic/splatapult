@@ -158,7 +158,7 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // NOTE: if depth buffer has less then 24 bits, it can mess up splat rendering.
-    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_DEPTH_TEST);
 
 #ifndef __ANDROID__
     // AJT: ANDROID: TODO: implement this in fragment shader, for OpenGLES I guess.
