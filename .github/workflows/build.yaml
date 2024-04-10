@@ -12,18 +12,17 @@ jobs:
       - name: Install System Packages
         uses: ConorMacBride/install-package@v1
         with:
-          apt: libgl-dev libxcb-glx0-dev libglu1-mesa-dev libxxf86vm-dev libxrandr-dev
+          apt: libxmu-dev libxi-dev libgl-dev libxcb-glx0-dev libglu1-mesa-dev libxxf86vm-dev libxrandr-dev
       - name: Install CMake
-        uses: lukka/get-cmake@latest
-      - name: Install Vcpkg Packages
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgJsonGlob: 'vcpkg.json'
-      - name: Configure and Build
-        uses: lukka/run-cmake@v10
-        with:
-          configurePreset: 'make-vcpkg'
-          buildPreset: 'make-vcpkg-release'
+        uses: lukka/get-cmake@v3.29.0
+      - name: Create Build Dir
+        run: mkdir build
+      - name: CMake Configure
+        working-directory: build
+        run: cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
+      - name: CMake Build
+        working-directory: build
+        run: cmake --build . --config=Release
   build-windows:
     runs-on: windows-latest
     steps:
@@ -34,18 +33,17 @@ jobs:
       - name: Get Microsoft Visual Studio for C++
         uses: ilammy/msvc-dev-cmd@v1
       - name: Install CMake
-        uses: lukka/get-cmake@latest
-      - name: Install Vcpkg Packages
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgJsonGlob: 'vcpkg.json'
-      - name: Configure and Build
-        uses: lukka/run-cmake@v10
-        with:
-          configurePreset: 'msvc-vcpkg'
-          buildPreset: 'msvc-vcpkg-release'
+        uses: lukka/get-cmake@v3.29.0
+      - name: Create Build Dir
+        run: mkdir build
+      - name: CMake Configure
+        working-directory: build
+        run: cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
+      - name: CMake Build
+        working-directory: build
+        run: cmake --build . --config=Release
       - name: Upload Artifiacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: builds/msvc-vcpkg/Release
+          path: build/Release

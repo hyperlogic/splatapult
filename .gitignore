@@ -4,6 +4,7 @@ meta-quest/ovr_openxr_mobile_sdk_59.0.zip
 data/*
 !data/test.ply
 !data/test_vr.json
+vcpkg_installed/
 
 # ignore archived release zip
 splatapult*.zip

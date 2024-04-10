@@ -4,38 +4,30 @@ import shutil
 
 
 RELEASE_NAME = "splatapult-0.1-x64"
-VCPKG_DIR = os.getenv("VCPKG_DIR")
-
 
 @task
 def clean(c):
+    c.run("rm -rf vcpkg_installed")
     c.run("rm -rf build")
 
+def build_with_config(c, config):
+    c.run("mkdir build")
+
+    with c.cd("build"):
+        c.run('cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..')
+        c.run(f"cmake --build . --config={config}")
 
 @task
 def build(c):
-    c.run("mkdir build")
-    with c.cd("build"):
-        c.run(
-            f'cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="{VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake" ..'
-        )
-        c.run(f"cmake --build . --config Release")
-
+    build_with_config(c, "Release")
 
 @task
 def build_debug(c):
-    c.run("mkdir build")
-    with c.cd("build"):
-        c.run(
-            f'cmake -DSHIPPING=OFF -DCMAKE_TOOLCHAIN_FILE="{VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake" ..'
-        )
-        c.run(f"cmake --build . --config Debug")
-
+    build_with_config(c, "Debug")
 
 @task
 def archive(c):
     shutil.make_archive(RELEASE_NAME, "zip", "build/Release")
-
 
 @task
 def deploy(c):
