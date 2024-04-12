@@ -53,7 +53,7 @@ for cam in cameras:
             "img_name": str(i),
             "timestamp": cam.timestamp,
             "width": 1920,
-            "height": 480,
+            "height": 1080,
             "position": [cam.x, cam.y, cam.z],
             "rotation": quat_to_mat(cam.qx, cam.qy, cam.qz, cam.qw),
             "fx": 1000.0,
