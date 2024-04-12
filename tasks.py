@@ -7,19 +7,22 @@ RELEASE_NAME = "splatapult-0.1-x64"
 
 @task
 def clean(c):
-    c.run("rm -rf vcpkg_installed")
     c.run("rm -rf build")
 
-def build_with_config(c, config):
-    c.run("mkdir build")
+def build_with_config(c, config, options={}):
+    if (not os.path.exists("build")):
+        c.run("mkdir build")
 
     with c.cd("build"):
-        c.run('cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..')
+        defines = []
+        for k, v in options.items():
+            defines.append(f"-D{k}={v}")
+        c.run(f'cmake {" ".join(defines)} -DCMAKE_TOOLCHAIN_FILE="../vcpkg/scripts/buildsystems/vcpkg.cmake" ..')
         c.run(f"cmake --build . --config={config}")
 
 @task
 def build(c):
-    build_with_config(c, "Release")
+    build_with_config(c, "Release", {"SHIPPING": "ON"})
 
 @task
 def build_debug(c):
