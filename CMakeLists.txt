@@ -69,6 +69,7 @@ add_executable(${PROJECT_NAME}
 
     src/app.cpp
     src/camerasconfig.cpp
+    src/camerapathrenderer.cpp
     src/flycam.cpp
     src/gaussiancloud.cpp
     src/magiccarpet.cpp

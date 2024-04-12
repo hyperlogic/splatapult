@@ -36,17 +36,21 @@ Desktop Controls
 * c - toggle between initial SfM point cloud (if present) and gaussian splats.
 * n - jump to next camera
 * p - jump to previous camera
+* y - toggle rendering of camera frustums
+* h - toggle rendering of camera path
 * return - save the current position and orientation of the world into a vr.json file.
 
 VR Controls
 ---------------
-* c - toggle between initial SfM point cloud (if present) and gaussian splats.
 * left stick - move
 * right stick - snap turn
 * f - show hide floor carpet.
 * single grab - translate the world.
 * double grab - rotate and translate the world.
 * triple grab - (double grab while trigger is depressed) scale, rotate and translate the world.
+* c - toggle between initial SfM point cloud (if present) and gaussian splats.
+* y - toggle rendering of camera frustums
+* h - toggle rendering of camera path
 * return - save the current position and orientation/scale of the world into a vr.json file.
 
 Config Files

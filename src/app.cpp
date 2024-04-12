@@ -26,6 +26,7 @@
 #include "core/xrbuddy.h"
 
 #include "camerasconfig.h"
+#include "camerapathrenderer.h"
 #include "flycam.h"
 #include "gaussiancloud.h"
 #include "magiccarpet.h"
@@ -400,6 +401,16 @@ bool App::Init()
         Log::D("Could not find cameras.json\n");
     }
 
+    if (camerasConfig)
+    {
+        cameraPathRenderer = std::make_shared<CameraPathRenderer>();
+        if (!cameraPathRenderer->Init(camerasConfig->GetCameraVec()))
+        {
+            Log::E("CameraPathRenderer Init failed\n");
+            return false;
+        }
+    }
+
     // search for vr config file
     // for example: if plyFilename is "input.ply", then search for "input_vr.json"
     std::string vrConfigBaseFilename = GetFilenameWithoutExtension(plyFilename) + "_vr.json";
@@ -424,14 +435,14 @@ bool App::Init()
     glm::mat4 floorMat(1.0f);
     if (camerasConfig)
     {
-        flyCamMat = camerasConfig->GetCameraVec()[cameraIndex];
+        flyCamMat = camerasConfig->GetCameraVec()[cameraIndex].mat;
 
         // initialize magicCarpet from first camera and estimated floor position.
         if (camerasConfig->GetNumCameras() > 0)
         {
             glm::vec3 floorNormal, floorPos;
             camerasConfig->EstimateFloorPlane(floorNormal, floorPos);
-            glm::vec3 floorZ = camerasConfig->GetCameraVec()[0][2];
+            glm::vec3 floorZ = camerasConfig->GetCameraVec()[0].mat[2];
             glm::vec3 floorY = floorNormal;
             glm::vec3 floorX = glm::cross(floorY, floorZ);
             floorZ = glm::cross(floorX, floorY);
@@ -545,6 +556,13 @@ bool App::Init()
                 debugRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
 
+            if (cameraPathRenderer)
+            {
+                cameraPathRenderer->SetShowCameras(opt.drawCameraFrustums);
+                cameraPathRenderer->SetShowPath(opt.drawCameraPath);
+                cameraPathRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
+            }
+
             if (opt.drawCarpet)
             {
                 magicCarpet->Render(fullEyeMat, projMat, viewport, nearFar);
@@ -602,7 +620,7 @@ bool App::Init()
             {
                 cameraIndex -= (int)camerasConfig->GetNumCameras();
             }
-            flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+            flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex].mat);
         }
     });
 
@@ -615,7 +633,7 @@ bool App::Init()
             {
                 cameraIndex += (int)camerasConfig->GetNumCameras();
             }
-            flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex]);
+            flyCam->SetCameraMat(camerasConfig->GetCameraVec()[cameraIndex].mat);
         }
     });
 
@@ -624,6 +642,22 @@ bool App::Init()
         if (down)
         {
             opt.drawCarpet = !opt.drawCarpet;
+        }
+    });
+
+    inputBuddy->OnKey(SDLK_y, [this](bool down, uint16_t mod)
+    {
+        if (down)
+        {
+            opt.drawCameraFrustums = !opt.drawCameraFrustums;
+        }
+    });
+
+    inputBuddy->OnKey(SDLK_h, [this](bool down, uint16_t mod)
+    {
+        if (down)
+        {
+            opt.drawCameraPath = !opt.drawCameraPath;
         }
     });
 
@@ -937,6 +971,13 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
         if (opt.drawDebug)
         {
             debugRenderer->Render(cameraMat, projMat, viewport, nearFar);
+        }
+
+        if (cameraPathRenderer)
+        {
+            cameraPathRenderer->SetShowCameras(opt.drawCameraFrustums);
+            cameraPathRenderer->SetShowPath(opt.drawCameraPath);
+            cameraPathRenderer->Render(cameraMat, projMat, viewport, nearFar);
         }
 
         if (opt.drawCarpet)

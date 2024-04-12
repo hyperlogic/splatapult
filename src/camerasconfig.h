@@ -9,6 +9,12 @@
 #include <string>
 #include <vector>
 
+struct Camera
+{
+	glm::mat4 mat;  // inverse view matrix
+	glm::vec2 fov;
+};
+
 class CamerasConfig
 {
 public:
@@ -16,11 +22,11 @@ public:
 
     bool ImportJson(const std::string& jsonFilename);
 
-    const std::vector<glm::mat4>& GetCameraVec() const { return cameraVec; }
+    const std::vector<Camera>& GetCameraVec() const { return cameraVec; }
 	size_t GetNumCameras() const { return cameraVec.size(); }
 
 	void EstimateFloorPlane(glm::vec3& normalOut, glm::vec3& posOut) const;
 protected:
 
-    std::vector<glm::mat4> cameraVec;
+    std::vector<Camera> cameraVec;
 };

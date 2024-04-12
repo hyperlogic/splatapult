@@ -13,6 +13,7 @@
 #include "maincontext.h"
 
 class CamerasConfig;
+class CameraPathRenderer;
 class DebugRenderer;
 class FlyCam;
 class GaussianCloud;
@@ -64,12 +65,15 @@ protected:
         bool drawDebug = true;
         bool debugLogging = false;
         bool drawFps = true;
+        bool drawCameraFrustums = false;
+        bool drawCameraPath = false;
     };
 
     MainContext& mainContext;
     Options opt;
     std::string plyFilename;
     std::shared_ptr<DebugRenderer> debugRenderer;
+    std::shared_ptr<CameraPathRenderer> cameraPathRenderer;
     std::shared_ptr<TextRenderer> textRenderer;
     std::shared_ptr<XrBuddy> xrBuddy;
 
