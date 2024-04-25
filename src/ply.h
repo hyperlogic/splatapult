@@ -8,6 +8,7 @@
 #include <cassert>
 #include <functional>
 #include <string>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
