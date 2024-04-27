@@ -95,11 +95,15 @@ void PointRenderer::Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
     const size_t numPoints = posVec.size();
     glm::mat4 modelViewMat = glm::inverse(cameraMat);
 
+    const uint32_t MAX_DEPTH = std::numeric_limits<uint32_t>::max();
+
     {
         ZoneScopedNC("pre-sort", tracy::Color::Red4);
 
         preSortProg->Bind();
         preSortProg->SetUniform("modelViewProj", projMat * modelViewMat);
+        preSortProg->SetUniform("nearFar", nearFar);
+        preSortProg->SetUniform("keyMax", MAX_DEPTH);
 
         glm::mat4 modelViewProjMat = projMat * modelViewMat;
 
