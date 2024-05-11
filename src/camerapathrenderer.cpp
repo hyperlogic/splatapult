@@ -165,7 +165,7 @@ void CameraPathRenderer::BuildPathVao(const std::vector<Camera>& cameraVec)
 	// build lines for each path segment
 	if (cameraVec.size() > 1)
 	{
-		const Camera* prev = &cameraVec[cameraVec.size() - 1];
+		const Camera* prev = &cameraVec[0];
 		for (size_t i = 1; i < cameraVec.size(); i++)
 		{
 			const Camera* curr = cameraVec.data() + i;
@@ -177,6 +177,13 @@ void CameraPathRenderer::BuildPathVao(const std::vector<Camera>& cameraVec)
 			colVec.push_back(PATH_COLOR);
 			prev = curr;
 		}
+	}
+	else
+	{
+		posVec.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+		posVec.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+		colVec.push_back(PATH_COLOR);
+		colVec.push_back(PATH_COLOR);
 	}
 
     auto posBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
