@@ -22,6 +22,12 @@ Options
 -d, --debug
     enable debug logging
 
+--fp16
+    Use 16-bit half-precision floating frame buffer, to reduce color banding artifacts
+
+--fp32
+    Use 32-bit floating point frame buffer, to reduce color banding even more
+
 -h, --help
     show help
 

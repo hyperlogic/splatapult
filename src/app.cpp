@@ -17,11 +17,13 @@
 #include <filesystem>
 #include <thread>
 
+#include "core/framebuffer.h"
 #include "core/log.h"
 #include "core/debugrenderer.h"
 #include "core/inputbuddy.h"
 #include "core/optionparser.h"
 #include "core/textrenderer.h"
+#include "core/texture.h"
 #include "core/util.h"
 #include "core/xrbuddy.h"
 
@@ -41,7 +43,9 @@ enum optionIndex
     OPENXR,
     FULLSCREEN,
     DEBUG,
-    HELP
+    HELP,
+    FP16,
+    FP32
 };
 
 const option::Descriptor usage[] =
@@ -51,6 +55,8 @@ const option::Descriptor usage[] =
     { OPENXR, 0, "v", "openxr", option::Arg::None,        "  -v, --openxr      Launch app in vr mode, using openxr runtime." },
     { FULLSCREEN, 0, "f", "fullscren", option::Arg::None, "  -f, --fullscreen  Launch window in fullscreen." },
     { DEBUG, 0, "d", "debug", option::Arg::None,          "  -d, --debug       Enable verbose debug logging." },
+    { FP16, 0, "", "fp16", option::Arg::None,             "  --fp16            Use 16-bit half-precision floating frame buffer, to reduce color banding artifacts" },
+    { FP32, 0, "", "fp32", option::Arg::None,             "  --fp32            Use 32-bit floating point frame buffer, to reduce color banding even more" },
     { UNKNOWN, 0, "", "", option::Arg::None,              "\nExamples:\n  splataplut data/test.ply\n  splatapult -v data/test.ply" },
     { 0, 0, 0, 0, 0, 0}
 };
@@ -156,7 +162,7 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 }
 
 // Draw a textured quad over the entire screen.
-static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> desktopProgram, uint32_t colorTexture)
+static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> desktopProgram, uint32_t colorTexture, bool adjustAspect)
 {
     int width = windowSize.x;
     int height = windowSize.y;
@@ -178,8 +184,13 @@ static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> deskto
         glBindTexture(GL_TEXTURE_2D, colorTexture);
         desktopProgram->SetUniform("colorTexture", 0);
 
-        glm::vec2 xyLowerLeft(0.0f, (height - width) / 2.0f);
-        glm::vec2 xyUpperRight((float)width, (height + width) / 2.0f);
+        glm::vec2 xyLowerLeft(0.0f, 0.0f);
+        glm::vec2 xyUpperRight((float)width, (float)height);
+        if (adjustAspect)
+        {
+            xyLowerLeft = glm::vec2(0.0f, (height - width) / 2.0f);
+            xyUpperRight = glm::vec2((float)width, (height + width) / 2.0f);
+        }
         glm::vec2 uvLowerLeft(0.0f, 0.0f);
         glm::vec2 uvUpperRight(1.0f, 1.0f);
 
@@ -303,6 +314,15 @@ App::ParseResult App::ParseArguments(int argc, const char* argv[])
     if (options[DEBUG])
     {
         opt.debugLogging = true;
+    }
+
+    if (options[FP32])
+    {
+        opt.frameBuffer = Options::FrameBuffer::Float;
+    }
+    else if (options[FP16])
+    {
+        opt.frameBuffer = Options::FrameBuffer::HalfFloat;
     }
 
     bool unknownOptionFound = false;
@@ -533,7 +553,6 @@ bool App::Init()
 
     if (opt.vrMode)
     {
-        // TODO: move this into a DesktopRenderer class
         desktopProgram = std::make_shared<Program>();
         std::string defines = "#define USE_SUPERSAMPLING\n";
         desktopProgram->AddMacro("DEFINES", defines);
@@ -581,6 +600,16 @@ bool App::Init()
                 splatRenderer->Render(fullEyeMat, projMat, viewport, nearFar);
             }
         });
+    }
+
+    if (!opt.vrMode && opt.frameBuffer != Options::FrameBuffer::Default)
+    {
+        desktopProgram = std::make_shared<Program>();
+        if (!desktopProgram->LoadVertFrag("shader/desktop_vert.glsl", "shader/desktop_frag.glsl"))
+        {
+            Log::E("Error loading desktop shader!\n");
+            return 1;
+        }
     }
 
 #ifdef USE_SDL
@@ -948,7 +977,7 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
 #ifndef __ANDROID__
         // render desktop.
         Clear(windowSize, true);
-        RenderDesktop(windowSize, desktopProgram, xrBuddy->GetColorTexture());
+        RenderDesktop(windowSize, desktopProgram, xrBuddy->GetColorTexture(), true);
 
         if (opt.drawFps)
         {
@@ -961,6 +990,43 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
     }
     else
     {
+        // lazy init of fbo, fbo is only used for HalfFloat, Float option.
+        if (opt.frameBuffer != Options::FrameBuffer::Default && fboSize != windowSize)
+        {
+            fbo = std::make_shared<FrameBuffer>();
+
+            Texture::Params texParams;
+            texParams.minFilter = FilterType::Nearest;
+            texParams.magFilter = FilterType::Nearest;
+            texParams.sWrap = WrapType::ClampToEdge;
+            texParams.tWrap = WrapType::ClampToEdge;
+            if (opt.frameBuffer == Options::FrameBuffer::HalfFloat)
+            {
+                fboColorTex = std::make_shared<Texture>(windowSize.x, windowSize.y,
+                                                        GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT,
+                                                        texParams);
+            }
+            else if (opt.frameBuffer == Options::FrameBuffer::Float)
+            {
+                fboColorTex = std::make_shared<Texture>(windowSize.x, windowSize.y,
+                                                        GL_RGBA32F, GL_RGBA, GL_FLOAT,
+                                                        texParams);
+            }
+            else
+            {
+                Log::E("BAD opt.frameBuffer type!\n");
+            }
+
+            fbo->AttachColor(fboColorTex);
+
+            fboSize = windowSize;
+        }
+
+        if (opt.frameBuffer != Options::FrameBuffer::Default && fbo)
+        {
+            fbo->Bind();
+        }
+
         Clear(windowSize, true);
 
         glm::mat4 cameraMat = flyCam->GetCameraMat();
@@ -998,6 +1064,14 @@ bool App::Render(float dt, const glm::ivec2& windowSize)
         if (opt.drawFps)
         {
             textRenderer->Render(cameraMat, projMat, viewport, nearFar);
+        }
+
+        if (opt.frameBuffer != Options::FrameBuffer::Default && fbo)
+        {
+            // render fbo colorTexture as a full screen quad to the default fbo
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            Clear(windowSize, true);
+            RenderDesktop(windowSize, desktopProgram, fbo->GetColorTexture()->texture, false);
         }
     }
 

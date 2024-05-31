@@ -16,6 +16,7 @@ class CamerasConfig;
 class CameraPathRenderer;
 class DebugRenderer;
 class FlyCam;
+class FrameBuffer;
 class GaussianCloud;
 class InputBuddy;
 class MagicCarpet;
@@ -24,6 +25,7 @@ class PointRenderer;
 class Program;
 class SplatRenderer;
 class TextRenderer;
+struct Texture;
 class VrConfig;
 class XrBuddy;
 
@@ -58,8 +60,15 @@ public:
 protected:
     struct Options
     {
+        enum class FrameBuffer
+        {
+            Default,
+            HalfFloat,
+            Float
+        };
         bool vrMode = false;
         bool fullscreen = false;
+        FrameBuffer frameBuffer = FrameBuffer::Default;
         bool drawCarpet = false;
         bool drawPointCloud = false;
         bool drawDebug = true;
@@ -90,6 +99,10 @@ protected:
     std::shared_ptr<SplatRenderer> splatRenderer;
 
     std::shared_ptr<Program> desktopProgram;
+    std::shared_ptr<FrameBuffer> fbo;
+    glm::ivec2 fboSize = {0, 0};
+    std::shared_ptr<Texture> fboColorTex;
+
     std::shared_ptr<InputBuddy> inputBuddy;
 
     glm::vec2 virtualLeftStick;

@@ -89,6 +89,12 @@ int main(int argc, char *argv[])
     }
     ctx.window = SDL_CreateWindow("splatapult", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, windowFlags);
 
+    if (!ctx.window)
+    {
+        Log::E("Failed to create window: %s\n", SDL_GetError());
+        return 1;
+    }
+
     ctx.gl_context = SDL_GL_CreateContext(ctx.window);
 
     SDL_GL_MakeCurrent(ctx.window, ctx.gl_context);
