@@ -16,7 +16,7 @@ class CamerasConfig;
 class CameraPathRenderer;
 class DebugRenderer;
 class FlyCam;
-class FrameBuffer;
+struct FrameBuffer;
 class GaussianCloud;
 class InputBuddy;
 class MagicCarpet;
