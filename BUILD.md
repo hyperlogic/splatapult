@@ -1,24 +1,19 @@
-Windows Build
+Windows Build (vcpkg submodule)
 -----------------------
 * Install Visual Studio 2022
 * Install cmake 3.27.1
-* Install [vcpkg](https://github.com/microsoft/vcpkg#quick-start-windows)
-* Use vcpkg to install the following packages:
-    - `vcpkg install sdl2:x64-windows`
-    - `vcpkg install glew:x64-windows`
-    - `vcpkg install glm:x64-windows`
-    - `vcpkg install libpng:x64-windows`
-    - `vcpkg install nlohmann-json:x64-windows`
-    - `vcpkg install tracy:x64-windows`
-    - `vcpkg install openxr-loader:x64-windows`
-
-* Use cmake to make the visual studio project:
-    - `mkdir build`
-    - `cd build`
-    - `cmake -DCMAKE_TOOLCHAIN_FILE="C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
-
-Use visual studio to open and build the project.
-Or build from the command line: `cmake --build . --config=Release`
+* Ensure splatapult has the vcpkg submodule.
+  Either clone with the --recursive flag so that the vcpkg submodule is added
+  or execute `git submodule init` and `git submodule update` after a regular clone.
+* Bootstrap vcpkg
+  - `cd vcpkg`
+  - `bootstrap-vcpg.bat`
+* Execute cmake to create a Visual Studio solution file
+  - `mkdir build`
+  - `cd build`
+  - `cmake .. -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake`
+* Build exe by using Visual Studio by loading splatapult.sln or from the command line:
+  - `cmake --build . --config=Release`
 
 Windows Shipping Builds
 -------------------------
@@ -29,29 +24,30 @@ And the resulting exe will use that copy.  You can then zip up the folder and di
 * To create a shipping build:
     - `mkdir build`
     - `cd build`
-    - `cmake -DSHIPPING=ON -DCMAKE_TOOLCHAIN_FILE="C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" ..`
+    - `cmake .. -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DSHIPPING=ON`
     - `cmake --build . --config=Release`
 
-*EXPERIMENTAL* Linux Build (Ubuntu)
+Linux Build (vcpkg submodule)
 --------------------
-    - `sudo apt-get install clang`
-    - `sudo apt-get install cmake`
-    - `sudo apt-get install freeglut3-dev`
-    - `sudo apt-get install libsdl2-dev`
-    - `sudo apt-get install libglew-dev`
-    - `sudo apt-get install libglm-dev`
-    - `sudo apt-get install libpng-dev`
-    - `sudo apt-get install nlohmann-json3-dev`
-    - `sudo apt-get install libopenxr-dev`
+* Install dependencies
+  - `sudo apt-get install clang`
+  - `sudo apt-get install cmake`
+  - `sudo apt-get install freeglut3-dev`
+  - `sudo apt-get install libopenxr-dev`
+* Ensure splatapult has the vcpkg submodule.
+  Either clone with the --recursive flag so that the vcpkg submodule is added
+  or execute `git submodule init` and `git submodule update` after a regular clone.
+* Bootstrap vcpkg
+  - `cd vcpkg`
+  - `bootstrap-vcpg.sh`
+* Execute cmake to create a Makefile
+  - `mkdir build`
+  - `cd build`
+  - `cmake .. -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake`
+* build executable
+  - `cmake --build . --config=Release`
 
-* To create a shipping build:
-    - `mkdir build`
-    - `cd build`
-    - `cmake -DSHIPPING=ON ..`
-    - `cmake --build . --config=Release`
-
-
-*EXPERIMENTAL* Meta Quest Build
+*EXPERIMENTAL* Meta Quest Build (OUT OF DATE)
 --------------------
 NOTE: Although the quest build functions it is much to slow for most scenes.
 A Quest2 headset can only run a scene consisting of 25k splats.
