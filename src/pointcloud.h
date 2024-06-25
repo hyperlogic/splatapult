@@ -21,6 +21,7 @@ public:
 
     struct Point
     {
+        Point() noexcept {}
         float position[3];
         uint8_t color[3];
     };
