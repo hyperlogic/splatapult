@@ -36,18 +36,22 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
     struct
     {
-        Ply::Property x, y, z;
-        Ply::Property red, green, blue;
+        Ply::PropertyInfo x, y, z;
+        Ply::PropertyInfo red, green, blue;
     } props;
 
-    if (!ply.GetProperty("x", props.x) || !ply.GetProperty("y", props.y) || !ply.GetProperty("z", props.z))
+    if (!ply.GetPropertyInfo("x", props.x) ||
+        !ply.GetPropertyInfo("y", props.y) ||
+        !ply.GetPropertyInfo("z", props.z))
     {
         Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
     }
 
     bool useDoubles = (props.x.type == Ply::Type::Double && props.y.type == Ply::Type::Double && props.z.type == Ply::Type::Double);
 
-    if (!ply.GetProperty("red", props.red) || !ply.GetProperty("green", props.green) || !ply.GetProperty("blue", props.blue))
+    if (!ply.GetPropertyInfo("red", props.red) ||
+        !ply.GetPropertyInfo("green", props.green) ||
+        !ply.GetPropertyInfo("blue", props.blue))
     {
         Log::E("Error parsing ply file \"%s\", missing color property\n", plyFilename.c_str());
     }

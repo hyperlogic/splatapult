@@ -13,6 +13,13 @@
 #include <string>
 #include <string.h>
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
+
 #include "core/log.h"
 #include "core/util.h"
 
@@ -24,6 +31,8 @@ GaussianCloud::GaussianCloud()
 
 bool GaussianCloud::ImportPly(const std::string& plyFilename)
 {
+    ZoneScopedNC("GC::ImportPly", tracy::Color::Red4);
+
     std::ifstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
@@ -32,93 +41,111 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     }
 
     Ply ply;
-    if (!ply.Parse(plyFile))
+
     {
-        Log::E("Error parsing ply file \"%s\"\n", plyFilename.c_str());
-        return false;
+        ZoneScopedNC("ply.Parse", tracy::Color::Blue);
+        if (!ply.Parse(plyFile))
+        {
+            Log::E("Error parsing ply file \"%s\"\n", plyFilename.c_str());
+            return false;
+        }
     }
 
     struct
     {
-        Ply::Property x, y, z;
-        Ply::Property f_dc[3];
-        Ply::Property f_rest[45];
-        Ply::Property opacity;
-        Ply::Property scale[3];
-        Ply::Property rot[4];
+        Ply::PropertyInfo x, y, z;
+        Ply::PropertyInfo f_dc[3];
+        Ply::PropertyInfo f_rest[45];
+        Ply::PropertyInfo opacity;
+        Ply::PropertyInfo scale[3];
+        Ply::PropertyInfo rot[4];
     } props;
 
-    if (!ply.GetProperty("x", props.x) || !ply.GetProperty("y", props.y) || !ply.GetProperty("z", props.z))
+
     {
-        Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
+        ZoneScopedNC("ply.GetProps", tracy::Color::Green);
+
+        if (!ply.GetPropertyInfo("x", props.x) ||
+            !ply.GetPropertyInfo("y", props.y) ||
+            !ply.GetPropertyInfo("z", props.z))
+        {
+            Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (!ply.GetPropertyInfo("f_dc_" + std::to_string(i), props.f_dc[i]))
+            {
+                Log::E("Error parsing ply file \"%s\", missing f_dc property\n", plyFilename.c_str());
+            }
+        }
+
+        for (int i = 0; i < 45; i++)
+        {
+            if (!ply.GetPropertyInfo("f_rest_" + std::to_string(i), props.f_rest[i]))
+            {
+                // f_rest properties are optional
+                Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
+                break;
+            }
+        }
+
+        if (!ply.GetPropertyInfo("opacity", props.opacity))
+        {
+            Log::E("Error parsing ply file \"%s\", missing opacity property\n", plyFilename.c_str());
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (!ply.GetPropertyInfo("scale_" + std::to_string(i), props.scale[i]))
+            {
+                Log::E("Error parsing ply file \"%s\", missing scale property\n", plyFilename.c_str());
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (!ply.GetPropertyInfo("rot_" + std::to_string(i), props.rot[i]))
+            {
+                Log::E("Error parsing ply file \"%s\", missing rot property\n", plyFilename.c_str());
+            }
+        }
+
     }
 
-    for (int i = 0; i < 3; i++)
     {
-        if (!ply.GetProperty("f_dc_" + std::to_string(i), props.f_dc[i]))
-        {
-            Log::E("Error parsing ply file \"%s\", missing f_dc property\n", plyFilename.c_str());
-        }
+        ZoneScopedNC("ply.resize", tracy::Color::Red4);
+        gaussianVec.resize(ply.GetVertexCount());
     }
 
-    for (int i = 0; i < 45; i++)
     {
-        if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
+        ZoneScopedNC("ply.ForEachVertex", tracy::Color::Blue);
+        int i = 0;
+        ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
         {
-            // f_rest properties are optional
-            Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
-            break;
-        }
+            gaussianVec[i].position[0] = props.x.Get<float>(data);
+            gaussianVec[i].position[1] = props.y.Get<float>(data);
+            gaussianVec[i].position[2] = props.z.Get<float>(data);
+            for (int j = 0; j < 3; j++)
+            {
+                gaussianVec[i].f_dc[j] = props.f_dc[j].Get<float>(data);
+            }
+            for (int j = 0; j < 45; j++)
+            {
+                gaussianVec[i].f_rest[j] = props.f_rest[j].Get<float>(data);
+            }
+            gaussianVec[i].opacity = props.opacity.Get<float>(data);
+            for (int j = 0; j < 3; j++)
+            {
+                gaussianVec[i].scale[j] = props.scale[j].Get<float>(data);
+            }
+            for (int j = 0; j < 4; j++)
+            {
+                gaussianVec[i].rot[j] = props.rot[j].Get<float>(data);
+            }
+            i++;
+        });
     }
-
-    if (!ply.GetProperty("opacity", props.opacity))
-    {
-        Log::E("Error parsing ply file \"%s\", missing opacity property\n", plyFilename.c_str());
-    }
-
-    for (int i = 0; i < 3; i++)
-    {
-        if (!ply.GetProperty("scale_" + std::to_string(i), props.scale[i]))
-        {
-            Log::E("Error parsing ply file \"%s\", missing scale property\n", plyFilename.c_str());
-        }
-    }
-
-    for (int i = 0; i < 4; i++)
-    {
-        if (!ply.GetProperty("rot_" + std::to_string(i), props.rot[i]))
-        {
-            Log::E("Error parsing ply file \"%s\", missing rot property\n", plyFilename.c_str());
-        }
-    }
-
-    gaussianVec.resize(ply.GetVertexCount());
-
-    int i = 0;
-    ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
-    {
-        gaussianVec[i].position[0] = props.x.Get<float>(data);
-        gaussianVec[i].position[1] = props.y.Get<float>(data);
-        gaussianVec[i].position[2] = props.z.Get<float>(data);
-        for (int j = 0; j < 3; j++)
-        {
-            gaussianVec[i].f_dc[j] = props.f_dc[j].Get<float>(data);
-        }
-        for (int j = 0; j < 45; j++)
-        {
-            gaussianVec[i].f_rest[j] = props.f_rest[j].Get<float>(data);
-        }
-        gaussianVec[i].opacity = props.opacity.Get<float>(data);
-        for (int j = 0; j < 3; j++)
-        {
-            gaussianVec[i].scale[j] = props.scale[j].Get<float>(data);
-        }
-        for (int j = 0; j < 4; j++)
-        {
-            gaussianVec[i].rot[j] = props.rot[j].Get<float>(data);
-        }
-        i++;
-    });
 
     return true;
 }

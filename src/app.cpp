@@ -17,6 +17,13 @@
 #include <filesystem>
 #include <thread>
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
+
 #include "core/framebuffer.h"
 #include "core/log.h"
 #include "core/debugrenderer.h"
@@ -209,7 +216,6 @@ static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> deskto
     }
 }
 
-// AJT: TODO this wrapper func is not needed anymore
 static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename)
 {
     auto pointCloud = std::make_shared<PointCloud>();
@@ -222,7 +228,6 @@ static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename
     return pointCloud;
 }
 
-// AJT: TODO this wrapper func is not needed anymore
 static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename)
 {
     auto gaussianCloud = std::make_shared<GaussianCloud>();

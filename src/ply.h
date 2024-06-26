@@ -30,10 +30,10 @@ public:
         Double
     };
 
-    struct Property
+    struct PropertyInfo
     {
-        Property() : type(Type::Unknown) {}
-        Property(size_t offsetIn, size_t sizeIn, Type typeIn) : offset(offsetIn), size(sizeIn), type(typeIn) {}
+        PropertyInfo() : type(Type::Unknown) {}
+        PropertyInfo(size_t offsetIn, size_t sizeIn, Type typeIn) : offset(offsetIn), size(sizeIn), type(typeIn) {}
 
         size_t offset;
         size_t size;
@@ -54,15 +54,17 @@ public:
         }
     };
 
-    bool GetProperty(const std::string& key, Property& propertyOut) const;
+    bool GetPropertyInfo(const std::string& key, PropertyInfo& propertyInfoOut) const;
 
     using VertexCallback = std::function<void(const uint8_t*, size_t)>;
-    void ForEachVertex(const VertexCallback& cb);
+    void ForEachVertex(const VertexCallback& cb) const;
 
     size_t GetVertexCount() const { return vertexCount; }
 
 protected:
-    std::unordered_map<std::string, Property> propertyMap;
+    bool ParseHeader(std::ifstream& plyFile);
+
+    std::unordered_map<std::string, PropertyInfo> propertyInfoMap;
     std::vector<uint8_t> dataVec;
     size_t vertexCount;
     size_t vertexSize;

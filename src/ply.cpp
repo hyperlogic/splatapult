@@ -9,6 +9,13 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
+
 #include "core/log.h"
 
 static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
@@ -30,8 +37,10 @@ static bool GetNextPlyLine(std::ifstream& plyFile, std::string& lineOut)
     return false;
 }
 
-bool Ply::Parse(std::ifstream& plyFile)
+bool Ply::ParseHeader(std::ifstream& plyFile)
 {
+    ZoneScopedNC("Ply::ParseHeader", tracy::Color::Green);
+
     // validate start of header
     std::string token1, token2, token3;
 
@@ -95,6 +104,8 @@ bool Ply::Parse(std::ifstream& plyFile)
             break;
         }
 
+        using PropInfoPair = std::pair<std::string, PropertyInfo>;
+
         iss.str(line);
         iss.clear();
         iss >> token1 >> token2 >> token3;
@@ -105,42 +116,42 @@ bool Ply::Parse(std::ifstream& plyFile)
         }
         if (token2 == "char" || token2 == "int8")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::Char}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 1, Ply::Type::Char}));
             offset += 1;
         }
         else if (token2 == "uchar" || token2 == "uint8")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::UChar}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 1, Ply::Type::UChar}));
             offset += 1;
         }
         else if (token2 == "short" || token2 == "int16")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::Short}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 2, Ply::Type::Short}));
             offset += 2;
         }
         else if (token2 == "ushort" || token2 == "uint16")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::UShort}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 2, Ply::Type::UShort}));
             offset += 2;
         }
         else if (token2 == "int" || token2 == "int32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Int}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::Int}));
             offset += 4;
         }
         else if (token2 == "uint" || token2 == "uint32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::UInt}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::UInt}));
             offset += 4;
         }
         else if (token2 == "float" || token2 == "float32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Float}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::Float}));
             offset += 4;
         }
         else if (token2 == "double" || token2 == "float64")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 8, Ply::Type::Double}));
+            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 8, Ply::Type::Double}));
             offset += 8;
         }
         else
@@ -152,25 +163,38 @@ bool Ply::Parse(std::ifstream& plyFile)
 
     vertexSize = offset;
 
+    return true;
+}
+
+bool Ply::Parse(std::ifstream& plyFile)
+{
+    if (!ParseHeader(plyFile))
+    {
+        return false;
+    }
+
     // read rest of file into dataVec
-    dataVec.resize(vertexSize * vertexCount);
-    plyFile.read((char*)dataVec.data(), vertexSize * vertexCount);
+    {
+        ZoneScopedNC("Ply::Parse() read data", tracy::Color::Yellow);
+        dataVec.resize(vertexSize * vertexCount);
+        plyFile.read((char*)dataVec.data(), vertexSize * vertexCount);
+    }
 
     return true;
 }
 
-bool Ply::GetProperty(const std::string& key, Ply::Property& propertyOut) const
+bool Ply::GetPropertyInfo(const std::string& key, Ply::PropertyInfo& propertyInfoOut) const
 {
-    auto iter = propertyMap.find(key);
-    if (iter != propertyMap.end())
+    auto iter = propertyInfoMap.find(key);
+    if (iter != propertyInfoMap.end())
     {
-        propertyOut = iter->second;
+        propertyInfoOut = iter->second;
         return true;
     }
     return false;
 }
 
-void Ply::ForEachVertex(const VertexCallback& cb)
+void Ply::ForEachVertex(const VertexCallback& cb) const
 {
     const uint8_t* vertexPtr = dataVec.data();
     for (size_t i = 0; i < vertexCount; i++)

@@ -43,6 +43,7 @@ SplatRenderer::~SplatRenderer()
 bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
                          bool useFullSHIn, bool useRgcSortOverrideIn)
 {
+    ZoneScopedNC("SplatRenderer::Init()", tracy::Color::Blue);
     GL_ERROR_CHECK("SplatRenderer::Init() begin");
 
     isFramebufferSRGBEnabled = isFramebufferSRGBEnabledIn;
