@@ -216,9 +216,9 @@ static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> deskto
     }
 }
 
-static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename)
+static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename, bool useLinearColors)
 {
-    auto pointCloud = std::make_shared<PointCloud>();
+    auto pointCloud = std::make_shared<PointCloud>(useLinearColors);
 
     if (!pointCloud->ImportPly(plyFilename))
     {
@@ -509,7 +509,7 @@ bool App::Init()
     std::string pointCloudFilename = FindConfigFile(plyFilename, "input.ply");
     if (!pointCloudFilename.empty())
     {
-        pointCloud = LoadPointCloud(pointCloudFilename);
+        pointCloud = LoadPointCloud(pointCloudFilename, isFramebufferSRGBEnabled);
         if (!pointCloud)
         {
             Log::E("Error loading PointCloud\n");

@@ -12,10 +12,13 @@
 #include <string>
 
 #include "core/log.h"
+#include "core/util.h"
 #include "ply.h"
 
-PointCloud::PointCloud()
+PointCloud::PointCloud(bool useLinearColorsIn) :
+    useLinearColors(useLinearColorsIn)
 {
+    ;
 }
 
 bool PointCloud::ImportPly(const std::string& plyFilename)
@@ -56,19 +59,30 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         Log::E("Error parsing ply file \"%s\", missing color property\n", plyFilename.c_str());
     }
 
-    pointVec.resize(ply.GetVertexCount());
+    pointDataVec.resize(ply.GetVertexCount());
 
     if (useDoubles)
     {
         int i = 0;
         ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
         {
-            pointVec[i].position[0] = (float)props.x.Get<double>(data);
-            pointVec[i].position[1] = (float)props.y.Get<double>(data);
-            pointVec[i].position[2] = (float)props.z.Get<double>(data);
-            pointVec[i].color[0] = props.red.Get<uint8_t>(data);
-            pointVec[i].color[1] = props.green.Get<uint8_t>(data);
-            pointVec[i].color[2] = props.blue.Get<uint8_t>(data);
+            if (useLinearColors)
+            {
+                pointDataVec[i].position[0] = SRGBToLinear((float)props.x.Get<double>(data));
+                pointDataVec[i].position[1] = SRGBToLinear((float)props.y.Get<double>(data));
+                pointDataVec[i].position[2] = SRGBToLinear((float)props.z.Get<double>(data));
+            }
+            else
+            {
+                pointDataVec[i].position[0] = (float)props.x.Get<double>(data);
+                pointDataVec[i].position[1] = (float)props.y.Get<double>(data);
+                pointDataVec[i].position[2] = (float)props.z.Get<double>(data);
+            }
+            pointDataVec[i].position[3] = 1.0f;
+            pointDataVec[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[3] = 1.0f;
             i++;
         });
     }
@@ -77,12 +91,23 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         int i = 0;
         ply.ForEachVertex([this, &i, &props](const uint8_t* data, size_t size)
         {
-            pointVec[i].position[0] = props.x.Get<float>(data);
-            pointVec[i].position[1] = props.y.Get<float>(data);
-            pointVec[i].position[2] = props.z.Get<float>(data);
-            pointVec[i].color[0] = props.red.Get<uint8_t>(data);
-            pointVec[i].color[1] = props.green.Get<uint8_t>(data);
-            pointVec[i].color[2] = props.blue.Get<uint8_t>(data);
+            if (useLinearColors)
+            {
+                pointDataVec[i].position[0] = SRGBToLinear(props.x.Get<float>(data));
+                pointDataVec[i].position[1] = SRGBToLinear(props.y.Get<float>(data));
+                pointDataVec[i].position[2] = SRGBToLinear(props.z.Get<float>(data));
+            }
+            else
+            {
+                pointDataVec[i].position[0] = props.x.Get<float>(data);
+                pointDataVec[i].position[1] = props.y.Get<float>(data);
+                pointDataVec[i].position[2] = props.z.Get<float>(data);
+            }
+            pointDataVec[i].position[3] = 1.0f;
+            pointDataVec[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pointDataVec[i].color[2] = 1.0f;
             i++;
         });
     }
@@ -92,6 +117,9 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
 bool PointCloud::ExportPly(const std::string& plyFilename) const
 {
+    // AJT: TODO FIXME BROKEN
+    return false;
+
     std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
@@ -102,7 +130,7 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     // ply files have unix line endings.
     plyFile << "ply\n";
     plyFile << "format binary_little_endian 1.0\n";
-    plyFile << "element vertex " << pointVec.size() << "\n";
+    plyFile << "element vertex " << pointDataVec.size() << "\n";
     plyFile << "property float x\n";
     plyFile << "property float y\n";
     plyFile << "property float z\n";
@@ -114,18 +142,20 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     plyFile << "property uchar blue\n";
     plyFile << "end_header\n";
 
+    /*
     const size_t POINT_SIZE = 27;
-    for (auto&& p : pointVec)
+    for (auto&& p : pointDataVec)
     {
         plyFile.write((char*)&p, POINT_SIZE);
     }
+    */
 
     return true;
 }
 
 void PointCloud::InitDebugCloud()
 {
-    pointVec.clear();
+    pointDataVec.clear();
 
     //
     // make an debug pointVec, that contains three lines one for each axis.
@@ -133,38 +163,44 @@ void PointCloud::InitDebugCloud()
     const float AXIS_LENGTH = 1.0f;
     const int NUM_POINTS = 5;
     const float DELTA = (AXIS_LENGTH / (float)NUM_POINTS);
-    pointVec.resize(NUM_POINTS * 3);
+    pointDataVec.resize(NUM_POINTS * 3);
     // x axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointCloud::Point& p = pointVec[i];
+        PointCloud::PointData& p = pointDataVec[i];
         p.position[0] = i * DELTA;
         p.position[1] = 0.0f;
         p.position[2] = 0.0f;
-        p.color[0] = 255;
-        p.color[1] = 0;
-        p.color[2] = 0;
+        p.position[3] = 1.0f;
+        p.color[0] = 1.0f;
+        p.color[1] = 0.0f;
+        p.color[2] = 0.0f;
+        p.color[3] = 1.0f;
     }
     // y axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointCloud::Point& p = pointVec[i + NUM_POINTS];
+        PointCloud::PointData& p = pointDataVec[i + NUM_POINTS];
         p.position[0] = 0.0f;
         p.position[1] = i * DELTA;
         p.position[2] = 0.0f;
-        p.color[0] = 0;
-        p.color[1] = 255;
-        p.color[2] = 0;
+        p.position[3] = 1.0f;
+        p.color[0] = 0.0f;
+        p.color[1] = 1.0f;
+        p.color[2] = 0.0f;
+        p.color[3] = 1.0f;
     }
     // z axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointCloud::Point& p = pointVec[i + 2 * NUM_POINTS];
+        PointCloud::PointData& p = pointDataVec[i + 2 * NUM_POINTS];
         p.position[0] = 0.0f;
         p.position[1] = 0.0f;
         p.position[2] = i * DELTA;
+        p.position[3] = 1.0f;
         p.color[0] = 0;
         p.color[1] = 0;
-        p.color[2] = 255;
+        p.color[2] = 1.0f;
+        p.color[3] = 0.0f;
     }
 }

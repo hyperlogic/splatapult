@@ -12,26 +12,25 @@
 class PointCloud
 {
 public:
-    PointCloud();
+    PointCloud(bool useLinearColorsIn);
 
     bool ImportPly(const std::string& plyFilename);
     bool ExportPly(const std::string& plyFilename) const;
 
     void InitDebugCloud();
 
-    struct Point
+    struct PointData
     {
-        Point() noexcept {}
-        float position[3];
-        uint8_t color[3];
+        PointData() noexcept {}
+        float position[4];
+        float color[4];
     };
 
-    size_t size() const { return pointVec.size(); }
-    const std::vector<Point>& GetPointVec() const { return pointVec; }
-
-    // AJT: HACK FOR NOW give full access to pointVec
-    std::vector<Point>& GetPointVec() { return pointVec; }
+    size_t GetNumPoints() const { return pointDataVec.size(); }
+    const std::vector<PointData>& GetPointDataVec() const { return pointDataVec; }
+    std::vector<PointData>& GetPointDataVec() { return pointDataVec; }
 
 protected:
-    std::vector<Point> pointVec;
+    std::vector<PointData> pointDataVec;
+    bool useLinearColors;
 };

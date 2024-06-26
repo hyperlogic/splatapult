@@ -31,6 +31,7 @@ public:
 	// flags can one of the following bitfields.
 	//     GL_DYNAMIC_STORAGE_BIT, GL_MAP_READ_BIT, GL_MAP_WRITE_BIT, GL_MAP_PERSISTENT_BIT
 	//     GL_MAP_COHERENT_BIT, GL_CLIENT_STORAGE_BIT
+	BufferObject(int targetIn, void* data, size_t size, unsigned int flags = 0);
     BufferObject(int targetIn, const std::vector<float>& data, unsigned int flags = 0);
 	BufferObject(int targetIn, const std::vector<glm::vec2>& data, unsigned int flags = 0);
 	BufferObject(int targetIn, const std::vector<glm::vec3>& data, unsigned int flags = 0);
