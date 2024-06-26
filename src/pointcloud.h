@@ -5,9 +5,10 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
 #include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 
 class PointCloud
 {
@@ -19,18 +20,30 @@ public:
 
     void InitDebugCloud();
 
-    struct PointData
+    struct AttribData
     {
-        PointData() noexcept {}
-        float position[4];
-        float color[4];
+        int32_t size;
+        int32_t type;
+        int32_t stride;
+        size_t offset;
     };
 
-    size_t GetNumPoints() const { return pointDataVec.size(); }
-    const std::vector<PointData>& GetPointDataVec() const { return pointDataVec; }
-    std::vector<PointData>& GetPointDataVec() { return pointDataVec; }
+    size_t GetNumPoints() const { return numPoints; }
+    size_t GetTotalSize() const { return GetNumPoints() * pointSize; }
+    void* GetRawDataPtr() { return data.get(); }
+
+    const AttribData& GetPositionAttrib() const { return positionAttrib; }
+    const AttribData& GetColorAttrib() const { return colorAttrib; }
+
+    using AttribCallback = std::function<void(const void*)>;
+    void ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const;
 
 protected:
-    std::vector<PointData> pointDataVec;
+    std::shared_ptr<void> data;
+    AttribData positionAttrib;
+    AttribData colorAttrib;
+
+    size_t numPoints;
+    size_t pointSize;
     bool useLinearColors;
 };

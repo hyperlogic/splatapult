@@ -70,12 +70,14 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebuf
     }
 
     const size_t numPoints = pointCloud->GetNumPoints();
+
     // build posVec
     posVec.reserve(numPoints);
-    for (auto&& p : pointCloud->GetPointDataVec())
+    pointCloud->ForEachAttrib(pointCloud->GetPositionAttrib(), [this](const void* ptr)
     {
-        posVec.emplace_back(glm::vec4(p.position[0], p.position[1], p.position[2], p.position[3]));
-    }
+        const float* p = (const float*)ptr;
+        posVec.emplace_back(glm::vec4(p[0], p[1], p[2], p[3]));
+    });
 
     BuildVertexArrayObject(pointCloud);
 
@@ -194,9 +196,8 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     const size_t numPoints = pointCloud->GetNumPoints();
 
     // allocate large buffer to hold interleaved vertex data
-    void* pointDataPtr = (void*)pointCloud->GetPointDataVec().data();
-    size_t pointDataSize = (size_t)(numPoints * sizeof(PointCloud::PointData));
-    pointDataBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, pointDataPtr, pointDataSize, 0);
+    pointDataBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, pointCloud->GetRawDataPtr(),
+                                                     pointCloud->GetTotalSize(), 0);
 
     // build element array
     indexVec.reserve(numPoints);
@@ -211,12 +212,16 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     pointDataBuffer->Bind();
 
     int positionLoc = pointProg->GetAttribLoc("position");
-    glVertexAttribPointer(positionLoc, 4, GL_FLOAT, GL_FALSE, sizeof(PointCloud::PointData), (void*)0);
+    PointCloud::AttribData positionAttrib = pointCloud->GetPositionAttrib();
+    glVertexAttribPointer(positionLoc, positionAttrib.size, positionAttrib.type, GL_FALSE,
+                          positionAttrib.stride, (void*)positionAttrib.offset);
     glEnableVertexAttribArray(positionLoc);
 
     int colorLoc = pointProg->GetAttribLoc("color");
-    glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, sizeof(PointCloud::PointData), (void*)(sizeof(float) * 4));
-    glEnableVertexAttribArray(positionLoc);
+    PointCloud::AttribData colorAttrib = pointCloud->GetColorAttrib();
+    glVertexAttribPointer(colorLoc, colorAttrib.size, colorAttrib.type, GL_FALSE,
+                          colorAttrib.stride, (void*)colorAttrib.offset);
+    glEnableVertexAttribArray(colorLoc);
 
     pointVao->SetElementBuffer(indexBuffer);
 }
