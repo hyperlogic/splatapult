@@ -453,19 +453,18 @@ void GaussianCloud::InitDebugCloud()
 // only keep the nearest splats
 void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
 {
-    // AJT: TODO fixme
-#if 0
-    if (static_cast<size_t>(numSplats) >= gaussianVec.size())
+    if (!data || static_cast<size_t>(numSplats) >= numGaussians)
     {
         return;
     }
 
+    GaussianData* gd = (GaussianData*)data.get();
     using IndexDistPair = std::pair<uint32_t, float>;
     std::vector<IndexDistPair> indexDistVec;
-    indexDistVec.reserve(gaussianVec.size());
-    for (uint32_t i = 0; i < gaussianVec.size(); i++)
+    indexDistVec.reserve(numGaussians);
+    for (uint32_t i = 0; i < numGaussians; i++)
     {
-        glm::vec3 pos(gaussianVec[i].position[0], gaussianVec[i].position[1], gaussianVec[i].position[2]);
+        glm::vec3 pos(gd[i].posWithAlpha[0], gd[i].posWithAlpha[1], gd[i].posWithAlpha[2]);
         indexDistVec.push_back(IndexDistPair(i, glm::distance(origin, pos)));
     }
 
@@ -474,15 +473,14 @@ void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
         return a.second < b.second;
     });
 
-    std::vector<Gaussian> newGaussianVec;
-    newGaussianVec.reserve(numSplats);
+    GaussianData* gd2 = new GaussianData[numSplats];
     for (uint32_t i = 0; i < numSplats; i++)
     {
-        newGaussianVec.push_back(gaussianVec[indexDistVec[i].first]);
+        gd2[i] = gd[indexDistVec[i].first];
     }
-
-    gaussianVec.swap(newGaussianVec);
-#endif
+    numGaussians = numSplats;
+    data.reset(gd2);
+    gd = nullptr;
 }
 
 void GaussianCloud::ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const
