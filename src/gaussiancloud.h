@@ -5,15 +5,17 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
+
+#include <glm/glm.hpp>
 
 class GaussianCloud
 {
 public:
-    GaussianCloud();
+    GaussianCloud(bool useLinearColorsIn);
 
     bool ImportPly(const std::string& plyFilename);
     bool ExportPly(const std::string& plyFilename) const;
@@ -21,37 +23,65 @@ public:
     void InitDebugCloud();
 
     // only keep the nearest splats
-    void PruneSplats(const glm::vec3& origin, uint32_t numSplats);
+    void PruneSplats(const glm::vec3& origin, uint32_t numGaussians);
 
-    struct Gaussian
+    size_t GetNumGaussians() const { return numGaussians; }
+    size_t GetTotalSize() const { return GetNumGaussians() * gaussianSize; }
+    void* GetRawDataPtr() { return data.get(); }
+
+    struct AttribData
     {
-        Gaussian() noexcept {}
-        float position[3];  // in world space
-        float normal[3];  // unused
-        float f_dc[3];  // first order spherical harmonics coeff (sRGB color space)
-        float f_rest[45];  // more spherical harminics coeff
-        float opacity;  // alpha = 1 / (1 + exp(-opacity));
-        float scale[3];
-        float rot[4];  // local rotation of guassian (real, i, j, k)
-
-        // convert from (scale, rot) into the gaussian covariance matrix in world space
-        // See 3d Gaussian Splat paper for more info
-        glm::mat3 ComputeCovMat() const
-        {
-            glm::quat q(rot[0], rot[1], rot[2], rot[3]);
-            glm::mat3 R(glm::normalize(q));
-            glm::mat3 S(glm::vec3(expf(scale[0]), 0.0f, 0.0f),
-                        glm::vec3(0.0f, expf(scale[1]), 0.0f),
-                        glm::vec3(0.0f, 0.0f, expf(scale[2])));
-            return R * S * glm::transpose(S) * glm::transpose(R);
-        }
+        AttribData() : size(0), type(0), stride(0), offset(0) {}
+        AttribData(int32_t sizeIn, int32_t typeIn, int32_t strideIn, size_t offsetIn) : size(sizeIn), type(typeIn), stride(strideIn), offset(offsetIn) {}
+        bool IsValid() const { return size != 0; }
+        int32_t size;
+        int32_t type;
+        int32_t stride;
+        size_t offset;
     };
 
-    const std::vector<Gaussian>& GetGaussianVec() const { return gaussianVec; }
-    std::vector<Gaussian>& GetGaussianVec() { return gaussianVec; }
-    size_t size() const { return gaussianVec.size(); }
+    const AttribData& GetPosWithAlphaAttrib() const { return posWithAlphaAttrib; }
+    const AttribData& GetR_SH0Attrib() const { return r_sh0Attrib; }
+    const AttribData& GetR_SH1Attrib() const { return r_sh1Attrib; }
+    const AttribData& GetR_SH2Attrib() const { return r_sh2Attrib; }
+    const AttribData& GetR_SH3Attrib() const { return r_sh3Attrib; }
+    const AttribData& GetG_SH0Attrib() const { return g_sh0Attrib; }
+    const AttribData& GetG_SH1Attrib() const { return g_sh1Attrib; }
+    const AttribData& GetG_SH2Attrib() const { return g_sh2Attrib; }
+    const AttribData& GetG_SH3Attrib() const { return g_sh3Attrib; }
+    const AttribData& GetB_SH0Attrib() const { return b_sh0Attrib; }
+    const AttribData& GetB_SH1Attrib() const { return b_sh1Attrib; }
+    const AttribData& GetB_SH2Attrib() const { return b_sh2Attrib; }
+    const AttribData& GetB_SH3Attrib() const { return b_sh3Attrib; }
+    const AttribData& GetCov3_Col0Attrib() const { return cov3_col0Attrib; }
+    const AttribData& GetCov3_Col1Attrib() const { return cov3_col1Attrib; }
+    const AttribData& GetCov3_Col2Attrib() const { return cov3_col2Attrib; }
+
+    using AttribCallback = std::function<void(const void*)>;
+    void ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const;
 
 protected:
 
-    std::vector<Gaussian> gaussianVec;
+    std::shared_ptr<void> data;
+
+    AttribData posWithAlphaAttrib;
+    AttribData r_sh0Attrib;
+    AttribData r_sh1Attrib;
+    AttribData r_sh2Attrib;
+    AttribData r_sh3Attrib;
+    AttribData g_sh0Attrib;
+    AttribData g_sh1Attrib;
+    AttribData g_sh2Attrib;
+    AttribData g_sh3Attrib;
+    AttribData b_sh0Attrib;
+    AttribData b_sh1Attrib;
+    AttribData b_sh2Attrib;
+    AttribData b_sh3Attrib;
+    AttribData cov3_col0Attrib;
+    AttribData cov3_col1Attrib;
+    AttribData cov3_col2Attrib;
+
+    size_t numGaussians;
+    size_t gaussianSize;
+    bool useLinearColors;
 };

@@ -228,9 +228,9 @@ static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename
     return pointCloud;
 }
 
-static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename)
+static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename, bool useLinearColors)
 {
-    auto gaussianCloud = std::make_shared<GaussianCloud>();
+    auto gaussianCloud = std::make_shared<GaussianCloud>(useLinearColors);
 
     if (!gaussianCloud->ImportPly(plyFilename))
     {
@@ -528,7 +528,7 @@ bool App::Init()
         Log::D("Could not find input.ply\n");
     }
 
-    gaussianCloud = LoadGaussianCloud(plyFilename);
+    gaussianCloud = LoadGaussianCloud(plyFilename, isFramebufferSRGBEnabled);
     if (!gaussianCloud)
     {
         Log::E("Error loading GaussianCloud\n");

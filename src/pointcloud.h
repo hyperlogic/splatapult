@@ -20,17 +20,20 @@ public:
 
     void InitDebugCloud();
 
+    size_t GetNumPoints() const { return numPoints; }
+    size_t GetTotalSize() const { return GetNumPoints() * pointSize; }
+    void* GetRawDataPtr() { return data.get(); }
+
     struct AttribData
     {
+        AttribData() : size(0), type(0), stride(0), offset(0) {}
+        AttribData(int32_t sizeIn, int32_t typeIn, int32_t strideIn, size_t offsetIn) : size(sizeIn), type(typeIn), stride(strideIn), offset(offsetIn) {}
+        bool IsValid() const { return size != 0; }
         int32_t size;
         int32_t type;
         int32_t stride;
         size_t offset;
     };
-
-    size_t GetNumPoints() const { return numPoints; }
-    size_t GetTotalSize() const { return GetNumPoints() * pointSize; }
-    void* GetRawDataPtr() { return data.get(); }
 
     const AttribData& GetPositionAttrib() const { return positionAttrib; }
     const AttribData& GetColorAttrib() const { return colorAttrib; }
@@ -40,6 +43,7 @@ public:
 
 protected:
     std::shared_ptr<void> data;
+
     AttribData positionAttrib;
     AttribData colorAttrib;
 

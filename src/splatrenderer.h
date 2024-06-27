@@ -52,6 +52,7 @@ protected:
     std::vector<glm::vec4> posVec;
     std::vector<uint32_t> atomicCounterVec;
 
+    std::shared_ptr<BufferObject> gaussianDataBuffer;
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> keyBuffer2;
     std::shared_ptr<BufferObject> histogramBuffer;

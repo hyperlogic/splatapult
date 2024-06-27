@@ -70,8 +70,8 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
     numPoints = ply.GetVertexCount();
     pointSize = sizeof(PointData);
-    PointData* pointDataPtr = new PointData[numPoints];
-    data.reset(pointDataPtr);
+    PointData* pd = new PointData[numPoints];
+    data.reset(pd);
 
     // GL_FLOAT = 0x1406
     positionAttrib = {4, 0x1406, (int)pointSize, offsetof(PointData, position)};
@@ -80,50 +80,50 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     if (useDoubles)
     {
         int i = 0;
-        ply.ForEachVertex([this, pointDataPtr, &i, &props](const uint8_t* data, size_t size)
+        ply.ForEachVertex([this, pd, &i, &props](const uint8_t* data, size_t size)
         {
             if (useLinearColors)
             {
-                pointDataPtr[i].position[0] = SRGBToLinear((float)props.x.Get<double>(data));
-                pointDataPtr[i].position[1] = SRGBToLinear((float)props.y.Get<double>(data));
-                pointDataPtr[i].position[2] = SRGBToLinear((float)props.z.Get<double>(data));
+                pd[i].position[0] = SRGBToLinear((float)props.x.Get<double>(data));
+                pd[i].position[1] = SRGBToLinear((float)props.y.Get<double>(data));
+                pd[i].position[2] = SRGBToLinear((float)props.z.Get<double>(data));
             }
             else
             {
-                pointDataPtr[i].position[0] = (float)props.x.Get<double>(data);
-                pointDataPtr[i].position[1] = (float)props.y.Get<double>(data);
-                pointDataPtr[i].position[2] = (float)props.z.Get<double>(data);
+                pd[i].position[0] = (float)props.x.Get<double>(data);
+                pd[i].position[1] = (float)props.y.Get<double>(data);
+                pd[i].position[2] = (float)props.z.Get<double>(data);
             }
-            pointDataPtr[i].position[3] = 1.0f;
-            pointDataPtr[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[3] = 1.0f;
+            pd[i].position[3] = 1.0f;
+            pd[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[3] = 1.0f;
             i++;
         });
     }
     else
     {
         int i = 0;
-        ply.ForEachVertex([this, pointDataPtr, &i, &props](const uint8_t* data, size_t size)
+        ply.ForEachVertex([this, pd, &i, &props](const uint8_t* data, size_t size)
         {
             if (useLinearColors)
             {
-                pointDataPtr[i].position[0] = SRGBToLinear(props.x.Get<float>(data));
-                pointDataPtr[i].position[1] = SRGBToLinear(props.y.Get<float>(data));
-                pointDataPtr[i].position[2] = SRGBToLinear(props.z.Get<float>(data));
+                pd[i].position[0] = SRGBToLinear(props.x.Get<float>(data));
+                pd[i].position[1] = SRGBToLinear(props.y.Get<float>(data));
+                pd[i].position[2] = SRGBToLinear(props.z.Get<float>(data));
             }
             else
             {
-                pointDataPtr[i].position[0] = props.x.Get<float>(data);
-                pointDataPtr[i].position[1] = props.y.Get<float>(data);
-                pointDataPtr[i].position[2] = props.z.Get<float>(data);
+                pd[i].position[0] = props.x.Get<float>(data);
+                pd[i].position[1] = props.y.Get<float>(data);
+                pd[i].position[2] = props.z.Get<float>(data);
             }
-            pointDataPtr[i].position[3] = 1.0f;
-            pointDataPtr[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
-            pointDataPtr[i].color[3] = 1.0f;
+            pd[i].position[3] = 1.0f;
+            pd[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[3] = 1.0f;
             i++;
         });
     }
@@ -175,8 +175,8 @@ void PointCloud::InitDebugCloud()
 
     numPoints = NUM_POINTS * 3;
     pointSize = sizeof(PointData);
-    PointData* pointDataPtr = new PointData[numPoints];
-    data.reset(pointDataPtr);
+    PointData* pd = new PointData[numPoints];
+    data.reset(pd);
 
     //
     // make an debug pointVec, that contains three lines one for each axis.
@@ -186,7 +186,7 @@ void PointCloud::InitDebugCloud()
     // x axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointData& p = pointDataPtr[i];
+        PointData& p = pd[i];
         p.position[0] = i * DELTA;
         p.position[1] = 0.0f;
         p.position[2] = 0.0f;
@@ -199,7 +199,7 @@ void PointCloud::InitDebugCloud()
     // y axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointData& p = pointDataPtr[i + NUM_POINTS];
+        PointData& p = pd[i + NUM_POINTS];
         p.position[0] = 0.0f;
         p.position[1] = i * DELTA;
         p.position[2] = 0.0f;
@@ -212,7 +212,7 @@ void PointCloud::InitDebugCloud()
     // z axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointData& p = pointDataPtr[i + 2 * NUM_POINTS];
+        PointData& p = pd[i + 2 * NUM_POINTS];
         p.position[0] = 0.0f;
         p.position[1] = 0.0f;
         p.position[2] = i * DELTA;

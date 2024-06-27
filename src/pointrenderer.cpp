@@ -30,6 +30,12 @@
 
 #include "radix_sort.hpp"
 
+static void SetupAttrib(int loc, const PointCloud::AttribData& attrib)
+{
+    glVertexAttribPointer(loc, attrib.size, attrib.type, GL_FALSE, attrib.stride, (void*)attrib.offset);
+    glEnableVertexAttribArray(loc);
+}
+
 PointRenderer::PointRenderer()
 {
 }
@@ -211,17 +217,9 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     pointVao->Bind();
     pointDataBuffer->Bind();
 
-    int positionLoc = pointProg->GetAttribLoc("position");
-    PointCloud::AttribData positionAttrib = pointCloud->GetPositionAttrib();
-    glVertexAttribPointer(positionLoc, positionAttrib.size, positionAttrib.type, GL_FALSE,
-                          positionAttrib.stride, (void*)positionAttrib.offset);
-    glEnableVertexAttribArray(positionLoc);
-
-    int colorLoc = pointProg->GetAttribLoc("color");
-    PointCloud::AttribData colorAttrib = pointCloud->GetColorAttrib();
-    glVertexAttribPointer(colorLoc, colorAttrib.size, colorAttrib.type, GL_FALSE,
-                          colorAttrib.stride, (void*)colorAttrib.offset);
-    glEnableVertexAttribArray(colorLoc);
+    SetupAttrib(pointProg->GetAttribLoc("position"), pointCloud->GetPositionAttrib());
+    SetupAttrib(pointProg->GetAttribLoc("color"), pointCloud->GetColorAttrib());
 
     pointVao->SetElementBuffer(indexBuffer);
+    pointDataBuffer->Unbind();
 }
