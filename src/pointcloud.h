@@ -42,6 +42,8 @@ public:
     void ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const;
 
 protected:
+    void InitAttribs(size_t size);
+
     std::shared_ptr<void> data;
 
     AttribData positionAttrib;

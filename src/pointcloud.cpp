@@ -70,12 +70,9 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
     numPoints = ply.GetVertexCount();
     pointSize = sizeof(PointData);
+    InitAttribs(pointSize);
     PointData* pd = new PointData[numPoints];
     data.reset(pd);
-
-    // GL_FLOAT = 0x1406
-    positionAttrib = {4, 0x1406, (int)pointSize, offsetof(PointData, position)};
-    colorAttrib = {4, 0x1406, (int)pointSize, offsetof(PointData, color)};
 
     if (useDoubles)
     {
@@ -175,6 +172,7 @@ void PointCloud::InitDebugCloud()
 
     numPoints = NUM_POINTS * 3;
     pointSize = sizeof(PointData);
+    InitAttribs(pointSize);
     PointData* pd = new PointData[numPoints];
     data.reset(pd);
 
@@ -212,7 +210,7 @@ void PointCloud::InitDebugCloud()
     // z axis
     for (int i = 0; i < NUM_POINTS; i++)
     {
-        PointData& p = pd[i + 2 * NUM_POINTS];
+        PointData& p = pd[(2 * NUM_POINTS) + i];
         p.position[0] = 0.0f;
         p.position[1] = 0.0f;
         p.position[2] = i * DELTA;
@@ -220,7 +218,7 @@ void PointCloud::InitDebugCloud()
         p.color[0] = 0.0f;
         p.color[1] = 0.0f;
         p.color[2] = 1.0f;
-        p.color[3] = 0.0f;
+        p.color[3] = 1.0f;
     }
 }
 
@@ -233,4 +231,11 @@ void PointCloud::ForEachAttrib(const AttribData& attribData, const AttribCallbac
         cb((const void*)bytePtr);
         bytePtr += attribData.stride;
     }
+}
+
+void PointCloud::InitAttribs(size_t size)
+{
+    // GL_FLOAT = 0x1406
+    positionAttrib = {4, 0x1406, (int)size, offsetof(PointData, position)};
+    colorAttrib = {4, 0x1406, (int)size, offsetof(PointData, color)};
 }

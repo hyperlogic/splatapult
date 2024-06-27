@@ -162,26 +162,9 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
         numGaussians = ply.GetVertexCount();
         gaussianSize = sizeof(GaussianData);
+        InitAttribs(gaussianSize);
         gd = new GaussianData[numGaussians];
         data.reset(gd);
-
-        // GL_FLOAT = 0x1406
-        posWithAlphaAttrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, posWithAlpha)};
-        r_sh0Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, r_sh0)};
-        r_sh1Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, r_sh1)};
-        r_sh2Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, r_sh2)};
-        r_sh3Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, r_sh3)};
-        g_sh0Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, g_sh0)};
-        g_sh1Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, g_sh1)};
-        g_sh2Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, g_sh2)};
-        g_sh3Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, g_sh3)};
-        b_sh0Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, b_sh0)};
-        b_sh1Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, b_sh1)};
-        b_sh2Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, b_sh2)};
-        b_sh3Attrib = {4, 0x1406, (int)gaussianSize, offsetof(GaussianData, b_sh3)};
-        cov3_col0Attrib = {3, 0x1406, (int)gaussianSize, offsetof(GaussianData, cov3_col0)};
-        cov3_col1Attrib = {3, 0x1406, (int)gaussianSize, offsetof(GaussianData, cov3_col1)};
-        cov3_col2Attrib = {3, 0x1406, (int)gaussianSize, offsetof(GaussianData, cov3_col2)};
     }
 
     {
@@ -374,18 +357,20 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename) const
 
 void GaussianCloud::InitDebugCloud()
 {
-    // AJT: TODO fix me
+    const int NUM_SPLATS = 5;
 
-#if 0
-    gaussianVec.clear();
+    numGaussians = NUM_SPLATS * 3 + 1;
+    gaussianSize = sizeof(GaussianData);
+    InitAttribs(gaussianSize);
+    GaussianData* gd = new GaussianData[numGaussians];
+    data.reset(gd);
 
     //
     // make an debug GaussianClound, that contain red, green and blue axes.
     //
     const float AXIS_LENGTH = 1.0f;
-    const int NUM_SPLATS = 5;
     const float DELTA = (AXIS_LENGTH / (float)NUM_SPLATS);
-    const float S = logf(0.05f);
+    const float COV_DIAG = 0.005f;
     const float SH_C0 = 0.28209479177387814f;
     const float SH_ONE = 1.0f / (2.0f * SH_C0);
     const float SH_ZERO = -1.0f / (2.0f * SH_C0);
@@ -393,61 +378,56 @@ void GaussianCloud::InitDebugCloud()
     // x axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = i * DELTA + DELTA;
-        g.position[1] = 0.0f;
-        g.position[2] = 0.0f;
+        GaussianData g;
+        memset(&g, 0, sizeof(GaussianData));
+        g.posWithAlpha[0] = i * DELTA + DELTA;
+        g.posWithAlpha[1] = 0.0f;
+        g.posWithAlpha[2] = 0.0f;
+        g.posWithAlpha[3] = 1.0f;
         // red
-        g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ZERO;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
+        g.r_sh0[0] = SH_ONE; g.g_sh0[0] = SH_ZERO; g.b_sh0[0] = SH_ZERO;
+        g.cov3_col0[0] = COV_DIAG; g.cov3_col1[1] = COV_DIAG; g.cov3_col2[2] = COV_DIAG;
+        gd[i] = g;
     }
     // y axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = 0.0f;
-        g.position[1] = i * DELTA + DELTA;
-        g.position[2] = 0.0f;
+        GaussianData g;
+        memset(&g, 0, sizeof(GaussianData));
+        g.posWithAlpha[0] = 0.0f;
+        g.posWithAlpha[1] = i * DELTA + DELTA;
+        g.posWithAlpha[2] = 0.0f;
+        g.posWithAlpha[3] = 1.0f;
         // green
-        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ZERO;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
+        g.r_sh0[0] = SH_ZERO; g.g_sh0[0] = SH_ONE; g.b_sh0[0] = SH_ZERO;
+        g.cov3_col0[0] = COV_DIAG; g.cov3_col1[1] = COV_DIAG; g.cov3_col2[2] = COV_DIAG;
+        gd[NUM_SPLATS + i] = g;
     }
     // z axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianCloud::Gaussian g;
-        memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-        g.position[0] = 0.0f;
-        g.position[1] = 0.0f;
-        g.position[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
+        GaussianData g;
+        memset(&g, 0, sizeof(GaussianData));
+        g.posWithAlpha[0] = 0.0f;
+        g.posWithAlpha[1] = 0.0f;
+        g.posWithAlpha[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
+        g.posWithAlpha[3] = 1.0f;
         // blue
-        g.f_dc[0] = SH_ZERO; g.f_dc[1] = SH_ZERO; g.f_dc[2] = SH_ONE;
-        g.opacity = 100.0f;
-        g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-        g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-        gaussianVec.push_back(g);
+        g.r_sh0[0] = SH_ZERO; g.g_sh0[0] = SH_ZERO; g.b_sh0[0] = SH_ONE;
+        g.cov3_col0[0] = COV_DIAG; g.cov3_col1[1] = COV_DIAG; g.cov3_col2[2] = COV_DIAG;
+        gd[(NUM_SPLATS * 2) + i] = g;
     }
 
-    GaussianCloud::Gaussian g;
-    memset(&g, 0, sizeof(GaussianCloud::Gaussian));
-    g.position[0] = 0.0f;
-    g.position[1] = 0.0f;
-    g.position[2] = 0.0f;
+    GaussianData g;
+    memset(&g, 0, sizeof(GaussianData));
+    g.posWithAlpha[0] = 0.0f;
+    g.posWithAlpha[1] = 0.0f;
+    g.posWithAlpha[2] = 0.0f;
+    g.posWithAlpha[3] = 1.0f;
     // white
-    g.f_dc[0] = SH_ONE; g.f_dc[1] = SH_ONE; g.f_dc[2] = SH_ONE;
-    g.opacity = 100.0f;
-    g.scale[0] = S; g.scale[1] = S; g.scale[2] = S;
-    g.rot[0] = 1.0f; g.rot[1] = 0.0f; g.rot[2] = 0.0f; g.rot[3] = 0.0f;
-    gaussianVec.push_back(g);
-#endif
+    g.r_sh0[0] = SH_ONE; g.g_sh0[0] = SH_ONE; g.b_sh0[0] = SH_ONE;
+    g.cov3_col0[0] = COV_DIAG; g.cov3_col1[1] = COV_DIAG; g.cov3_col2[2] = COV_DIAG;
+    gd[(NUM_SPLATS * 3)] = g;
 }
 
 // only keep the nearest splats
@@ -492,4 +472,25 @@ void GaussianCloud::ForEachAttrib(const AttribData& attribData, const AttribCall
         cb((const void*)bytePtr);
         bytePtr += attribData.stride;
     }
+}
+
+void GaussianCloud::InitAttribs(size_t size)
+{
+    // GL_FLOAT = 0x1406
+    posWithAlphaAttrib = {4, 0x1406, (int)size, offsetof(GaussianData, posWithAlpha)};
+    r_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh0)};
+    r_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh1)};
+    r_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh2)};
+    r_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh3)};
+    g_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh0)};
+    g_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh1)};
+    g_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh2)};
+    g_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh3)};
+    b_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh0)};
+    b_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh1)};
+    b_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh2)};
+    b_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh3)};
+    cov3_col0Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col0)};
+    cov3_col1Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col1)};
+    cov3_col2Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col2)};
 }
