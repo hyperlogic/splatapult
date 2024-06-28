@@ -59,7 +59,9 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
     }
 
-    bool useDoubles = (props.x.type == Ply::Type::Double && props.y.type == Ply::Type::Double && props.z.type == Ply::Type::Double);
+    bool useDoubles = (props.x.type == Ply::PropertyType::Double &&
+                       props.y.type == Ply::PropertyType::Double &&
+                       props.z.type == Ply::PropertyType::Double);
 
     if (!ply.GetPropertyInfo("red", props.red) ||
         !ply.GetPropertyInfo("green", props.green) ||
@@ -130,7 +132,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
 bool PointCloud::ExportPly(const std::string& plyFilename) const
 {
-    // AJT: TODO FIXME BROKEN
+    // AJT: TODO
     return false;
 
     std::ofstream plyFile(plyFilename, std::ios::binary);
@@ -140,6 +142,27 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
         return false;
     }
 
+    Ply ply;
+    ply.AddPropertyInfo("x", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("y", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("z", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("nx", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("ny", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("nz", Ply::PropertyType::Float);
+    ply.AddPropertyInfo("red", Ply::PropertyType::UChar);
+    ply.AddPropertyInfo("green", Ply::PropertyType::UChar);
+    ply.AddPropertyInfo("blue", Ply::PropertyType::UChar);
+
+    ply.AllocData(numPoints);
+
+    /*
+    ply.ForEachVertex([this](uint8_t* data, size_t size))
+    {
+        positionAttrib.Set
+    }
+    */
+    
+    /*
     // ply files have unix line endings.
     plyFile << "ply\n";
     plyFile << "format binary_little_endian 1.0\n";
@@ -154,6 +177,7 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     plyFile << "property uchar green\n";
     plyFile << "property uchar blue\n";
     plyFile << "end_header\n";
+    */
 
     /*
     const size_t POINT_SIZE = 27;

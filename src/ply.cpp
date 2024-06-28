@@ -18,6 +18,18 @@
 
 #include "core/log.h"
 
+static size_t propertyTypeSizeArr[Ply::PropertyType::NumTypes] = {
+    0, // Unknown
+    1, // Char
+    1, // UChar
+    2, // Short
+    2, // UShort
+    4, // Int
+    4, // UInt
+    4, // Float
+    8 // Double
+};
+
 static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {
     std::string line;
@@ -35,6 +47,11 @@ static bool GetNextPlyLine(std::ifstream& plyFile, std::string& lineOut)
         }
     }
     return false;
+}
+
+Ply::Ply() : vertexCount(0), vertexSize(0)
+{
+    ;
 }
 
 bool Ply::ParseHeader(std::ifstream& plyFile)
@@ -90,7 +107,6 @@ bool Ply::ParseHeader(std::ifstream& plyFile)
     // TODO: support other "element" types faces, edges etc?
     // at the moment I only care about ply files with vertex elements.
 
-    size_t offset = 0;
     while (true)
     {
         if (!GetNextPlyLine(plyFile, line))
@@ -104,8 +120,6 @@ bool Ply::ParseHeader(std::ifstream& plyFile)
             break;
         }
 
-        using PropInfoPair = std::pair<std::string, PropertyInfo>;
-
         iss.str(line);
         iss.clear();
         iss >> token1 >> token2 >> token3;
@@ -116,43 +130,35 @@ bool Ply::ParseHeader(std::ifstream& plyFile)
         }
         if (token2 == "char" || token2 == "int8")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 1, Ply::Type::Char}));
-            offset += 1;
+            AddPropertyInfo(token3, PropertyType::Char);
         }
         else if (token2 == "uchar" || token2 == "uint8")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 1, Ply::Type::UChar}));
-            offset += 1;
+            AddPropertyInfo(token3, PropertyType::UChar);
         }
         else if (token2 == "short" || token2 == "int16")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 2, Ply::Type::Short}));
-            offset += 2;
+            AddPropertyInfo(token3, PropertyType::Short);
         }
         else if (token2 == "ushort" || token2 == "uint16")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 2, Ply::Type::UShort}));
-            offset += 2;
+            AddPropertyInfo(token3, PropertyType::UShort);
         }
         else if (token2 == "int" || token2 == "int32")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::Int}));
-            offset += 4;
+            AddPropertyInfo(token3, PropertyType::Int);
         }
         else if (token2 == "uint" || token2 == "uint32")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::UInt}));
-            offset += 4;
+            AddPropertyInfo(token3, PropertyType::UInt);
         }
         else if (token2 == "float" || token2 == "float32")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 4, Ply::Type::Float}));
-            offset += 4;
+            AddPropertyInfo(token3, PropertyType::Float);
         }
         else if (token2 == "double" || token2 == "float64")
         {
-            propertyInfoMap.emplace(PropInfoPair(token3, {offset, 8, Ply::Type::Double}));
-            offset += 8;
+            AddPropertyInfo(token3, PropertyType::Double);
         }
         else
         {
@@ -160,8 +166,6 @@ bool Ply::ParseHeader(std::ifstream& plyFile)
             return false;
         }
     }
-
-    vertexSize = offset;
 
     return true;
 }
@@ -173,17 +177,17 @@ bool Ply::Parse(std::ifstream& plyFile)
         return false;
     }
 
-    // read rest of file into dataVec
+    // read rest of file into data ptr
     {
         ZoneScopedNC("Ply::Parse() read data", tracy::Color::Yellow);
-        dataVec.resize(vertexSize * vertexCount);
-        plyFile.read((char*)dataVec.data(), vertexSize * vertexCount);
+        AllocData(vertexCount);
+        plyFile.read((char*)data.get(), vertexSize * vertexCount);
     }
 
     return true;
 }
 
-bool Ply::GetPropertyInfo(const std::string& key, Ply::PropertyInfo& propertyInfoOut) const
+bool Ply::GetPropertyInfo(const std::string& key, PropertyInfo& propertyInfoOut) const
 {
     auto iter = propertyInfoMap.find(key);
     if (iter != propertyInfoMap.end())
@@ -194,12 +198,27 @@ bool Ply::GetPropertyInfo(const std::string& key, Ply::PropertyInfo& propertyInf
     return false;
 }
 
+void Ply::AddPropertyInfo(const std::string& key, PropertyType type)
+{
+    using PropInfoPair = std::pair<std::string, PropertyInfo>;
+
+    size_t propSize = propertyTypeSizeArr[(int)type];
+    propertyInfoMap.emplace(PropInfoPair(key, {vertexSize, propSize, PropertyType::Char, (uint16_t)propertyInfoMap.size()}));
+    vertexSize += propSize;
+}
+
+void Ply::AllocData(size_t numVertices)
+{
+    data.reset(new uint8_t[vertexSize * numVertices]);
+}
+
 void Ply::ForEachVertex(const VertexCallback& cb) const
 {
-    const uint8_t* vertexPtr = dataVec.data();
+    const uint8_t* ptr = data.get();
     for (size_t i = 0; i < vertexCount; i++)
     {
-        cb(vertexPtr, vertexSize);
-        vertexPtr += vertexSize;
+        cb(ptr, vertexSize);
+        ptr += vertexSize;
     }
 }
+
