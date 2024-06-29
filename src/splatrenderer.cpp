@@ -32,9 +32,10 @@
 
 static const uint32_t NUM_BLOCKS_PER_WORKGROUP = 1024;
 
-static void SetupAttrib(int loc, const GaussianCloud::AttribData& attrib)
+static void SetupAttrib(int loc, const BinaryAttribute& attrib, int32_t count, size_t stride)
 {
-    glVertexAttribPointer(loc, attrib.size, attrib.type, GL_FALSE, attrib.stride, (void*)attrib.offset);
+    assert(attrib.type == BinaryAttribute::Type::Float);
+    glVertexAttribPointer(loc, count, GL_FLOAT, GL_FALSE, (uint32_t)stride, (void*)attrib.offset);
     glEnableVertexAttribArray(loc);
 }
 
@@ -105,10 +106,9 @@ bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFr
     // build posVec
     size_t numGaussians = gaussianCloud->GetNumGaussians();
     posVec.reserve(numGaussians);
-    gaussianCloud->ForEachAttrib(gaussianCloud->GetPosWithAlphaAttrib(), [this](const void* ptr)
+    gaussianCloud->ForEachPosWithAlpha([this](const float* pos)
     {
-        const float* p = (const float*)ptr;
-        posVec.emplace_back(glm::vec4(p[0], p[1], p[2], 1.0f));
+        posVec.emplace_back(glm::vec4(pos[0], pos[1], pos[2], 1.0f));
     });
 
     BuildVertexArrayObject(gaussianCloud);
@@ -366,25 +366,26 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
     splatVao->Bind();
     gaussianDataBuffer->Bind();
 
-    SetupAttrib(splatProg->GetAttribLoc("position"), gaussianCloud->GetPosWithAlphaAttrib());
-    SetupAttrib(splatProg->GetAttribLoc("r_sh0"), gaussianCloud->GetR_SH0Attrib());
-    SetupAttrib(splatProg->GetAttribLoc("g_sh0"), gaussianCloud->GetG_SH0Attrib());
-    SetupAttrib(splatProg->GetAttribLoc("b_sh0"), gaussianCloud->GetB_SH0Attrib());
+    const size_t stride = gaussianCloud->GetStride();
+    SetupAttrib(splatProg->GetAttribLoc("position"), gaussianCloud->GetPosWithAlphaAttrib(), 4, stride);
+    SetupAttrib(splatProg->GetAttribLoc("r_sh0"), gaussianCloud->GetR_SH0Attrib(), 4, stride);
+    SetupAttrib(splatProg->GetAttribLoc("g_sh0"), gaussianCloud->GetG_SH0Attrib(), 4, stride);
+    SetupAttrib(splatProg->GetAttribLoc("b_sh0"), gaussianCloud->GetB_SH0Attrib(), 4, stride);
     if (useFullSH)
     {
-        SetupAttrib(splatProg->GetAttribLoc("r_sh1"), gaussianCloud->GetR_SH1Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("r_sh2"), gaussianCloud->GetR_SH2Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("r_sh3"), gaussianCloud->GetR_SH3Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("g_sh1"), gaussianCloud->GetG_SH1Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("g_sh2"), gaussianCloud->GetG_SH2Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("g_sh3"), gaussianCloud->GetG_SH3Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("b_sh1"), gaussianCloud->GetB_SH1Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("b_sh2"), gaussianCloud->GetB_SH2Attrib());
-        SetupAttrib(splatProg->GetAttribLoc("b_sh3"), gaussianCloud->GetB_SH3Attrib());
+        SetupAttrib(splatProg->GetAttribLoc("r_sh1"), gaussianCloud->GetR_SH1Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("r_sh2"), gaussianCloud->GetR_SH2Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("r_sh3"), gaussianCloud->GetR_SH3Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("g_sh1"), gaussianCloud->GetG_SH1Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("g_sh2"), gaussianCloud->GetG_SH2Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("g_sh3"), gaussianCloud->GetG_SH3Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("b_sh1"), gaussianCloud->GetB_SH1Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("b_sh2"), gaussianCloud->GetB_SH2Attrib(), 4, stride);
+        SetupAttrib(splatProg->GetAttribLoc("b_sh3"), gaussianCloud->GetB_SH3Attrib(), 4, stride);
     }
-    SetupAttrib(splatProg->GetAttribLoc("cov3_col0"), gaussianCloud->GetCov3_Col0Attrib());
-    SetupAttrib(splatProg->GetAttribLoc("cov3_col1"), gaussianCloud->GetCov3_Col1Attrib());
-    SetupAttrib(splatProg->GetAttribLoc("cov3_col2"), gaussianCloud->GetCov3_Col2Attrib());
+    SetupAttrib(splatProg->GetAttribLoc("cov3_col0"), gaussianCloud->GetCov3_Col0Attrib(), 3, stride);
+    SetupAttrib(splatProg->GetAttribLoc("cov3_col1"), gaussianCloud->GetCov3_Col1Attrib(), 3, stride);
+    SetupAttrib(splatProg->GetAttribLoc("cov3_col2"), gaussianCloud->GetCov3_Col2Attrib(), 3, stride);
 
     splatVao->SetElementBuffer(indexBuffer);
     gaussianDataBuffer->Unbind();

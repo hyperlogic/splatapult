@@ -18,7 +18,7 @@
 
 #include "core/log.h"
 
-static size_t propertyTypeSizeArr[Ply::PropertyType::NumTypes] = {
+static uint32_t propertyTypeSizeArr[(size_t)BinaryAttribute::Type::NumTypes] = {
     0, // Unknown
     1, // Char
     1, // UChar
@@ -130,35 +130,35 @@ bool Ply::ParseHeader(std::ifstream& plyFile)
         }
         if (token2 == "char" || token2 == "int8")
         {
-            AddPropertyInfo(token3, PropertyType::Char);
+            AddProperty(token3, BinaryAttribute::Type::Char);
         }
         else if (token2 == "uchar" || token2 == "uint8")
         {
-            AddPropertyInfo(token3, PropertyType::UChar);
+            AddProperty(token3, BinaryAttribute::Type::UChar);
         }
         else if (token2 == "short" || token2 == "int16")
         {
-            AddPropertyInfo(token3, PropertyType::Short);
+            AddProperty(token3, BinaryAttribute::Type::Short);
         }
         else if (token2 == "ushort" || token2 == "uint16")
         {
-            AddPropertyInfo(token3, PropertyType::UShort);
+            AddProperty(token3, BinaryAttribute::Type::UShort);
         }
         else if (token2 == "int" || token2 == "int32")
         {
-            AddPropertyInfo(token3, PropertyType::Int);
+            AddProperty(token3, BinaryAttribute::Type::Int);
         }
         else if (token2 == "uint" || token2 == "uint32")
         {
-            AddPropertyInfo(token3, PropertyType::UInt);
+            AddProperty(token3, BinaryAttribute::Type::UInt);
         }
         else if (token2 == "float" || token2 == "float32")
         {
-            AddPropertyInfo(token3, PropertyType::Float);
+            AddProperty(token3, BinaryAttribute::Type::Float);
         }
         else if (token2 == "double" || token2 == "float64")
         {
-            AddPropertyInfo(token3, PropertyType::Double);
+            AddProperty(token3, BinaryAttribute::Type::Double);
         }
         else
         {
@@ -187,23 +187,23 @@ bool Ply::Parse(std::ifstream& plyFile)
     return true;
 }
 
-bool Ply::GetPropertyInfo(const std::string& key, PropertyInfo& propertyInfoOut) const
+bool Ply::GetProperty(const std::string& key, BinaryAttribute& binaryAttributeOut) const
 {
-    auto iter = propertyInfoMap.find(key);
-    if (iter != propertyInfoMap.end())
+    auto iter = propertyMap.find(key);
+    if (iter != propertyMap.end())
     {
-        propertyInfoOut = iter->second;
+        binaryAttributeOut = iter->second;
         return true;
     }
     return false;
 }
 
-void Ply::AddPropertyInfo(const std::string& key, PropertyType type)
+void Ply::AddProperty(const std::string& key, BinaryAttribute::Type type)
 {
-    using PropInfoPair = std::pair<std::string, PropertyInfo>;
+    using PropInfoPair = std::pair<std::string, BinaryAttribute>;
 
-    size_t propSize = propertyTypeSizeArr[(int)type];
-    propertyInfoMap.emplace(PropInfoPair(key, {vertexSize, propSize, PropertyType::Char, (uint16_t)propertyInfoMap.size()}));
+    uint32_t propSize = propertyTypeSizeArr[(int)type];
+    propertyMap.emplace(PropInfoPair(key, BinaryAttribute{type, propSize, (uint32_t)vertexSize}));
     vertexSize += propSize;
 }
 

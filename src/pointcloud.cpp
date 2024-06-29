@@ -48,31 +48,31 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
     struct
     {
-        Ply::PropertyInfo x, y, z;
-        Ply::PropertyInfo red, green, blue;
+        BinaryAttribute x, y, z;
+        BinaryAttribute red, green, blue;
     } props;
 
-    if (!ply.GetPropertyInfo("x", props.x) ||
-        !ply.GetPropertyInfo("y", props.y) ||
-        !ply.GetPropertyInfo("z", props.z))
+    if (!ply.GetProperty("x", props.x) ||
+        !ply.GetProperty("y", props.y) ||
+        !ply.GetProperty("z", props.z))
     {
         Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
     }
 
-    bool useDoubles = (props.x.type == Ply::PropertyType::Double &&
-                       props.y.type == Ply::PropertyType::Double &&
-                       props.z.type == Ply::PropertyType::Double);
+    bool useDoubles = (props.x.type == BinaryAttribute::Type::Double &&
+                       props.y.type == BinaryAttribute::Type::Double &&
+                       props.z.type == BinaryAttribute::Type::Double);
 
-    if (!ply.GetPropertyInfo("red", props.red) ||
-        !ply.GetPropertyInfo("green", props.green) ||
-        !ply.GetPropertyInfo("blue", props.blue))
+    if (!ply.GetProperty("red", props.red) ||
+        !ply.GetProperty("green", props.green) ||
+        !ply.GetProperty("blue", props.blue))
     {
         Log::E("Error parsing ply file \"%s\", missing color property\n", plyFilename.c_str());
     }
 
     numPoints = ply.GetVertexCount();
     pointSize = sizeof(PointData);
-    InitAttribs(pointSize);
+    InitAttribs();
     PointData* pd = new PointData[numPoints];
     data.reset(pd);
 
@@ -83,20 +83,20 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         {
             if (useLinearColors)
             {
-                pd[i].position[0] = SRGBToLinear((float)props.x.Get<double>(data));
-                pd[i].position[1] = SRGBToLinear((float)props.y.Get<double>(data));
-                pd[i].position[2] = SRGBToLinear((float)props.z.Get<double>(data));
+                pd[i].position[0] = SRGBToLinear((float)props.x.Read<double>(data));
+                pd[i].position[1] = SRGBToLinear((float)props.y.Read<double>(data));
+                pd[i].position[2] = SRGBToLinear((float)props.z.Read<double>(data));
             }
             else
             {
-                pd[i].position[0] = (float)props.x.Get<double>(data);
-                pd[i].position[1] = (float)props.y.Get<double>(data);
-                pd[i].position[2] = (float)props.z.Get<double>(data);
+                pd[i].position[0] = (float)props.x.Read<double>(data);
+                pd[i].position[1] = (float)props.y.Read<double>(data);
+                pd[i].position[2] = (float)props.z.Read<double>(data);
             }
             pd[i].position[3] = 1.0f;
-            pd[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
-            pd[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
-            pd[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[0] = (float)props.red.Read<uint8_t>(data) / 255.0f;
+            pd[i].color[1] = (float)props.green.Read<uint8_t>(data) / 255.0f;
+            pd[i].color[2] = (float)props.blue.Read<uint8_t>(data) / 255.0f;
             pd[i].color[3] = 1.0f;
             i++;
         });
@@ -108,20 +108,20 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
         {
             if (useLinearColors)
             {
-                pd[i].position[0] = SRGBToLinear(props.x.Get<float>(data));
-                pd[i].position[1] = SRGBToLinear(props.y.Get<float>(data));
-                pd[i].position[2] = SRGBToLinear(props.z.Get<float>(data));
+                pd[i].position[0] = SRGBToLinear(props.x.Read<float>(data));
+                pd[i].position[1] = SRGBToLinear(props.y.Read<float>(data));
+                pd[i].position[2] = SRGBToLinear(props.z.Read<float>(data));
             }
             else
             {
-                pd[i].position[0] = props.x.Get<float>(data);
-                pd[i].position[1] = props.y.Get<float>(data);
-                pd[i].position[2] = props.z.Get<float>(data);
+                pd[i].position[0] = props.x.Read<float>(data);
+                pd[i].position[1] = props.y.Read<float>(data);
+                pd[i].position[2] = props.z.Read<float>(data);
             }
             pd[i].position[3] = 1.0f;
-            pd[i].color[0] = (float)props.red.Get<uint8_t>(data) / 255.0f;
-            pd[i].color[1] = (float)props.green.Get<uint8_t>(data) / 255.0f;
-            pd[i].color[2] = (float)props.blue.Get<uint8_t>(data) / 255.0f;
+            pd[i].color[0] = (float)props.red.Read<uint8_t>(data) / 255.0f;
+            pd[i].color[1] = (float)props.green.Read<uint8_t>(data) / 255.0f;
+            pd[i].color[2] = (float)props.blue.Read<uint8_t>(data) / 255.0f;
             pd[i].color[3] = 1.0f;
             i++;
         });
@@ -143,15 +143,15 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     }
 
     Ply ply;
-    ply.AddPropertyInfo("x", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("y", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("z", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("nx", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("ny", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("nz", Ply::PropertyType::Float);
-    ply.AddPropertyInfo("red", Ply::PropertyType::UChar);
-    ply.AddPropertyInfo("green", Ply::PropertyType::UChar);
-    ply.AddPropertyInfo("blue", Ply::PropertyType::UChar);
+    ply.AddProperty("x", BinaryAttribute::Type::Float);
+    ply.AddProperty("y", BinaryAttribute::Type::Float);
+    ply.AddProperty("z", BinaryAttribute::Type::Float);
+    ply.AddProperty("nx", BinaryAttribute::Type::Float);
+    ply.AddProperty("ny", BinaryAttribute::Type::Float);
+    ply.AddProperty("nz", BinaryAttribute::Type::Float);
+    ply.AddProperty("red", BinaryAttribute::Type::UChar);
+    ply.AddProperty("green", BinaryAttribute::Type::UChar);
+    ply.AddProperty("blue", BinaryAttribute::Type::UChar);
 
     ply.AllocData(numPoints);
 
@@ -196,7 +196,7 @@ void PointCloud::InitDebugCloud()
 
     numPoints = NUM_POINTS * 3;
     pointSize = sizeof(PointData);
-    InitAttribs(pointSize);
+    InitAttribs();
     PointData* pd = new PointData[numPoints];
     data.reset(pd);
 
@@ -246,20 +246,13 @@ void PointCloud::InitDebugCloud()
     }
 }
 
-void PointCloud::ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const
+void PointCloud::ForEachPosition(const ForEachPositionCallback& cb) const
 {
-    const uint8_t* bytePtr = (uint8_t*)data.get();
-    bytePtr += attribData.offset;
-    for (size_t i = 0; i < GetNumPoints(); i++)
-    {
-        cb((const void*)bytePtr);
-        bytePtr += attribData.stride;
-    }
+    positionAttrib.ForEachConst<float>(GetRawDataPtr(), GetStride(), GetNumPoints(), cb);
 }
 
-void PointCloud::InitAttribs(size_t size)
+void PointCloud::InitAttribs()
 {
-    // GL_FLOAT = 0x1406
-    positionAttrib = {4, 0x1406, (int)size, offsetof(PointData, position)};
-    colorAttrib = {4, 0x1406, (int)size, offsetof(PointData, color)};
+    positionAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(PointData, position)};
+    colorAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(PointData, color)};
 }

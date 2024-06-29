@@ -95,27 +95,27 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
     struct
     {
-        Ply::PropertyInfo x, y, z;
-        Ply::PropertyInfo f_dc[3];
-        Ply::PropertyInfo f_rest[45];
-        Ply::PropertyInfo opacity;
-        Ply::PropertyInfo scale[3];
-        Ply::PropertyInfo rot[4];
+        BinaryAttribute x, y, z;
+        BinaryAttribute f_dc[3];
+        BinaryAttribute f_rest[45];
+        BinaryAttribute opacity;
+        BinaryAttribute scale[3];
+        BinaryAttribute rot[4];
     } props;
 
     {
         ZoneScopedNC("ply.GetProps", tracy::Color::Green);
 
-        if (!ply.GetPropertyInfo("x", props.x) ||
-            !ply.GetPropertyInfo("y", props.y) ||
-            !ply.GetPropertyInfo("z", props.z))
+        if (!ply.GetProperty("x", props.x) ||
+            !ply.GetProperty("y", props.y) ||
+            !ply.GetProperty("z", props.z))
         {
             Log::E("Error parsing ply file \"%s\", missing position property\n", plyFilename.c_str());
         }
 
         for (int i = 0; i < 3; i++)
         {
-            if (!ply.GetPropertyInfo("f_dc_" + std::to_string(i), props.f_dc[i]))
+            if (!ply.GetProperty("f_dc_" + std::to_string(i), props.f_dc[i]))
             {
                 Log::E("Error parsing ply file \"%s\", missing f_dc property\n", plyFilename.c_str());
             }
@@ -123,7 +123,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
         for (int i = 0; i < 45; i++)
         {
-            if (!ply.GetPropertyInfo("f_rest_" + std::to_string(i), props.f_rest[i]))
+            if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
             {
                 // f_rest properties are optional
                 Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
@@ -131,14 +131,14 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
             }
         }
 
-        if (!ply.GetPropertyInfo("opacity", props.opacity))
+        if (!ply.GetProperty("opacity", props.opacity))
         {
             Log::E("Error parsing ply file \"%s\", missing opacity property\n", plyFilename.c_str());
         }
 
         for (int i = 0; i < 3; i++)
         {
-            if (!ply.GetPropertyInfo("scale_" + std::to_string(i), props.scale[i]))
+            if (!ply.GetProperty("scale_" + std::to_string(i), props.scale[i]))
             {
                 Log::E("Error parsing ply file \"%s\", missing scale property\n", plyFilename.c_str());
             }
@@ -146,7 +146,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
         for (int i = 0; i < 4; i++)
         {
-            if (!ply.GetPropertyInfo("rot_" + std::to_string(i), props.rot[i]))
+            if (!ply.GetProperty("rot_" + std::to_string(i), props.rot[i]))
             {
                 Log::E("Error parsing ply file \"%s\", missing rot property\n", plyFilename.c_str());
             }
@@ -162,7 +162,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
         numGaussians = ply.GetVertexCount();
         gaussianSize = sizeof(GaussianData);
-        InitAttribs(gaussianSize);
+        InitAttribs();
         gd = new GaussianData[numGaussians];
         data.reset(gd);
     }
@@ -172,76 +172,76 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
         int i = 0;
         ply.ForEachVertex([this, gd, &i, &props](const uint8_t* data, size_t size)
         {
-            gd[i].posWithAlpha[0] = props.x.Get<float>(data);
-            gd[i].posWithAlpha[1] = props.y.Get<float>(data);
-            gd[i].posWithAlpha[2] = props.z.Get<float>(data);
-            gd[i].posWithAlpha[3] = ComputeAlpha(props.opacity.Get<float>(data));
+            gd[i].posWithAlpha[0] = props.x.Read<float>(data);
+            gd[i].posWithAlpha[1] = props.y.Read<float>(data);
+            gd[i].posWithAlpha[2] = props.z.Read<float>(data);
+            gd[i].posWithAlpha[3] = ComputeAlpha(props.opacity.Read<float>(data));
 
             // AJT: TODO check for useLinearColors
 
-            gd[i].r_sh0[0] = props.f_dc[0].Get<float>(data);
-            gd[i].r_sh0[1] = props.f_rest[0].Get<float>(data);
-            gd[i].r_sh0[2] = props.f_rest[1].Get<float>(data);
-            gd[i].r_sh0[3] = props.f_rest[2].Get<float>(data);
-            gd[i].r_sh1[0] = props.f_rest[3].Get<float>(data);
-            gd[i].r_sh1[1] = props.f_rest[4].Get<float>(data);
-            gd[i].r_sh1[2] = props.f_rest[5].Get<float>(data);
-            gd[i].r_sh1[3] = props.f_rest[6].Get<float>(data);
-            gd[i].r_sh2[0] = props.f_rest[7].Get<float>(data);
-            gd[i].r_sh2[1] = props.f_rest[8].Get<float>(data);
-            gd[i].r_sh2[2] = props.f_rest[9].Get<float>(data);
-            gd[i].r_sh2[3] = props.f_rest[10].Get<float>(data);
-            gd[i].r_sh3[0] = props.f_rest[11].Get<float>(data);
-            gd[i].r_sh3[1] = props.f_rest[12].Get<float>(data);
-            gd[i].r_sh3[2] = props.f_rest[13].Get<float>(data);
-            gd[i].r_sh3[3] = props.f_rest[14].Get<float>(data);
+            gd[i].r_sh0[0] = props.f_dc[0].Read<float>(data);
+            gd[i].r_sh0[1] = props.f_rest[0].Read<float>(data);
+            gd[i].r_sh0[2] = props.f_rest[1].Read<float>(data);
+            gd[i].r_sh0[3] = props.f_rest[2].Read<float>(data);
+            gd[i].r_sh1[0] = props.f_rest[3].Read<float>(data);
+            gd[i].r_sh1[1] = props.f_rest[4].Read<float>(data);
+            gd[i].r_sh1[2] = props.f_rest[5].Read<float>(data);
+            gd[i].r_sh1[3] = props.f_rest[6].Read<float>(data);
+            gd[i].r_sh2[0] = props.f_rest[7].Read<float>(data);
+            gd[i].r_sh2[1] = props.f_rest[8].Read<float>(data);
+            gd[i].r_sh2[2] = props.f_rest[9].Read<float>(data);
+            gd[i].r_sh2[3] = props.f_rest[10].Read<float>(data);
+            gd[i].r_sh3[0] = props.f_rest[11].Read<float>(data);
+            gd[i].r_sh3[1] = props.f_rest[12].Read<float>(data);
+            gd[i].r_sh3[2] = props.f_rest[13].Read<float>(data);
+            gd[i].r_sh3[3] = props.f_rest[14].Read<float>(data);
 
-            gd[i].g_sh0[0] = props.f_dc[1].Get<float>(data);
-            gd[i].g_sh0[1] = props.f_rest[15].Get<float>(data);
-            gd[i].g_sh0[2] = props.f_rest[16].Get<float>(data);
-            gd[i].g_sh0[3] = props.f_rest[17].Get<float>(data);
-            gd[i].g_sh1[0] = props.f_rest[18].Get<float>(data);
-            gd[i].g_sh1[1] = props.f_rest[19].Get<float>(data);
-            gd[i].g_sh1[2] = props.f_rest[20].Get<float>(data);
-            gd[i].g_sh1[3] = props.f_rest[21].Get<float>(data);
-            gd[i].g_sh2[0] = props.f_rest[22].Get<float>(data);
-            gd[i].g_sh2[1] = props.f_rest[23].Get<float>(data);
-            gd[i].g_sh2[2] = props.f_rest[24].Get<float>(data);
-            gd[i].g_sh2[3] = props.f_rest[25].Get<float>(data);
-            gd[i].g_sh3[0] = props.f_rest[26].Get<float>(data);
-            gd[i].g_sh3[1] = props.f_rest[27].Get<float>(data);
-            gd[i].g_sh3[2] = props.f_rest[28].Get<float>(data);
-            gd[i].g_sh3[3] = props.f_rest[29].Get<float>(data);
+            gd[i].g_sh0[0] = props.f_dc[1].Read<float>(data);
+            gd[i].g_sh0[1] = props.f_rest[15].Read<float>(data);
+            gd[i].g_sh0[2] = props.f_rest[16].Read<float>(data);
+            gd[i].g_sh0[3] = props.f_rest[17].Read<float>(data);
+            gd[i].g_sh1[0] = props.f_rest[18].Read<float>(data);
+            gd[i].g_sh1[1] = props.f_rest[19].Read<float>(data);
+            gd[i].g_sh1[2] = props.f_rest[20].Read<float>(data);
+            gd[i].g_sh1[3] = props.f_rest[21].Read<float>(data);
+            gd[i].g_sh2[0] = props.f_rest[22].Read<float>(data);
+            gd[i].g_sh2[1] = props.f_rest[23].Read<float>(data);
+            gd[i].g_sh2[2] = props.f_rest[24].Read<float>(data);
+            gd[i].g_sh2[3] = props.f_rest[25].Read<float>(data);
+            gd[i].g_sh3[0] = props.f_rest[26].Read<float>(data);
+            gd[i].g_sh3[1] = props.f_rest[27].Read<float>(data);
+            gd[i].g_sh3[2] = props.f_rest[28].Read<float>(data);
+            gd[i].g_sh3[3] = props.f_rest[29].Read<float>(data);
 
-            gd[i].b_sh0[0] = props.f_dc[2].Get<float>(data);
-            gd[i].b_sh0[1] = props.f_rest[30].Get<float>(data);
-            gd[i].b_sh0[2] = props.f_rest[31].Get<float>(data);
-            gd[i].b_sh0[3] = props.f_rest[32].Get<float>(data);
-            gd[i].b_sh1[0] = props.f_rest[33].Get<float>(data);
-            gd[i].b_sh1[1] = props.f_rest[34].Get<float>(data);
-            gd[i].b_sh1[2] = props.f_rest[35].Get<float>(data);
-            gd[i].b_sh1[3] = props.f_rest[36].Get<float>(data);
-            gd[i].b_sh2[0] = props.f_rest[37].Get<float>(data);
-            gd[i].b_sh2[1] = props.f_rest[38].Get<float>(data);
-            gd[i].b_sh2[2] = props.f_rest[39].Get<float>(data);
-            gd[i].b_sh2[3] = props.f_rest[40].Get<float>(data);
-            gd[i].b_sh3[0] = props.f_rest[41].Get<float>(data);
-            gd[i].b_sh3[1] = props.f_rest[42].Get<float>(data);
-            gd[i].b_sh3[2] = props.f_rest[43].Get<float>(data);
-            gd[i].b_sh3[3] = props.f_rest[44].Get<float>(data);
+            gd[i].b_sh0[0] = props.f_dc[2].Read<float>(data);
+            gd[i].b_sh0[1] = props.f_rest[30].Read<float>(data);
+            gd[i].b_sh0[2] = props.f_rest[31].Read<float>(data);
+            gd[i].b_sh0[3] = props.f_rest[32].Read<float>(data);
+            gd[i].b_sh1[0] = props.f_rest[33].Read<float>(data);
+            gd[i].b_sh1[1] = props.f_rest[34].Read<float>(data);
+            gd[i].b_sh1[2] = props.f_rest[35].Read<float>(data);
+            gd[i].b_sh1[3] = props.f_rest[36].Read<float>(data);
+            gd[i].b_sh2[0] = props.f_rest[37].Read<float>(data);
+            gd[i].b_sh2[1] = props.f_rest[38].Read<float>(data);
+            gd[i].b_sh2[2] = props.f_rest[39].Read<float>(data);
+            gd[i].b_sh2[3] = props.f_rest[40].Read<float>(data);
+            gd[i].b_sh3[0] = props.f_rest[41].Read<float>(data);
+            gd[i].b_sh3[1] = props.f_rest[42].Read<float>(data);
+            gd[i].b_sh3[2] = props.f_rest[43].Read<float>(data);
+            gd[i].b_sh3[3] = props.f_rest[44].Read<float>(data);
 
             float rot[4] =
             {
-                props.rot[0].Get<float>(data),
-                props.rot[1].Get<float>(data),
-                props.rot[2].Get<float>(data),
-                props.rot[3].Get<float>(data)
+                props.rot[0].Read<float>(data),
+                props.rot[1].Read<float>(data),
+                props.rot[2].Read<float>(data),
+                props.rot[3].Read<float>(data)
             };
             float scale[4] =
             {
-                props.scale[0].Get<float>(data),
-                props.scale[1].Get<float>(data),
-                props.scale[2].Get<float>(data)
+                props.scale[0].Read<float>(data),
+                props.scale[1].Read<float>(data),
+                props.scale[2].Read<float>(data)
             };
 
             glm::mat3 V = ComputeCovMat(rot, scale);
@@ -361,7 +361,7 @@ void GaussianCloud::InitDebugCloud()
 
     numGaussians = NUM_SPLATS * 3 + 1;
     gaussianSize = sizeof(GaussianData);
-    InitAttribs(gaussianSize);
+    InitAttribs();
     GaussianData* gd = new GaussianData[numGaussians];
     data.reset(gd);
 
@@ -463,34 +463,27 @@ void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
     gd = nullptr;
 }
 
-void GaussianCloud::ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const
+void GaussianCloud::ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) const
 {
-    const uint8_t* bytePtr = (uint8_t*)data.get();
-    bytePtr += attribData.offset;
-    for (size_t i = 0; i < GetNumGaussians(); i++)
-    {
-        cb((const void*)bytePtr);
-        bytePtr += attribData.stride;
-    }
+    posWithAlphaAttrib.ForEachConst<float>(GetRawDataPtr(), GetStride(), GetNumGaussians(), cb);
 }
 
-void GaussianCloud::InitAttribs(size_t size)
+void GaussianCloud::InitAttribs()
 {
-    // GL_FLOAT = 0x1406
-    posWithAlphaAttrib = {4, 0x1406, (int)size, offsetof(GaussianData, posWithAlpha)};
-    r_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh0)};
-    r_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh1)};
-    r_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh2)};
-    r_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, r_sh3)};
-    g_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh0)};
-    g_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh1)};
-    g_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh2)};
-    g_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, g_sh3)};
-    b_sh0Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh0)};
-    b_sh1Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh1)};
-    b_sh2Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh2)};
-    b_sh3Attrib = {4, 0x1406, (int)size, offsetof(GaussianData, b_sh3)};
-    cov3_col0Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col0)};
-    cov3_col1Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col1)};
-    cov3_col2Attrib = {3, 0x1406, (int)size, offsetof(GaussianData, cov3_col2)};
+    posWithAlphaAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, posWithAlpha)};
+    r_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh0)};
+    r_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh1)};
+    r_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh2)};
+    r_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh3)};
+    g_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh0)};
+    g_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh1)};
+    g_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh2)};
+    g_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh3)};
+    b_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh0)};
+    b_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh1)};
+    b_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh2)};
+    b_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh3)};
+    cov3_col0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col0)};
+    cov3_col1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col1)};
+    cov3_col2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col2)};
 }

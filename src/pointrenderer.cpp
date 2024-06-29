@@ -30,9 +30,10 @@
 
 #include "radix_sort.hpp"
 
-static void SetupAttrib(int loc, const PointCloud::AttribData& attrib)
+static void SetupAttrib(int loc, const BinaryAttribute& attrib, int32_t numElems, size_t stride)
 {
-    glVertexAttribPointer(loc, attrib.size, attrib.type, GL_FALSE, attrib.stride, (void*)attrib.offset);
+    assert(attrib.type == BinaryAttribute::Type::Float);
+    glVertexAttribPointer(loc, numElems, GL_FLOAT, GL_FALSE, (uint32_t)stride, (void*)attrib.offset);
     glEnableVertexAttribArray(loc);
 }
 
@@ -79,10 +80,9 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebuf
 
     // build posVec
     posVec.reserve(numPoints);
-    pointCloud->ForEachAttrib(pointCloud->GetPositionAttrib(), [this](const void* ptr)
+    pointCloud->ForEachPosition([this](const float* pos)
     {
-        const float* p = (const float*)ptr;
-        posVec.emplace_back(glm::vec4(p[0], p[1], p[2], p[3]));
+        posVec.emplace_back(glm::vec4(pos[0], pos[1], pos[2], pos[3]));
     });
 
     BuildVertexArrayObject(pointCloud);
@@ -217,8 +217,8 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     pointVao->Bind();
     pointDataBuffer->Bind();
 
-    SetupAttrib(pointProg->GetAttribLoc("position"), pointCloud->GetPositionAttrib());
-    SetupAttrib(pointProg->GetAttribLoc("color"), pointCloud->GetColorAttrib());
+    SetupAttrib(pointProg->GetAttribLoc("position"), pointCloud->GetPositionAttrib(), 4, pointCloud->GetStride());
+    SetupAttrib(pointProg->GetAttribLoc("color"), pointCloud->GetColorAttrib(), 4, pointCloud->GetStride());
 
     pointVao->SetElementBuffer(indexBuffer);
     pointDataBuffer->Unbind();

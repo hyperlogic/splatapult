@@ -10,6 +10,8 @@
 #include <memory>
 #include <string>
 
+#include "core/binaryattribute.h"
+
 class PointCloud
 {
 public:
@@ -21,33 +23,24 @@ public:
     void InitDebugCloud();
 
     size_t GetNumPoints() const { return numPoints; }
-    size_t GetTotalSize() const { return GetNumPoints() * pointSize; }
+    size_t GetStride() const { return pointSize; }
+    size_t GetTotalSize() const { return GetNumPoints() * GetStride(); }
     void* GetRawDataPtr() { return data.get(); }
+    const void* GetRawDataPtr() const { return data.get(); }
 
-    struct AttribData
-    {
-        AttribData() : size(0), type(0), stride(0), offset(0) {}
-        AttribData(int32_t sizeIn, int32_t typeIn, int32_t strideIn, size_t offsetIn) : size(sizeIn), type(typeIn), stride(strideIn), offset(offsetIn) {}
-        bool IsValid() const { return size != 0; }
-        int32_t size;
-        int32_t type;
-        int32_t stride;
-        size_t offset;
-    };
+    const BinaryAttribute& GetPositionAttrib() const { return positionAttrib; }
+    const BinaryAttribute& GetColorAttrib() const { return colorAttrib; }
 
-    const AttribData& GetPositionAttrib() const { return positionAttrib; }
-    const AttribData& GetColorAttrib() const { return colorAttrib; }
-
-    using AttribCallback = std::function<void(const void*)>;
-    void ForEachAttrib(const AttribData& attribData, const AttribCallback& cb) const;
+    using ForEachPositionCallback = std::function<void(const float*)>;
+    void ForEachPosition(const ForEachPositionCallback& cb) const;
 
 protected:
-    void InitAttribs(size_t size);
+    void InitAttribs();
 
     std::shared_ptr<void> data;
 
-    AttribData positionAttrib;
-    AttribData colorAttrib;
+    BinaryAttribute positionAttrib;
+    BinaryAttribute colorAttrib;
 
     size_t numPoints;
     size_t pointSize;

@@ -14,53 +14,16 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/binaryattribute.h"
+
 class Ply
 {
 public:
     Ply();
     bool Parse(std::ifstream& plyFile);
 
-    enum class PropertyType : uint16_t
-    {
-        Unknown,
-        Char,
-        UChar,
-        Short,
-        UShort,
-        Int,
-        UInt,
-        Float,
-        Double,
-        NumTypes
-    };
-
-    struct PropertyInfo
-    {
-        PropertyInfo() : type(PropertyType::Unknown) {}
-        PropertyInfo(size_t offsetIn, size_t sizeIn, PropertyType typeIn, uint16_t indexIn) : offset(offsetIn), size(sizeIn), type(typeIn), index(indexIn) {}
-
-        size_t offset;
-        size_t size;
-        PropertyType type;
-        uint16_t index;
-
-        template <typename T>
-        const T Get(const uint8_t* data) const
-        {
-            if (type == PropertyType::Unknown)
-            {
-                return 0;
-            }
-            else
-            {
-                assert(size == sizeof(T));
-                return *reinterpret_cast<const T*>(data + offset);
-            }
-        }
-    };
-
-    bool GetPropertyInfo(const std::string& key, PropertyInfo& propertyInfoOut) const;
-    void AddPropertyInfo(const std::string& key, PropertyType type);
+    bool GetProperty(const std::string& key, BinaryAttribute& attributeOut) const;
+    void AddProperty(const std::string& key, BinaryAttribute::Type type);
     void AllocData(size_t numVertices);
 
     using VertexCallback = std::function<void(const uint8_t*, size_t)>;
@@ -71,7 +34,7 @@ public:
 protected:
     bool ParseHeader(std::ifstream& plyFile);
 
-    std::unordered_map<std::string, PropertyInfo> propertyInfoMap;
+    std::unordered_map<std::string, BinaryAttribute> propertyMap;
     std::unique_ptr<uint8_t> data;
     size_t vertexCount;
     size_t vertexSize;
