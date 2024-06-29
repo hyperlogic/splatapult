@@ -170,7 +170,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     {
         ZoneScopedNC("ply.ForEachVertex", tracy::Color::Blue);
         int i = 0;
-        ply.ForEachVertex([this, gd, &i, &props](const uint8_t* data, size_t size)
+        ply.ForEachVertex([this, gd, &i, &props](const void* data, size_t size)
         {
             gd[i].posWithAlpha[0] = props.x.Read<float>(data);
             gd[i].posWithAlpha[1] = props.y.Read<float>(data);
@@ -465,25 +465,25 @@ void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
 
 void GaussianCloud::ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) const
 {
-    posWithAlphaAttrib.ForEachConst<float>(GetRawDataPtr(), GetStride(), GetNumGaussians(), cb);
+    posWithAlphaAttrib.ForEach<float>(GetRawDataPtr(), GetStride(), GetNumGaussians(), cb);
 }
 
 void GaussianCloud::InitAttribs()
 {
-    posWithAlphaAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, posWithAlpha)};
-    r_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh0)};
-    r_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh1)};
-    r_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh2)};
-    r_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, r_sh3)};
-    g_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh0)};
-    g_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh1)};
-    g_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh2)};
-    g_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, g_sh3)};
-    b_sh0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh0)};
-    b_sh1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh1)};
-    b_sh2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh2)};
-    b_sh3Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, b_sh3)};
-    cov3_col0Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col0)};
-    cov3_col1Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col1)};
-    cov3_col2Attrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(GaussianData, cov3_col2)};
+    posWithAlphaAttrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, posWithAlpha)};
+    r_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh0)};
+    r_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh1)};
+    r_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh2)};
+    r_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh3)};
+    g_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh0)};
+    g_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh1)};
+    g_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh2)};
+    g_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh3)};
+    b_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh0)};
+    b_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh1)};
+    b_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh2)};
+    b_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh3)};
+    cov3_col0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col0)};
+    cov3_col1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col1)};
+    cov3_col2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col2)};
 }

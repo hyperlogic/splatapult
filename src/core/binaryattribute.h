@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <functional>
 
 class BinaryAttribute
 {
@@ -26,7 +27,7 @@ public:
     };
 
     BinaryAttribute() : type(Type::Unknown), size(0), offset(0) {}
-    BinaryAttribute(Type typeIn, size_t sizeIn, size_t offsetIn) : type(typeIn), size(sizeIn), offset(offsetIn) {}
+    BinaryAttribute(Type typeIn, size_t offsetIn);
 
     template <typename T>
     const T* Get(const void* data) const
@@ -43,7 +44,7 @@ public:
     }
 
     template <typename T>
-    T* Get(const void* data)
+    T* Get(void* data)
     {
         if (type == Type::Unknown)
         {
@@ -79,7 +80,7 @@ public:
     }
 
     template<typename T>
-    void ForEach(void* data, size_t stride, size_t count, const std::function<void(T*)>& cb)
+    void ForEachMut(void* data, size_t stride, size_t count, const std::function<void(T*)>& cb)
     {
         assert(type != Type::Unknown);
         assert(data);
@@ -92,7 +93,7 @@ public:
     }
 
     template<typename T>
-    void ForEachConst(const void* data, size_t stride, size_t count, const std::function<void(const T*)>& cb) const
+    void ForEach(const void* data, size_t stride, size_t count, const std::function<void(const T*)>& cb) const
     {
         assert(type != Type::Unknown);
         assert(data);

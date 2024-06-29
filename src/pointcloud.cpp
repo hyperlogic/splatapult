@@ -79,7 +79,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     if (useDoubles)
     {
         int i = 0;
-        ply.ForEachVertex([this, pd, &i, &props](const uint8_t* data, size_t size)
+        ply.ForEachVertex([this, pd, &i, &props](const void* data, size_t size)
         {
             if (useLinearColors)
             {
@@ -104,7 +104,7 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
     else
     {
         int i = 0;
-        ply.ForEachVertex([this, pd, &i, &props](const uint8_t* data, size_t size)
+        ply.ForEachVertex([this, pd, &i, &props](const void* data, size_t size)
         {
             if (useLinearColors)
             {
@@ -155,13 +155,11 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
 
     ply.AllocData(numPoints);
 
-    /*
-    ply.ForEachVertex([this](uint8_t* data, size_t size))
+    ply.ForEachVertexMut([this](void* data, size_t size)
     {
-        positionAttrib.Set
-    }
-    */
-    
+        //
+    });
+
     /*
     // ply files have unix line endings.
     plyFile << "ply\n";
@@ -248,11 +246,11 @@ void PointCloud::InitDebugCloud()
 
 void PointCloud::ForEachPosition(const ForEachPositionCallback& cb) const
 {
-    positionAttrib.ForEachConst<float>(GetRawDataPtr(), GetStride(), GetNumPoints(), cb);
+    positionAttrib.ForEach<float>(GetRawDataPtr(), GetStride(), GetNumPoints(), cb);
 }
 
 void PointCloud::InitAttribs()
 {
-    positionAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(PointData, position)};
-    colorAttrib = {BinaryAttribute::Type::Float, sizeof(float), offsetof(PointData, color)};
+    positionAttrib = {BinaryAttribute::Type::Float, offsetof(PointData, position)};
+    colorAttrib = {BinaryAttribute::Type::Float, offsetof(PointData, color)};
 }

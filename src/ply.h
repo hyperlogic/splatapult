@@ -26,8 +26,11 @@ public:
     void AddProperty(const std::string& key, BinaryAttribute::Type type);
     void AllocData(size_t numVertices);
 
-    using VertexCallback = std::function<void(const uint8_t*, size_t)>;
+    using VertexCallback = std::function<void(const void*, size_t)>;
     void ForEachVertex(const VertexCallback& cb) const;
+
+    using VertexCallbackMut = std::function<void(void*, size_t)>;
+    void ForEachVertexMut(const VertexCallbackMut& cb);
 
     size_t GetVertexCount() const { return vertexCount; }
 

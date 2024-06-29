@@ -18,17 +18,6 @@
 
 #include "core/log.h"
 
-static uint32_t propertyTypeSizeArr[(size_t)BinaryAttribute::Type::NumTypes] = {
-    0, // Unknown
-    1, // Char
-    1, // UChar
-    2, // Short
-    2, // UShort
-    4, // Int
-    4, // UInt
-    4, // Float
-    8 // Double
-};
 
 static bool CheckLine(std::ifstream& plyFile, const std::string& validLine)
 {
@@ -201,10 +190,9 @@ bool Ply::GetProperty(const std::string& key, BinaryAttribute& binaryAttributeOu
 void Ply::AddProperty(const std::string& key, BinaryAttribute::Type type)
 {
     using PropInfoPair = std::pair<std::string, BinaryAttribute>;
-
-    uint32_t propSize = propertyTypeSizeArr[(int)type];
-    propertyMap.emplace(PropInfoPair(key, BinaryAttribute{type, propSize, (uint32_t)vertexSize}));
-    vertexSize += propSize;
+    BinaryAttribute attrib(type, vertexSize);
+    propertyMap.emplace(PropInfoPair(key, attrib));
+    vertexSize += attrib.size;
 }
 
 void Ply::AllocData(size_t numVertices)
@@ -221,4 +209,15 @@ void Ply::ForEachVertex(const VertexCallback& cb) const
         ptr += vertexSize;
     }
 }
+
+void Ply::ForEachVertexMut(const VertexCallbackMut& cb)
+{
+    uint8_t* ptr = data.get();
+    for (size_t i = 0; i < vertexCount; i++)
+    {
+        cb(ptr, vertexSize);
+        ptr += vertexSize;
+    }
+}
+
 
