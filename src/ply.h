@@ -21,6 +21,7 @@ class Ply
 public:
     Ply();
     bool Parse(std::ifstream& plyFile);
+    void Dump(std::ofstream& plyFile) const;
 
     bool GetProperty(const std::string& key, BinaryAttribute& attributeOut) const;
     void AddProperty(const std::string& key, BinaryAttribute::Type type);
@@ -36,6 +37,7 @@ public:
 
 protected:
     bool ParseHeader(std::ifstream& plyFile);
+    void DumpHeader(std::ofstream& plyFile) const;
 
     std::unordered_map<std::string, BinaryAttribute> propertyMap;
     std::unique_ptr<uint8_t> data;

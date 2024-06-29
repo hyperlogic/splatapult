@@ -132,9 +132,6 @@ bool PointCloud::ImportPly(const std::string& plyFilename)
 
 bool PointCloud::ExportPly(const std::string& plyFilename) const
 {
-    // AJT: TODO
-    return false;
-
     std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
@@ -153,37 +150,46 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     ply.AddProperty("green", BinaryAttribute::Type::UChar);
     ply.AddProperty("blue", BinaryAttribute::Type::UChar);
 
+    struct
+    {
+        BinaryAttribute x, y, z;
+        BinaryAttribute nx, ny, nz;
+        BinaryAttribute red, green, blue;
+    } props;
+
+    ply.GetProperty("x", props.x);
+    ply.GetProperty("y", props.y);
+    ply.GetProperty("z", props.z);
+    ply.GetProperty("nx", props.nx);
+    ply.GetProperty("ny", props.ny);
+    ply.GetProperty("nz", props.nz);
+    ply.GetProperty("red", props.red);
+    ply.GetProperty("green", props.green);
+    ply.GetProperty("blue", props.blue);
+
     ply.AllocData(numPoints);
 
-    ply.ForEachVertexMut([this](void* data, size_t size)
+    uint8_t* cloudData = (uint8_t*)data.get();
+    size_t runningSize = 0;
+    ply.ForEachVertexMut([this, &props, &cloudData, &runningSize](void* plyData, size_t size)
     {
-        //
+        const float* position = positionAttrib.Get<float>(cloudData);
+        props.x.Write<float>(plyData, position[0]);
+        props.y.Write<float>(plyData, position[1]);
+        props.z.Write<float>(plyData, position[2]);
+        props.nx.Write<float>(plyData, 0.0f);
+        props.ny.Write<float>(plyData, 0.0f);
+        props.nz.Write<float>(plyData, 0.0f);
+        const float* color = colorAttrib.Get<float>(cloudData);
+        props.red.Write<uint8_t>(plyData, (uint8_t)(color[0] * 255.0f));
+        props.green.Write<uint8_t>(plyData, (uint8_t)(color[1] * 255.0f));
+        props.blue.Write<uint8_t>(plyData, (uint8_t)(color[2] * 255.0f));
+        cloudData += pointSize;
+        runningSize += pointSize;
+        assert(runningSize <= GetTotalSize());  // bad, we went outside of data ptr contents.
     });
 
-    /*
-    // ply files have unix line endings.
-    plyFile << "ply\n";
-    plyFile << "format binary_little_endian 1.0\n";
-    plyFile << "element vertex " << numPoints << "\n";
-    plyFile << "property float x\n";
-    plyFile << "property float y\n";
-    plyFile << "property float z\n";
-    plyFile << "property float nx\n";
-    plyFile << "property float ny\n";
-    plyFile << "property float nz\n";
-    plyFile << "property uchar red\n";
-    plyFile << "property uchar green\n";
-    plyFile << "property uchar blue\n";
-    plyFile << "end_header\n";
-    */
-
-    /*
-    const size_t POINT_SIZE = 27;
-    for (auto&& p : pointDataVec)
-    {
-        plyFile.write((char*)&p, POINT_SIZE);
-    }
-    */
+    ply.Dump(plyFile);
 
     return true;
 }
