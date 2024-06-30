@@ -174,16 +174,18 @@ bool PointCloud::ExportPly(const std::string& plyFilename) const
     ply.ForEachVertexMut([this, &props, &cloudData, &runningSize](void* plyData, size_t size)
     {
         const float* position = positionAttrib.Get<float>(cloudData);
+        const float* color = colorAttrib.Get<float>(cloudData);
+
         props.x.Write<float>(plyData, position[0]);
         props.y.Write<float>(plyData, position[1]);
         props.z.Write<float>(plyData, position[2]);
         props.nx.Write<float>(plyData, 0.0f);
         props.ny.Write<float>(plyData, 0.0f);
         props.nz.Write<float>(plyData, 0.0f);
-        const float* color = colorAttrib.Get<float>(cloudData);
         props.red.Write<uint8_t>(plyData, (uint8_t)(color[0] * 255.0f));
         props.green.Write<uint8_t>(plyData, (uint8_t)(color[1] * 255.0f));
         props.blue.Write<uint8_t>(plyData, (uint8_t)(color[2] * 255.0f));
+
         cloudData += pointSize;
         runningSize += pointSize;
         assert(runningSize <= GetTotalSize());  // bad, we went outside of data ptr contents.

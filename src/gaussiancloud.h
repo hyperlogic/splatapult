@@ -20,7 +20,7 @@ public:
     GaussianCloud(bool useLinearColorsIn);
 
     bool ImportPly(const std::string& plyFilename);
-    bool ExportPly(const std::string& plyFilename) const;
+    bool ExportPly(const std::string& plyFilename, bool exportFullSh) const;
 
     void InitDebugCloud();
 

@@ -48,7 +48,7 @@ struct GaussianData
     float cov3_col2[3];
 };
 
-glm::mat3 ComputeCovMat(float rot[4], float scale[3])
+glm::mat3 ComputeCovMatFromRotScale(float rot[4], float scale[3])
 {
     glm::quat q(rot[0], rot[1], rot[2], rot[3]);
     glm::mat3 R(glm::normalize(q));
@@ -58,9 +58,21 @@ glm::mat3 ComputeCovMat(float rot[4], float scale[3])
     return R * S * glm::transpose(S) * glm::transpose(R);
 }
 
-float ComputeAlpha(float opacity)
+void ComputeRotScaleFromCovMat(const glm::mat3& V, glm::quat& rotOut, glm::vec3& scaleOut)
+{
+    // AJT: TODO: use eigendecomposition to compute this from V
+    rotOut = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    scaleOut = glm::vec3(-2.99573231f, -2.99573231f, -2.99573231f);
+}
+
+float ComputeAlphaFromOpacity(float opacity)
 {
     return 1.0f / (1.0f + expf(-opacity));
+}
+
+float ComputeOpacityFromAlpha(float alpha)
+{
+    return -logf((1.0f / alpha) - 1.0f);
 }
 
 GaussianCloud::GaussianCloud(bool useLinearColorsIn) :
@@ -175,7 +187,7 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
             gd[i].posWithAlpha[0] = props.x.Read<float>(data);
             gd[i].posWithAlpha[1] = props.y.Read<float>(data);
             gd[i].posWithAlpha[2] = props.z.Read<float>(data);
-            gd[i].posWithAlpha[3] = ComputeAlpha(props.opacity.Read<float>(data));
+            gd[i].posWithAlpha[3] = ComputeAlphaFromOpacity(props.opacity.Read<float>(data));
 
             // AJT: TODO check for useLinearColors
 
@@ -230,6 +242,12 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
             gd[i].b_sh3[2] = props.f_rest[43].Read<float>(data);
             gd[i].b_sh3[3] = props.f_rest[44].Read<float>(data);
 
+            float scale[3] =
+            {
+                props.scale[0].Read<float>(data),
+                props.scale[1].Read<float>(data),
+                props.scale[2].Read<float>(data)
+            };
             float rot[4] =
             {
                 props.rot[0].Read<float>(data),
@@ -237,14 +255,8 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
                 props.rot[2].Read<float>(data),
                 props.rot[3].Read<float>(data)
             };
-            float scale[4] =
-            {
-                props.scale[0].Read<float>(data),
-                props.scale[1].Read<float>(data),
-                props.scale[2].Read<float>(data)
-            };
 
-            glm::mat3 V = ComputeCovMat(rot, scale);
+            glm::mat3 V = ComputeCovMatFromRotScale(rot, scale);
             gd[i].cov3_col0[0] = V[0][0];
             gd[i].cov3_col0[1] = V[0][1];
             gd[i].cov3_col0[2] = V[0][2];
@@ -262,11 +274,8 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
     return true;
 }
 
-bool GaussianCloud::ExportPly(const std::string& plyFilename) const
+bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh) const
 {
-    // AJT: TODO FIXME:
-    return false;
-
     std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
     {
@@ -274,83 +283,131 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename) const
         return false;
     }
 
-    // ply files have unix line endings.
-    plyFile << "ply\n";
-    plyFile << "format binary_little_endian 1.0\n";
-    plyFile << "element vertex " << numGaussians << "\n";
-    plyFile << "property float x\n";
-    plyFile << "property float y\n";
-    plyFile << "property float z\n";
-    plyFile << "property float nx\n";
-    plyFile << "property float ny\n";
-    plyFile << "property float nz\n";
-    plyFile << "property float f_dc_0\n";
-    plyFile << "property float f_dc_1\n";
-    plyFile << "property float f_dc_2\n";
-    plyFile << "property float f_rest_0\n";
-    plyFile << "property float f_rest_1\n";
-    plyFile << "property float f_rest_2\n";
-    plyFile << "property float f_rest_3\n";
-    plyFile << "property float f_rest_4\n";
-    plyFile << "property float f_rest_5\n";
-    plyFile << "property float f_rest_6\n";
-    plyFile << "property float f_rest_7\n";
-    plyFile << "property float f_rest_8\n";
-    plyFile << "property float f_rest_9\n";
-    plyFile << "property float f_rest_10\n";
-    plyFile << "property float f_rest_11\n";
-    plyFile << "property float f_rest_12\n";
-    plyFile << "property float f_rest_13\n";
-    plyFile << "property float f_rest_14\n";
-    plyFile << "property float f_rest_15\n";
-    plyFile << "property float f_rest_16\n";
-    plyFile << "property float f_rest_17\n";
-    plyFile << "property float f_rest_18\n";
-    plyFile << "property float f_rest_19\n";
-    plyFile << "property float f_rest_20\n";
-    plyFile << "property float f_rest_21\n";
-    plyFile << "property float f_rest_22\n";
-    plyFile << "property float f_rest_23\n";
-    plyFile << "property float f_rest_24\n";
-    plyFile << "property float f_rest_25\n";
-    plyFile << "property float f_rest_26\n";
-    plyFile << "property float f_rest_27\n";
-    plyFile << "property float f_rest_28\n";
-    plyFile << "property float f_rest_29\n";
-    plyFile << "property float f_rest_30\n";
-    plyFile << "property float f_rest_31\n";
-    plyFile << "property float f_rest_32\n";
-    plyFile << "property float f_rest_33\n";
-    plyFile << "property float f_rest_34\n";
-    plyFile << "property float f_rest_35\n";
-    plyFile << "property float f_rest_36\n";
-    plyFile << "property float f_rest_37\n";
-    plyFile << "property float f_rest_38\n";
-    plyFile << "property float f_rest_39\n";
-    plyFile << "property float f_rest_40\n";
-    plyFile << "property float f_rest_41\n";
-    plyFile << "property float f_rest_42\n";
-    plyFile << "property float f_rest_43\n";
-    plyFile << "property float f_rest_44\n";
-    plyFile << "property float opacity\n";
-    plyFile << "property float scale_0\n";
-    plyFile << "property float scale_1\n";
-    plyFile << "property float scale_2\n";
-    plyFile << "property float rot_0\n";
-    plyFile << "property float rot_1\n";
-    plyFile << "property float rot_2\n";
-    plyFile << "property float rot_3\n";
-    plyFile << "end_header\n";
-
-    /* AJT: TODO FIXME
-    const size_t GAUSSIAN_SIZE = 62 * sizeof(float);
-    static_assert(sizeof(Gaussian) >= GAUSSIAN_SIZE);
-
-    for (auto&& g : gaussianVec)
+    Ply ply;
+    ply.AddProperty("x", BinaryAttribute::Type::Float);
+    ply.AddProperty("y", BinaryAttribute::Type::Float);
+    ply.AddProperty("z", BinaryAttribute::Type::Float);
+    ply.AddProperty("nx", BinaryAttribute::Type::Float);
+    ply.AddProperty("ny", BinaryAttribute::Type::Float);
+    ply.AddProperty("nz", BinaryAttribute::Type::Float);
+    ply.AddProperty("f_dc_0", BinaryAttribute::Type::Float);
+    ply.AddProperty("f_dc_1", BinaryAttribute::Type::Float);
+    ply.AddProperty("f_dc_2", BinaryAttribute::Type::Float);
+    if (exportFullSh)
     {
-        plyFile.write((char*)&g, GAUSSIAN_SIZE);
+        for (int i = 0; i < 45; i++)
+        {
+            ply.AddProperty("f_rest_" + std::to_string(i), BinaryAttribute::Type::Float);
+        }
     }
-    */
+    ply.AddProperty("opacity", BinaryAttribute::Type::Float);
+    ply.AddProperty("scale_0", BinaryAttribute::Type::Float);
+    ply.AddProperty("scale_1", BinaryAttribute::Type::Float);
+    ply.AddProperty("scale_2", BinaryAttribute::Type::Float);
+    ply.AddProperty("rot_0", BinaryAttribute::Type::Float);
+    ply.AddProperty("rot_1", BinaryAttribute::Type::Float);
+    ply.AddProperty("rot_2", BinaryAttribute::Type::Float);
+    ply.AddProperty("rot_3", BinaryAttribute::Type::Float);
+
+    struct
+    {
+        BinaryAttribute x, y, z;
+        BinaryAttribute nx, ny, nz;
+        BinaryAttribute f_dc[3];
+        BinaryAttribute f_rest[45];
+        BinaryAttribute opacity;
+        BinaryAttribute scale[3];
+        BinaryAttribute rot[4];
+    } props;
+
+    ply.GetProperty("x", props.x);
+    ply.GetProperty("y", props.y);
+    ply.GetProperty("z", props.z);
+    ply.GetProperty("nx", props.nx);
+    ply.GetProperty("ny", props.ny);
+    ply.GetProperty("nz", props.nz);
+    ply.GetProperty("f_dc_0", props.f_dc[0]);
+    ply.GetProperty("f_dc_1", props.f_dc[1]);
+    ply.GetProperty("f_dc_2", props.f_dc[2]);
+    if (exportFullSh)
+    {
+        for (int i = 0; i < 45; i++)
+        {
+            ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]);
+        }
+    }
+    ply.GetProperty("opacity", props.opacity);
+    ply.GetProperty("scale_0", props.scale[0]);
+    ply.GetProperty("scale_1", props.scale[1]);
+    ply.GetProperty("scale_2", props.scale[2]);
+    ply.GetProperty("rot_0", props.rot[0]);
+    ply.GetProperty("rot_1", props.rot[1]);
+    ply.GetProperty("rot_2", props.rot[2]);
+    ply.GetProperty("rot_3", props.rot[3]);
+
+    ply.AllocData(numGaussians);
+
+    uint8_t* gData = (uint8_t*)data.get();
+    size_t runningSize = 0;
+    ply.ForEachVertexMut([this, &props, &gData, &runningSize, &exportFullSh](void* plyData, size_t size)
+    {
+        const float* posWithAlpha = posWithAlphaAttrib.Get<float>(gData);
+        const float* r_sh0 = r_sh0Attrib.Get<float>(gData);
+        const float* g_sh0 = g_sh0Attrib.Get<float>(gData);
+        const float* b_sh0 = b_sh0Attrib.Get<float>(gData);
+        const float* cov3_col0 = cov3_col0Attrib.Get<float>(gData);
+
+        props.x.Write<float>(plyData, posWithAlpha[0]);
+        props.y.Write<float>(plyData, posWithAlpha[1]);
+        props.z.Write<float>(plyData, posWithAlpha[2]);
+        props.nx.Write<float>(plyData, 0.0f);
+        props.ny.Write<float>(plyData, 0.0f);
+        props.nz.Write<float>(plyData, 0.0f);
+        props.f_dc[0].Write<float>(plyData, r_sh0[0]);
+        props.f_dc[1].Write<float>(plyData, g_sh0[0]);
+        props.f_dc[2].Write<float>(plyData, b_sh0[0]);
+
+        if (exportFullSh)
+        {
+            // TODO: maybe just a raw memcopy would be faster
+            for (int i = 0; i < 15; i++)
+            {
+                props.f_rest[i].Write<float>(plyData, r_sh0[i + 1]);
+            }
+            for (int i = 0; i < 15; i++)
+            {
+                props.f_rest[i + 15].Write<float>(plyData, g_sh0[i + 1]);
+            }
+            for (int i = 0; i < 15; i++)
+            {
+                props.f_rest[i + 30].Write<float>(plyData, b_sh0[i + 1]);
+            }
+        }
+
+        props.opacity.Write<float>(plyData, ComputeOpacityFromAlpha(posWithAlpha[3]));
+
+        glm::mat3 V(cov3_col0[0], cov3_col0[1], cov3_col0[2],
+                    cov3_col0[2], cov3_col0[4], cov3_col0[5],
+                    cov3_col0[6], cov3_col0[7], cov3_col0[8]);
+
+        glm::quat rot;
+        glm::vec3 scale;
+        ComputeRotScaleFromCovMat(V, rot, scale);
+
+        props.scale[0].Write<float>(plyData, scale.x);
+        props.scale[1].Write<float>(plyData, scale.y);
+        props.scale[2].Write<float>(plyData, scale.z);
+        props.rot[0].Write<float>(plyData, rot.w);
+        props.rot[1].Write<float>(plyData, rot.x);
+        props.rot[2].Write<float>(plyData, rot.y);
+        props.rot[3].Write<float>(plyData, rot.z);
+
+        gData += gaussianSize;
+        runningSize += gaussianSize;
+        assert(runningSize <= GetTotalSize());  // bad, we went off the end of the data ptr
+    });
+
+    ply.Dump(plyFile);
 
     return true;
 }
