@@ -15,6 +15,8 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+#include <Eigen/Dense>
+
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 #else
@@ -48,29 +50,110 @@ struct GaussianData
     float cov3_col2[3];
 };
 
-glm::mat3 ComputeCovMatFromRotScale(float rot[4], float scale[3])
+// Function to convert glm::mat3 to Eigen::Matrix3f
+static Eigen::Matrix3f glmToEigen(const glm::mat3& glmMat)
+{
+    Eigen::Matrix3f eigenMat;
+    for (int r = 0; r < 3; ++r)
+    {
+        for (int c = 0; c < 3; ++c)
+        {
+            eigenMat(r, c) = glmMat[c][r];
+        }
+    }
+    return eigenMat;
+}
+
+// Function to convert Eigen::Matrix3f to glm::mat3
+static glm::mat3 eigenToGlm(const Eigen::Matrix3f& eigenMat)
+{
+    glm::mat3 glmMat;
+    for (int r = 0; r < 3; ++r)
+    {
+        for (int c = 0; c < 3; ++c)
+        {
+            glmMat[c][r] = eigenMat(r, c);
+        }
+    }
+    return glmMat;
+}
+
+static glm::mat3 ComputeCovMatFromRotScale(float rot[4], float scale[3])
 {
     glm::quat q(rot[0], rot[1], rot[2], rot[3]);
     glm::mat3 R(glm::normalize(q));
+    // NOTE: scale is stored in log scale in ply file
     glm::mat3 S(glm::vec3(expf(scale[0]), 0.0f, 0.0f),
                 glm::vec3(0.0f, expf(scale[1]), 0.0f),
                 glm::vec3(0.0f, 0.0f, expf(scale[2])));
     return R * S * glm::transpose(S) * glm::transpose(R);
 }
 
-void ComputeRotScaleFromCovMat(const glm::mat3& V, glm::quat& rotOut, glm::vec3& scaleOut)
+static void ComputeRotScaleFromCovMat(const glm::mat3& V, glm::quat& rotOut, glm::vec3& scaleOut)
 {
-    // AJT: TODO: use eigendecomposition to compute this from V
-    rotOut = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-    scaleOut = glm::vec3(-2.99573231f, -2.99573231f, -2.99573231f);
+    Eigen::Matrix3f eigenV = glmToEigen(V);
+
+    // Perform Eigen decomposition
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(eigenV);
+
+    // Get eigenvectors and eigenvalues
+    Eigen::Matrix3f eigenR = solver.eigenvectors();
+    Eigen::Array3f eigenS = solver.eigenvalues();
+
+    glm::mat3 R = eigenToGlm(eigenR);
+    rotOut = glm::normalize(glm::quat(R));
+    // NOTE: scale is stored in log scale in ply file
+    scaleOut = glm::vec3(logf(std::sqrt(solver.eigenvalues()(0))),
+                         logf(std::sqrt(solver.eigenvalues()(1))),
+                         logf(std::sqrt(solver.eigenvalues()(2))));
+
+#if 0
+    // AJT: HACK REMOVE
+    // now check the result.
+    static int AJT_Count = 0;
+    float r[] = {rotOut.w, rotOut.x, rotOut.y, rotOut.z};
+    float s[] = {scaleOut.x, scaleOut.y, scaleOut.z};
+    glm::mat3 V2 = ComputeCovMatFromRotScale(r, s);
+
+    const float EPSILON = 0.0001f;
+    if (fabsf(V[0][0] - V2[0][0]) > EPSILON ||
+        fabsf(V[0][1] - V2[0][1]) > EPSILON ||
+        fabsf(V[0][2] - V2[0][2]) > EPSILON ||
+        fabsf(V[1][0] - V2[1][0]) > EPSILON ||
+        fabsf(V[1][1] - V2[1][1]) > EPSILON ||
+        fabsf(V[1][2] - V2[1][2]) > EPSILON ||
+        fabsf(V[2][0] - V2[2][0]) > EPSILON ||
+        fabsf(V[2][1] - V2[2][1]) > EPSILON ||
+        fabsf(V[2][2] - V2[2][2]) > EPSILON)
+    {
+
+        Log::E("AJT: ComputeRotScaleFromCovMat  i = %d\n", AJT_Count);
+        Log::E("AJT:     V = | %10.5f, %10.5f, %10.5f |\n", V[0][0], V[1][0], V[2][0]);
+        Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][1], V[1][1], V[2][1]);
+        Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][2], V[1][2], V[2][2]);
+        Log::E("AJT:\n");
+        Log::E("AJT:     eigenR = | %10.5f %10.5f %10.5f |\n", eigenR(0,0), eigenR(0,1), eigenR(0,2));
+        Log::E("AJT:              | %10.5f %10.5f %10.5f |\n", eigenR(1,0), eigenR(1,1), eigenR(1,2));
+        Log::E("AJT:              | %10.5f %10.5f %10.5f |\n", eigenR(2,0), eigenR(2,1), eigenR(2,2));
+        Log::E("AJT:     eigenS = [%0.5f, %0.5f, %0.5f]\n", eigenS(0), eigenS(1), eigenS(2));
+        Log::E("AJT:\n");
+        Log::E("AJT:     scaleOut = [%.5f, %.5f, %.5f]\n", scaleOut[0], scaleOut[1], scaleOut[2]);
+        Log::E("AJT:     rotOut = [%.5f, %.5f, %.5f, %.5f]\n", rotOut.w, rotOut.x, rotOut.y, rotOut.z);
+        Log::E("AJT:\n");
+        Log::E("AJT:     V2 = | %10.5f, %10.5f, %10.5f |\n", V2[0][0], V2[1][0], V2[2][0]);
+        Log::E("AJT:          | %10.5f, %10.5f, %10.5f |\n", V2[0][1], V2[1][1], V2[2][1]);
+        Log::E("AJT:          | %10.5f, %10.5f, %10.5f |\n", V2[0][2], V2[1][2], V2[2][2]);
+    }
+    AJT_Count++;
+#endif
 }
 
-float ComputeAlphaFromOpacity(float opacity)
+static float ComputeAlphaFromOpacity(float opacity)
 {
     return 1.0f / (1.0f + expf(-opacity));
 }
 
-float ComputeOpacityFromAlpha(float alpha)
+static float ComputeOpacityFromAlpha(float alpha)
 {
     return -logf((1.0f / alpha) - 1.0f);
 }
@@ -267,6 +350,17 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
             gd[i].cov3_col2[1] = V[2][1];
             gd[i].cov3_col2[2] = V[2][2];
 
+            // AJT: TODO REMOVE DEBUG
+            if (i == 0)
+            {
+                Log::E("AJT: ImportPly\n");
+                Log::E("AJT:     rot = [%.5f, %.5f, %.5f, %.5f]\n", rot[0], rot[1], rot[2], rot[3]);
+                Log::E("AJT:     scale = [%.5f, %.5f, %.5f]\n", scale[0], scale[1], scale[2]);
+                Log::E("AJT:     V = | %10.5f, %10.5f, %10.5f |\n", V[0][0], V[1][0], V[2][0]);
+                Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][1], V[1][1], V[2][1]);
+                Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][2], V[1][2], V[2][2]);
+            }
+
             i++;
         });
     }
@@ -387,7 +481,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
         props.opacity.Write<float>(plyData, ComputeOpacityFromAlpha(posWithAlpha[3]));
 
         glm::mat3 V(cov3_col0[0], cov3_col0[1], cov3_col0[2],
-                    cov3_col0[2], cov3_col0[4], cov3_col0[5],
+                    cov3_col0[3], cov3_col0[4], cov3_col0[5],
                     cov3_col0[6], cov3_col0[7], cov3_col0[8]);
 
         glm::quat rot;
@@ -401,6 +495,16 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
         props.rot[1].Write<float>(plyData, rot.x);
         props.rot[2].Write<float>(plyData, rot.y);
         props.rot[3].Write<float>(plyData, rot.z);
+
+        if (runningSize == 0)
+        {
+            Log::E("AJT: ExportPly\n");
+            Log::E("AJT:     V = | %10.5f, %10.5f, %10.5f |\n", V[0][0], V[1][0], V[2][0]);
+            Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][1], V[1][1], V[2][1]);
+            Log::E("AJT:         | %10.5f, %10.5f, %10.5f |\n", V[0][2], V[1][2], V[2][2]);
+            Log::E("AJT:     rot = [%.5f, %.5f, %.5f, %.5f]\n", rot.w, rot.x, rot.y, rot.z);
+            Log::E("AJT:     scale = [%.5f, %.5f, %.5f]\n", scale[0], scale[1], scale[2]);
+        }
 
         gData += gaussianSize;
         runningSize += gaussianSize;

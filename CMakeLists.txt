@@ -41,6 +41,9 @@ if (WIN32)
     find_package(nlohmann_json CONFIG REQUIRED)
 endif()
 
+# eigen
+find_package(Eigen3 CONFIG REQUIRED)
+
 # tracy
 if(WIN32 AND NOT SHIPPING)
     find_package(Tracy CONFIG REQUIRED)
@@ -100,6 +103,7 @@ if(WIN32)
             glm::glm
             PNG::PNG
             nlohmann_json::nlohmann_json
+            Eigen3::Eigen
             OpenXR::headers
             OpenXR::openxr_loader
         )
@@ -112,6 +116,7 @@ if(WIN32)
             glm::glm
             PNG::PNG
             nlohmann_json::nlohmann_json
+            Eigen3::Eigen
             Tracy::TracyClient
             OpenXR::headers
             OpenXR::openxr_loader
@@ -126,6 +131,7 @@ else()
         glm::glm
         PNG::PNG
         # nlohmann_json::nlohmann_json
+        Eigen3::Eigen
         OpenXR::headers
         OpenXR::openxr_loader
         ${X11_LIBRARIES}
