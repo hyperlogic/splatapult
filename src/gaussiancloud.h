@@ -17,10 +17,16 @@
 class GaussianCloud
 {
 public:
-    GaussianCloud(bool useLinearColorsIn);
+    struct Options
+    {
+        bool importFullSH;
+        bool exportFullSH;
+    };
+
+    GaussianCloud(const Options& options);
 
     bool ImportPly(const std::string& plyFilename);
-    bool ExportPly(const std::string& plyFilename, bool exportFullSh) const;
+    bool ExportPly(const std::string& plyFilename) const;
 
     void InitDebugCloud();
 
@@ -53,6 +59,8 @@ public:
     using ForEachPosWithAlphaCallback = std::function<void(const float*)>;
     void ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) const;
 
+    bool HasFullSH() const { return hasFullSH; }
+
 protected:
     void InitAttribs();
 
@@ -77,5 +85,7 @@ protected:
 
     size_t numGaussians;
     size_t gaussianSize;
-    bool useLinearColors;
+
+    Options opt;
+    bool hasFullSH;
 };

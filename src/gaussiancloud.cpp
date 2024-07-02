@@ -29,25 +29,30 @@
 
 #include "ply.h"
 
-struct GaussianData
+struct BaseGaussianData
 {
-    GaussianData() noexcept {}
+    BaseGaussianData() noexcept {}
     float posWithAlpha[4]; // center of the gaussian in object coordinates, with alpha in w
     float r_sh0[4]; // sh coeff for red channel (up to third-order)
-    float r_sh1[4];
-    float r_sh2[4];
-    float r_sh3[4];
     float g_sh0[4]; // sh coeff for green channel
-    float g_sh1[4];
-    float g_sh2[4];
-    float g_sh3[4];
     float b_sh0[4];  // sh coeff for blue channel
-    float b_sh1[4];
-    float b_sh2[4];
-    float b_sh3[4];
     float cov3_col0[3]; // 3x3 covariance matrix of the splat in object coordinates.
     float cov3_col1[3];
     float cov3_col2[3];
+};
+
+struct FullGaussianData : public BaseGaussianData
+{
+    FullGaussianData() noexcept {}
+    float r_sh1[4];
+    float r_sh2[4];
+    float r_sh3[4];
+    float g_sh1[4];
+    float g_sh2[4];
+    float g_sh3[4];
+    float b_sh1[4];
+    float b_sh2[4];
+    float b_sh3[4];
 };
 
 // Function to convert glm::mat3 to Eigen::Matrix3f
@@ -82,10 +87,9 @@ static glm::mat3 ComputeCovMatFromRotScale(float rot[4], float scale[3])
 {
     glm::quat q(rot[0], rot[1], rot[2], rot[3]);
     glm::mat3 R(glm::normalize(q));
-    // NOTE: scale is stored in log scale in ply file
-    glm::mat3 S(glm::vec3(expf(scale[0]), 0.0f, 0.0f),
-                glm::vec3(0.0f, expf(scale[1]), 0.0f),
-                glm::vec3(0.0f, 0.0f, expf(scale[2])));
+    glm::mat3 S(glm::vec3(scale[0], 0.0f, 0.0f),
+                glm::vec3(0.0f, scale[1], 0.0f),
+                glm::vec3(0.0f, 0.0f, scale[2]));
     return R * S * glm::transpose(S) * glm::transpose(R);
 }
 
@@ -108,12 +112,8 @@ static void ComputeRotScaleFromCovMat(const glm::mat3& V, glm::quat& rotOut, glm
         R[2] *= -1.0f;
     }
     rotOut = glm::normalize(glm::quat(R));
-    // NOTE: scale is stored in log scale in ply file
-    // Also, the eigenVal is for (S*S^T) we want it for S, so
-    // take the sqrt of the eigenVal. (or equivalently 1/2 of the log of the eigenVal.)
-    scaleOut = glm::vec3(logf(eigenVal(0)) / 2.0f,
-                         logf(eigenVal(1)) / 2.0f,
-                         logf(eigenVal(2)) / 2.0f);
+    // The eigenVal gives us the diagonal of (S*S^T), so take the sqrt to give is S.
+    scaleOut = glm::vec3(sqrtf(eigenVal(0)), sqrtf(eigenVal(1)), sqrtf(eigenVal(2)));
 }
 
 static float ComputeAlphaFromOpacity(float opacity)
@@ -126,10 +126,11 @@ static float ComputeOpacityFromAlpha(float alpha)
     return -logf((1.0f / alpha) - 1.0f);
 }
 
-GaussianCloud::GaussianCloud(bool useLinearColorsIn) :
+GaussianCloud::GaussianCloud(const Options& options) :
     numGaussians(0),
     gaussianSize(0),
-    useLinearColors(useLinearColorsIn)
+    opt(options),
+    hasFullSH(false)
 {
     ;
 }
@@ -184,14 +185,23 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
             }
         }
 
-        for (int i = 0; i < 45; i++)
+        if (opt.importFullSH)
         {
-            if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
+            hasFullSH = true;
+            for (int i = 0; i < 45; i++)
             {
-                // f_rest properties are optional
-                Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
-                break;
+                if (!ply.GetProperty("f_rest_" + std::to_string(i), props.f_rest[i]))
+                {
+                    // f_rest properties are optional
+                    Log::W("PLY file \"%s\", missing f_rest property\n", plyFilename.c_str());
+                    hasFullSH = false;
+                    break;
+                }
             }
+        }
+        else
+        {
+            hasFullSH = false;
         }
 
         if (!ply.GetProperty("opacity", props.opacity))
@@ -217,114 +227,144 @@ bool GaussianCloud::ImportPly(const std::string& plyFilename)
 
     }
 
-    GaussianData* gd;
+    InitAttribs();
+
     {
         ZoneScopedNC("alloc data", tracy::Color::Red4);
 
-        // AJT: TODO support with and without sh.
-
         numGaussians = ply.GetVertexCount();
-        gaussianSize = sizeof(GaussianData);
-        InitAttribs();
-        gd = new GaussianData[numGaussians];
-        data.reset(gd);
+        if (hasFullSH)
+        {
+            gaussianSize = sizeof(FullGaussianData);
+            FullGaussianData* fullPtr = new FullGaussianData[numGaussians];
+            data.reset(fullPtr);
+        }
+        else
+        {
+            gaussianSize = sizeof(BaseGaussianData);
+            BaseGaussianData* basePtr = new BaseGaussianData[numGaussians];
+            data.reset(basePtr);
+        }
     }
 
     {
         ZoneScopedNC("ply.ForEachVertex", tracy::Color::Blue);
         int i = 0;
-        ply.ForEachVertex([this, gd, &i, &props](const void* data, size_t size)
+        uint8_t* rawPtr = (uint8_t*)data.get();
+        ply.ForEachVertex([this, &rawPtr, &i, &props](const void* plyData, size_t size)
         {
-            gd[i].posWithAlpha[0] = props.x.Read<float>(data);
-            gd[i].posWithAlpha[1] = props.y.Read<float>(data);
-            gd[i].posWithAlpha[2] = props.z.Read<float>(data);
-            gd[i].posWithAlpha[3] = ComputeAlphaFromOpacity(props.opacity.Read<float>(data));
+            BaseGaussianData* basePtr = reinterpret_cast<BaseGaussianData*>(rawPtr);
+            basePtr->posWithAlpha[0] = props.x.Read<float>(plyData);
+            basePtr->posWithAlpha[1] = props.y.Read<float>(plyData);
+            basePtr->posWithAlpha[2] = props.z.Read<float>(plyData);
+            basePtr->posWithAlpha[3] = ComputeAlphaFromOpacity(props.opacity.Read<float>(plyData));
 
-            // AJT: TODO check for useLinearColors
+            if (hasFullSH)
+            {
+                FullGaussianData* fullPtr = reinterpret_cast<FullGaussianData*>(rawPtr);
+                fullPtr->r_sh0[0] = props.f_dc[0].Read<float>(plyData);
+                fullPtr->r_sh0[1] = props.f_rest[0].Read<float>(plyData);
+                fullPtr->r_sh0[2] = props.f_rest[1].Read<float>(plyData);
+                fullPtr->r_sh0[3] = props.f_rest[2].Read<float>(plyData);
+                fullPtr->r_sh1[0] = props.f_rest[3].Read<float>(plyData);
+                fullPtr->r_sh1[1] = props.f_rest[4].Read<float>(plyData);
+                fullPtr->r_sh1[2] = props.f_rest[5].Read<float>(plyData);
+                fullPtr->r_sh1[3] = props.f_rest[6].Read<float>(plyData);
+                fullPtr->r_sh2[0] = props.f_rest[7].Read<float>(plyData);
+                fullPtr->r_sh2[1] = props.f_rest[8].Read<float>(plyData);
+                fullPtr->r_sh2[2] = props.f_rest[9].Read<float>(plyData);
+                fullPtr->r_sh2[3] = props.f_rest[10].Read<float>(plyData);
+                fullPtr->r_sh3[0] = props.f_rest[11].Read<float>(plyData);
+                fullPtr->r_sh3[1] = props.f_rest[12].Read<float>(plyData);
+                fullPtr->r_sh3[2] = props.f_rest[13].Read<float>(plyData);
+                fullPtr->r_sh3[3] = props.f_rest[14].Read<float>(plyData);
 
-            gd[i].r_sh0[0] = props.f_dc[0].Read<float>(data);
-            gd[i].r_sh0[1] = props.f_rest[0].Read<float>(data);
-            gd[i].r_sh0[2] = props.f_rest[1].Read<float>(data);
-            gd[i].r_sh0[3] = props.f_rest[2].Read<float>(data);
-            gd[i].r_sh1[0] = props.f_rest[3].Read<float>(data);
-            gd[i].r_sh1[1] = props.f_rest[4].Read<float>(data);
-            gd[i].r_sh1[2] = props.f_rest[5].Read<float>(data);
-            gd[i].r_sh1[3] = props.f_rest[6].Read<float>(data);
-            gd[i].r_sh2[0] = props.f_rest[7].Read<float>(data);
-            gd[i].r_sh2[1] = props.f_rest[8].Read<float>(data);
-            gd[i].r_sh2[2] = props.f_rest[9].Read<float>(data);
-            gd[i].r_sh2[3] = props.f_rest[10].Read<float>(data);
-            gd[i].r_sh3[0] = props.f_rest[11].Read<float>(data);
-            gd[i].r_sh3[1] = props.f_rest[12].Read<float>(data);
-            gd[i].r_sh3[2] = props.f_rest[13].Read<float>(data);
-            gd[i].r_sh3[3] = props.f_rest[14].Read<float>(data);
+                fullPtr->g_sh0[0] = props.f_dc[1].Read<float>(plyData);
+                fullPtr->g_sh0[1] = props.f_rest[15].Read<float>(plyData);
+                fullPtr->g_sh0[2] = props.f_rest[16].Read<float>(plyData);
+                fullPtr->g_sh0[3] = props.f_rest[17].Read<float>(plyData);
+                fullPtr->g_sh1[0] = props.f_rest[18].Read<float>(plyData);
+                fullPtr->g_sh1[1] = props.f_rest[19].Read<float>(plyData);
+                fullPtr->g_sh1[2] = props.f_rest[20].Read<float>(plyData);
+                fullPtr->g_sh1[3] = props.f_rest[21].Read<float>(plyData);
+                fullPtr->g_sh2[0] = props.f_rest[22].Read<float>(plyData);
+                fullPtr->g_sh2[1] = props.f_rest[23].Read<float>(plyData);
+                fullPtr->g_sh2[2] = props.f_rest[24].Read<float>(plyData);
+                fullPtr->g_sh2[3] = props.f_rest[25].Read<float>(plyData);
+                fullPtr->g_sh3[0] = props.f_rest[26].Read<float>(plyData);
+                fullPtr->g_sh3[1] = props.f_rest[27].Read<float>(plyData);
+                fullPtr->g_sh3[2] = props.f_rest[28].Read<float>(plyData);
+                fullPtr->g_sh3[3] = props.f_rest[29].Read<float>(plyData);
 
-            gd[i].g_sh0[0] = props.f_dc[1].Read<float>(data);
-            gd[i].g_sh0[1] = props.f_rest[15].Read<float>(data);
-            gd[i].g_sh0[2] = props.f_rest[16].Read<float>(data);
-            gd[i].g_sh0[3] = props.f_rest[17].Read<float>(data);
-            gd[i].g_sh1[0] = props.f_rest[18].Read<float>(data);
-            gd[i].g_sh1[1] = props.f_rest[19].Read<float>(data);
-            gd[i].g_sh1[2] = props.f_rest[20].Read<float>(data);
-            gd[i].g_sh1[3] = props.f_rest[21].Read<float>(data);
-            gd[i].g_sh2[0] = props.f_rest[22].Read<float>(data);
-            gd[i].g_sh2[1] = props.f_rest[23].Read<float>(data);
-            gd[i].g_sh2[2] = props.f_rest[24].Read<float>(data);
-            gd[i].g_sh2[3] = props.f_rest[25].Read<float>(data);
-            gd[i].g_sh3[0] = props.f_rest[26].Read<float>(data);
-            gd[i].g_sh3[1] = props.f_rest[27].Read<float>(data);
-            gd[i].g_sh3[2] = props.f_rest[28].Read<float>(data);
-            gd[i].g_sh3[3] = props.f_rest[29].Read<float>(data);
+                fullPtr->b_sh0[0] = props.f_dc[2].Read<float>(plyData);
+                fullPtr->b_sh0[1] = props.f_rest[30].Read<float>(plyData);
+                fullPtr->b_sh0[2] = props.f_rest[31].Read<float>(plyData);
+                fullPtr->b_sh0[3] = props.f_rest[32].Read<float>(plyData);
+                fullPtr->b_sh1[0] = props.f_rest[33].Read<float>(plyData);
+                fullPtr->b_sh1[1] = props.f_rest[34].Read<float>(plyData);
+                fullPtr->b_sh1[2] = props.f_rest[35].Read<float>(plyData);
+                fullPtr->b_sh1[3] = props.f_rest[36].Read<float>(plyData);
+                fullPtr->b_sh2[0] = props.f_rest[37].Read<float>(plyData);
+                fullPtr->b_sh2[1] = props.f_rest[38].Read<float>(plyData);
+                fullPtr->b_sh2[2] = props.f_rest[39].Read<float>(plyData);
+                fullPtr->b_sh2[3] = props.f_rest[40].Read<float>(plyData);
+                fullPtr->b_sh3[0] = props.f_rest[41].Read<float>(plyData);
+                fullPtr->b_sh3[1] = props.f_rest[42].Read<float>(plyData);
+                fullPtr->b_sh3[2] = props.f_rest[43].Read<float>(plyData);
+                fullPtr->b_sh3[3] = props.f_rest[44].Read<float>(plyData);
+            }
+            else
+            {
+                basePtr->r_sh0[0] = props.f_dc[0].Read<float>(plyData);
+                basePtr->r_sh0[1] = 0.0f;
+                basePtr->r_sh0[2] = 0.0f;
+                basePtr->r_sh0[3] = 0.0f;
 
-            gd[i].b_sh0[0] = props.f_dc[2].Read<float>(data);
-            gd[i].b_sh0[1] = props.f_rest[30].Read<float>(data);
-            gd[i].b_sh0[2] = props.f_rest[31].Read<float>(data);
-            gd[i].b_sh0[3] = props.f_rest[32].Read<float>(data);
-            gd[i].b_sh1[0] = props.f_rest[33].Read<float>(data);
-            gd[i].b_sh1[1] = props.f_rest[34].Read<float>(data);
-            gd[i].b_sh1[2] = props.f_rest[35].Read<float>(data);
-            gd[i].b_sh1[3] = props.f_rest[36].Read<float>(data);
-            gd[i].b_sh2[0] = props.f_rest[37].Read<float>(data);
-            gd[i].b_sh2[1] = props.f_rest[38].Read<float>(data);
-            gd[i].b_sh2[2] = props.f_rest[39].Read<float>(data);
-            gd[i].b_sh2[3] = props.f_rest[40].Read<float>(data);
-            gd[i].b_sh3[0] = props.f_rest[41].Read<float>(data);
-            gd[i].b_sh3[1] = props.f_rest[42].Read<float>(data);
-            gd[i].b_sh3[2] = props.f_rest[43].Read<float>(data);
-            gd[i].b_sh3[3] = props.f_rest[44].Read<float>(data);
+                basePtr->g_sh0[0] = props.f_dc[1].Read<float>(plyData);
+                basePtr->g_sh0[1] = 0.0f;
+                basePtr->g_sh0[2] = 0.0f;
+                basePtr->g_sh0[3] = 0.0f;
 
+                basePtr->b_sh0[0] = props.f_dc[2].Read<float>(plyData);
+                basePtr->b_sh0[1] = 0.0f;
+                basePtr->b_sh0[2] = 0.0f;
+                basePtr->b_sh0[3] = 0.0f;
+            }
+
+            // NOTE: scale is stored in logarithmic scale in plyFile
             float scale[3] =
             {
-                props.scale[0].Read<float>(data),
-                props.scale[1].Read<float>(data),
-                props.scale[2].Read<float>(data)
+                expf(props.scale[0].Read<float>(plyData)),
+                expf(props.scale[1].Read<float>(plyData)),
+                expf(props.scale[2].Read<float>(plyData))
             };
             float rot[4] =
             {
-                props.rot[0].Read<float>(data),
-                props.rot[1].Read<float>(data),
-                props.rot[2].Read<float>(data),
-                props.rot[3].Read<float>(data)
+                props.rot[0].Read<float>(plyData),
+                props.rot[1].Read<float>(plyData),
+                props.rot[2].Read<float>(plyData),
+                props.rot[3].Read<float>(plyData)
             };
 
             glm::mat3 V = ComputeCovMatFromRotScale(rot, scale);
-            gd[i].cov3_col0[0] = V[0][0];
-            gd[i].cov3_col0[1] = V[0][1];
-            gd[i].cov3_col0[2] = V[0][2];
-            gd[i].cov3_col1[0] = V[1][0];
-            gd[i].cov3_col1[1] = V[1][1];
-            gd[i].cov3_col1[2] = V[1][2];
-            gd[i].cov3_col2[0] = V[2][0];
-            gd[i].cov3_col2[1] = V[2][1];
-            gd[i].cov3_col2[2] = V[2][2];
+            basePtr->cov3_col0[0] = V[0][0];
+            basePtr->cov3_col0[1] = V[0][1];
+            basePtr->cov3_col0[2] = V[0][2];
+            basePtr->cov3_col1[0] = V[1][0];
+            basePtr->cov3_col1[1] = V[1][1];
+            basePtr->cov3_col1[2] = V[1][2];
+            basePtr->cov3_col2[0] = V[2][0];
+            basePtr->cov3_col2[1] = V[2][1];
+            basePtr->cov3_col2[2] = V[2][2];
             i++;
+            rawPtr += gaussianSize;
         });
     }
 
     return true;
 }
 
-bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh) const
+bool GaussianCloud::ExportPly(const std::string& plyFilename) const
 {
     std::ofstream plyFile(plyFilename, std::ios::binary);
     if (!plyFile.is_open())
@@ -343,7 +383,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
     ply.AddProperty("f_dc_0", BinaryAttribute::Type::Float);
     ply.AddProperty("f_dc_1", BinaryAttribute::Type::Float);
     ply.AddProperty("f_dc_2", BinaryAttribute::Type::Float);
-    if (exportFullSh)
+    if (opt.exportFullSH)
     {
         for (int i = 0; i < 45; i++)
         {
@@ -379,7 +419,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
     ply.GetProperty("f_dc_0", props.f_dc[0]);
     ply.GetProperty("f_dc_1", props.f_dc[1]);
     ply.GetProperty("f_dc_2", props.f_dc[2]);
-    if (exportFullSh)
+    if (opt.exportFullSH)
     {
         for (int i = 0; i < 45; i++)
         {
@@ -399,7 +439,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
 
     uint8_t* gData = (uint8_t*)data.get();
     size_t runningSize = 0;
-    ply.ForEachVertexMut([this, &props, &gData, &runningSize, &exportFullSh](void* plyData, size_t size)
+    ply.ForEachVertexMut([this, &props, &gData, &runningSize](void* plyData, size_t size)
     {
         const float* posWithAlpha = posWithAlphaAttrib.Get<float>(gData);
         const float* r_sh0 = r_sh0Attrib.Get<float>(gData);
@@ -417,7 +457,7 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
         props.f_dc[1].Write<float>(plyData, g_sh0[0]);
         props.f_dc[2].Write<float>(plyData, b_sh0[0]);
 
-        if (exportFullSh)
+        if (opt.exportFullSH)
         {
             // TODO: maybe just a raw memcopy would be faster
             for (int i = 0; i < 15; i++)
@@ -444,9 +484,9 @@ bool GaussianCloud::ExportPly(const std::string& plyFilename, bool exportFullSh)
         glm::vec3 scale;
         ComputeRotScaleFromCovMat(V, rot, scale);
 
-        props.scale[0].Write<float>(plyData, scale.x);
-        props.scale[1].Write<float>(plyData, scale.y);
-        props.scale[2].Write<float>(plyData, scale.z);
+        props.scale[0].Write<float>(plyData, logf(scale.x));
+        props.scale[1].Write<float>(plyData, logf(scale.y));
+        props.scale[2].Write<float>(plyData, logf(scale.z));
         props.rot[0].Write<float>(plyData, rot.w);
         props.rot[1].Write<float>(plyData, rot.x);
         props.rot[2].Write<float>(plyData, rot.y);
@@ -467,9 +507,9 @@ void GaussianCloud::InitDebugCloud()
     const int NUM_SPLATS = 5;
 
     numGaussians = NUM_SPLATS * 3 + 1;
-    gaussianSize = sizeof(GaussianData);
+    gaussianSize = sizeof(FullGaussianData);
     InitAttribs();
-    GaussianData* gd = new GaussianData[numGaussians];
+    FullGaussianData* gd = new FullGaussianData[numGaussians];
     data.reset(gd);
 
     //
@@ -485,8 +525,8 @@ void GaussianCloud::InitDebugCloud()
     // x axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianData g;
-        memset(&g, 0, sizeof(GaussianData));
+        FullGaussianData g;
+        memset(&g, 0, sizeof(FullGaussianData));
         g.posWithAlpha[0] = i * DELTA + DELTA;
         g.posWithAlpha[1] = 0.0f;
         g.posWithAlpha[2] = 0.0f;
@@ -499,8 +539,8 @@ void GaussianCloud::InitDebugCloud()
     // y axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianData g;
-        memset(&g, 0, sizeof(GaussianData));
+        FullGaussianData g;
+        memset(&g, 0, sizeof(FullGaussianData));
         g.posWithAlpha[0] = 0.0f;
         g.posWithAlpha[1] = i * DELTA + DELTA;
         g.posWithAlpha[2] = 0.0f;
@@ -513,8 +553,8 @@ void GaussianCloud::InitDebugCloud()
     // z axis
     for (int i = 0; i < NUM_SPLATS; i++)
     {
-        GaussianData g;
-        memset(&g, 0, sizeof(GaussianData));
+        FullGaussianData g;
+        memset(&g, 0, sizeof(FullGaussianData));
         g.posWithAlpha[0] = 0.0f;
         g.posWithAlpha[1] = 0.0f;
         g.posWithAlpha[2] = i * DELTA + DELTA + 0.0001f; // AJT: HACK prevent div by zero for debug-shaders
@@ -525,8 +565,8 @@ void GaussianCloud::InitDebugCloud()
         gd[(NUM_SPLATS * 2) + i] = g;
     }
 
-    GaussianData g;
-    memset(&g, 0, sizeof(GaussianData));
+    FullGaussianData g;
+    memset(&g, 0, sizeof(FullGaussianData));
     g.posWithAlpha[0] = 0.0f;
     g.posWithAlpha[1] = 0.0f;
     g.posWithAlpha[2] = 0.0f;
@@ -545,14 +585,16 @@ void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
         return;
     }
 
-    GaussianData* gd = (GaussianData*)data.get();
     using IndexDistPair = std::pair<uint32_t, float>;
     std::vector<IndexDistPair> indexDistVec;
     indexDistVec.reserve(numGaussians);
+    uint8_t* rawPtr = (uint8_t*)data.get();
     for (uint32_t i = 0; i < numGaussians; i++)
     {
-        glm::vec3 pos(gd[i].posWithAlpha[0], gd[i].posWithAlpha[1], gd[i].posWithAlpha[2]);
+        BaseGaussianData* basePtr = reinterpret_cast<BaseGaussianData*>(rawPtr);
+        glm::vec3 pos(basePtr->posWithAlpha[0], basePtr->posWithAlpha[1], basePtr->posWithAlpha[2]);
         indexDistVec.push_back(IndexDistPair(i, glm::distance(origin, pos)));
+        rawPtr += gaussianSize;
     }
 
     std::sort(indexDistVec.begin(), indexDistVec.end(), [](const IndexDistPair& a, const IndexDistPair& b)
@@ -560,14 +602,27 @@ void GaussianCloud::PruneSplats(const glm::vec3& origin, uint32_t numSplats)
         return a.second < b.second;
     });
 
-    GaussianData* gd2 = new GaussianData[numSplats];
+    uint8_t* newData;
+    if (hasFullSH)
+    {
+        FullGaussianData* fullPtr = new FullGaussianData[numSplats];
+        newData = (uint8_t*)fullPtr;
+    }
+    else
+    {
+        BaseGaussianData* basePtr = new BaseGaussianData[numSplats];
+        newData = (uint8_t*)basePtr;
+    }
+    rawPtr = (uint8_t*)data.get();
+    uint8_t* rawPtr2 = newData;
+
     for (uint32_t i = 0; i < numSplats; i++)
     {
-        gd2[i] = gd[indexDistVec[i].first];
+        memcpy(rawPtr2, rawPtr + indexDistVec[i].first * gaussianSize, gaussianSize);
+        rawPtr2 += gaussianSize;
     }
     numGaussians = numSplats;
-    data.reset(gd2);
-    gd = nullptr;
+    data.reset(newData);
 }
 
 void GaussianCloud::ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) const
@@ -577,20 +632,26 @@ void GaussianCloud::ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) c
 
 void GaussianCloud::InitAttribs()
 {
-    posWithAlphaAttrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, posWithAlpha)};
-    r_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh0)};
-    r_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh1)};
-    r_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh2)};
-    r_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, r_sh3)};
-    g_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh0)};
-    g_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh1)};
-    g_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh2)};
-    g_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, g_sh3)};
-    b_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh0)};
-    b_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh1)};
-    b_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh2)};
-    b_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, b_sh3)};
-    cov3_col0Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col0)};
-    cov3_col1Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col1)};
-    cov3_col2Attrib = {BinaryAttribute::Type::Float, offsetof(GaussianData, cov3_col2)};
+    // BaseGaussianData attribs
+    posWithAlphaAttrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, posWithAlpha)};
+    r_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, r_sh0)};
+    g_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, g_sh0)};
+    b_sh0Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, b_sh0)};
+    cov3_col0Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, cov3_col0)};
+    cov3_col1Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, cov3_col1)};
+    cov3_col2Attrib = {BinaryAttribute::Type::Float, offsetof(BaseGaussianData, cov3_col2)};
+
+    // FullGaussianData attribs
+    if (hasFullSH)
+    {
+        r_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, r_sh1)};
+        r_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, r_sh2)};
+        r_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, r_sh3)};
+        g_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, g_sh1)};
+        g_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, g_sh2)};
+        g_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, g_sh3)};
+        b_sh1Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, b_sh1)};
+        b_sh2Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, b_sh2)};
+        b_sh3Attrib = {BinaryAttribute::Type::Float, offsetof(FullGaussianData, b_sh3)};
+    }
 }

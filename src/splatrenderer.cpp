@@ -47,25 +47,24 @@ SplatRenderer::~SplatRenderer()
 {
 }
 
-bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
-                         bool useFullSHIn, bool useRgcSortOverrideIn)
+bool SplatRenderer::Init(std::shared_ptr<GaussianCloud> gaussianCloud,
+                         bool isFramebufferSRGBEnabledIn, bool useRgcSortOverrideIn)
 {
     ZoneScopedNC("SplatRenderer::Init()", tracy::Color::Blue);
     GL_ERROR_CHECK("SplatRenderer::Init() begin");
 
     isFramebufferSRGBEnabled = isFramebufferSRGBEnabledIn;
-    useFullSH = useFullSHIn;
     useRgcSortOverride = useRgcSortOverrideIn;
 
     splatProg = std::make_shared<Program>();
-    if (isFramebufferSRGBEnabled || useFullSH)
+    if (isFramebufferSRGBEnabled || gaussianCloud->HasFullSH())
     {
         std::string defines = "";
         if (isFramebufferSRGBEnabled)
         {
             defines += "#define FRAMEBUFFER_SRGB\n";
         }
-        if (useFullSH)
+        if (gaussianCloud->HasFullSH())
         {
             defines += "#define FULL_SH\n";
         }
@@ -371,7 +370,7 @@ void SplatRenderer::BuildVertexArrayObject(std::shared_ptr<GaussianCloud> gaussi
     SetupAttrib(splatProg->GetAttribLoc("r_sh0"), gaussianCloud->GetR_SH0Attrib(), 4, stride);
     SetupAttrib(splatProg->GetAttribLoc("g_sh0"), gaussianCloud->GetG_SH0Attrib(), 4, stride);
     SetupAttrib(splatProg->GetAttribLoc("b_sh0"), gaussianCloud->GetB_SH0Attrib(), 4, stride);
-    if (useFullSH)
+    if (gaussianCloud->HasFullSH())
     {
         SetupAttrib(splatProg->GetAttribLoc("r_sh1"), gaussianCloud->GetR_SH1Attrib(), 4, stride);
         SetupAttrib(splatProg->GetAttribLoc("r_sh2"), gaussianCloud->GetR_SH2Attrib(), 4, stride);
