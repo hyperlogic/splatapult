@@ -28,6 +28,9 @@ Options
 --fp32
     Use 32-bit floating point frame buffer, to reduce color banding even more
 
+--nosh
+    Don't load/render full sh, this will reduce memory usage and higher performance
+
 -h, --help
     show help
 
