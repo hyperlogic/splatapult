@@ -52,6 +52,17 @@ static void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GL
 }
 #endif
 
+BufferObject::BufferObject(int targetIn, void* data, size_t size, unsigned int flags)
+{
+	target = targetIn;
+    glGenBuffers(1, &obj);
+	Bind();
+    glBufferStorage(target, size, data, flags);
+	Unbind();
+	elementSize = 0;
+	numElements = 0;
+}
+
 BufferObject::BufferObject(int targetIn, const std::vector<float>& data, unsigned int flags)
 {
 	target = targetIn;

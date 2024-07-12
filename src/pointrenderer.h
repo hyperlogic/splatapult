@@ -40,6 +40,8 @@ protected:
     std::shared_ptr<Program> preSortProg;
     std::shared_ptr<VertexArrayObject> pointVao;
 
+    std::shared_ptr<BufferObject> pointDataBuffer;
+
     std::vector<uint32_t> indexVec;
     std::vector<uint32_t> depthVec;
     std::vector<glm::vec4> posVec;

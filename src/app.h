@@ -57,7 +57,6 @@ public:
     using ResizeCallback = std::function<void(int, int)>;
     void OnResize(const ResizeCallback& cb);
 
-protected:
     struct Options
     {
         enum class FrameBuffer
@@ -76,8 +75,10 @@ protected:
         bool drawFps = true;
         bool drawCameraFrustums = false;
         bool drawCameraPath = false;
+        bool importFullSH = true;
     };
 
+protected:
     MainContext& mainContext;
     Options opt;
     std::string plyFilename;

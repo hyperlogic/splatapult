@@ -26,11 +26,11 @@ public:
     SplatRenderer();
     ~SplatRenderer();
 
-    bool Init(std::shared_ptr<GaussianCloud> gaussianCloud, bool isFramebufferSRGBEnabledIn,
-              bool useFullSHIn, bool useRgcSortOverrideIn);
+    bool Init(std::shared_ptr<GaussianCloud> gaussianCloud,
+              bool isFramebufferSRGBEnabledIn, bool useRgcSortOverrideIn);
 
     void Sort(const glm::mat4& cameraMat, const glm::mat4& projMat,
-                 const glm::vec4& viewport, const glm::vec2& nearFar);
+              const glm::vec4& viewport, const glm::vec2& nearFar);
 
     // viewport = (x, y, width, height)
     void Render(const glm::mat4& cameraMat, const glm::mat4& projMat,
@@ -52,6 +52,7 @@ protected:
     std::vector<glm::vec4> posVec;
     std::vector<uint32_t> atomicCounterVec;
 
+    std::shared_ptr<BufferObject> gaussianDataBuffer;
     std::shared_ptr<BufferObject> keyBuffer;
     std::shared_ptr<BufferObject> keyBuffer2;
     std::shared_ptr<BufferObject> histogramBuffer;
@@ -62,6 +63,5 @@ protected:
 
     uint32_t sortCount;
     bool isFramebufferSRGBEnabled;
-    bool useFullSH;
     bool useRgcSortOverride;
 };

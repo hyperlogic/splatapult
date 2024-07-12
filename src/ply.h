@@ -5,65 +5,42 @@
 
 #pragma once
 
+
 #include <cassert>
-#include <functional>
-#include <string>
 #include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "core/binaryattribute.h"
 
 class Ply
 {
 public:
+    Ply();
     bool Parse(std::ifstream& plyFile);
+    void Dump(std::ofstream& plyFile) const;
 
-    enum class Type
-    {
-        Unknown,
-        Char,
-        UChar,
-        Short,
-        UShort,
-        Int,
-        UInt,
-        Float,
-        Double
-    };
+    bool GetProperty(const std::string& key, BinaryAttribute& attributeOut) const;
+    void AddProperty(const std::string& key, BinaryAttribute::Type type);
+    void AllocData(size_t numVertices);
 
-    struct Property
-    {
-        Property() : type(Type::Unknown) {}
-        Property(size_t offsetIn, size_t sizeIn, Type typeIn) : offset(offsetIn), size(sizeIn), type(typeIn) {}
+    using VertexCallback = std::function<void(const void*, size_t)>;
+    void ForEachVertex(const VertexCallback& cb) const;
 
-        size_t offset;
-        size_t size;
-        Type type;
-
-        template <typename T>
-        const T Get(const uint8_t* data) const
-        {
-            if (type == Type::Unknown)
-            {
-                return 0;
-            }
-            else
-            {
-                assert(size == sizeof(T));
-                return *reinterpret_cast<const T*>(data + offset);
-            }
-        }
-    };
-
-    bool GetProperty(const std::string& key, Property& propertyOut) const;
-
-    using VertexCallback = std::function<void(const uint8_t*, size_t)>;
-    void ForEachVertex(const VertexCallback& cb);
+    using VertexCallbackMut = std::function<void(void*, size_t)>;
+    void ForEachVertexMut(const VertexCallbackMut& cb);
 
     size_t GetVertexCount() const { return vertexCount; }
 
 protected:
-    std::unordered_map<std::string, Property> propertyMap;
-    std::vector<uint8_t> dataVec;
+    bool ParseHeader(std::ifstream& plyFile);
+    void DumpHeader(std::ofstream& plyFile) const;
+
+    std::unordered_map<std::string, BinaryAttribute> propertyMap;
+    std::unique_ptr<uint8_t> data;
     size_t vertexCount;
     size_t vertexSize;
 };

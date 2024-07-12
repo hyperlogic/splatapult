@@ -30,6 +30,13 @@
 
 #include "radix_sort.hpp"
 
+static void SetupAttrib(int loc, const BinaryAttribute& attrib, int32_t numElems, size_t stride)
+{
+    assert(attrib.type == BinaryAttribute::Type::Float);
+    glVertexAttribPointer(loc, numElems, GL_FLOAT, GL_FALSE, (uint32_t)stride, (void*)attrib.offset);
+    glEnableVertexAttribArray(loc);
+}
+
 PointRenderer::PointRenderer()
 {
 }
@@ -69,13 +76,22 @@ bool PointRenderer::Init(std::shared_ptr<PointCloud> pointCloud, bool isFramebuf
         return false;
     }
 
+    const size_t numPoints = pointCloud->GetNumPoints();
+
+    // build posVec
+    posVec.reserve(numPoints);
+    pointCloud->ForEachPosition([this](const float* pos)
+    {
+        posVec.emplace_back(glm::vec4(pos[0], pos[1], pos[2], pos[3]));
+    });
+
     BuildVertexArrayObject(pointCloud);
 
-    depthVec.resize(pointCloud->size());
+    depthVec.resize(numPoints);
     keyBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, depthVec, GL_DYNAMIC_STORAGE_BIT);
     valBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
     posBuffer = std::make_shared<BufferObject>(GL_SHADER_STORAGE_BUFFER, posVec);
-    sorter = std::make_shared<rgc::radix_sort::sorter>(pointCloud->size());
+    sorter = std::make_shared<rgc::radix_sort::sorter>(numPoints);
 
     atomicCounterVec.resize(1, 0);
     atomicCounterBuffer = std::make_shared<BufferObject>(GL_ATOMIC_COUNTER_BUFFER, atomicCounterVec, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
@@ -183,29 +199,11 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
 {
     pointVao = std::make_shared<VertexArrayObject>();
 
-    // convert pointCloud positions and colors into buffers
-    size_t numPoints = pointCloud->size();
-    posVec.reserve(numPoints);
+    const size_t numPoints = pointCloud->GetNumPoints();
 
-    std::vector<glm::vec4> colorVec;
-    colorVec.reserve(numPoints);
-    for (auto&& p : pointCloud->GetPointVec())
-    {
-        posVec.emplace_back(glm::vec4(p.position[0], p.position[1], p.position[2], 1.0f));
-        colorVec.emplace_back(glm::vec4(p.color[0] / 255.0f, p.color[1] / 255.0f, p.color[2] / 255.0f, 1.0f));
-    }
-
-    if (isFramebufferSRGBEnabled)
-    {
-        // convert all colors to linear space
-        for (auto&& c : colorVec)
-        {
-            c = SRGBToLinear(c);
-        }
-    }
-
-    auto positionBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, posVec);
-    auto colorBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, colorVec);
+    // allocate large buffer to hold interleaved vertex data
+    pointDataBuffer = std::make_shared<BufferObject>(GL_ARRAY_BUFFER, pointCloud->GetRawDataPtr(),
+                                                     pointCloud->GetTotalSize(), 0);
 
     // build element array
     indexVec.reserve(numPoints);
@@ -216,8 +214,12 @@ void PointRenderer::BuildVertexArrayObject(std::shared_ptr<PointCloud> pointClou
     }
     auto indexBuffer = std::make_shared<BufferObject>(GL_ELEMENT_ARRAY_BUFFER, indexVec, GL_DYNAMIC_STORAGE_BIT);
 
-    // setup vertex array object with buffers
-    pointVao->SetAttribBuffer(pointProg->GetAttribLoc("position"), positionBuffer);
-    pointVao->SetAttribBuffer(pointProg->GetAttribLoc("color"), colorBuffer);
+    pointVao->Bind();
+    pointDataBuffer->Bind();
+
+    SetupAttrib(pointProg->GetAttribLoc("position"), pointCloud->GetPositionAttrib(), 4, pointCloud->GetStride());
+    SetupAttrib(pointProg->GetAttribLoc("color"), pointCloud->GetColorAttrib(), 4, pointCloud->GetStride());
+
     pointVao->SetElementBuffer(indexBuffer);
+    pointDataBuffer->Unbind();
 }

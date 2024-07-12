@@ -5,9 +5,17 @@
 
 #include "ply.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
 
 #include "core/log.h"
 
@@ -30,8 +38,109 @@ static bool GetNextPlyLine(std::ifstream& plyFile, std::string& lineOut)
     return false;
 }
 
+static const char* BinaryAttributeTypeToString(BinaryAttribute::Type type)
+{
+    switch (type)
+    {
+    case BinaryAttribute::Type::Char:
+        return "char";
+    case BinaryAttribute::Type::UChar:
+        return "uchar";
+    case BinaryAttribute::Type::Short:
+        return "short";
+    case BinaryAttribute::Type::UShort:
+        return "ushort";
+    case BinaryAttribute::Type::Int:
+        return "int";
+    case BinaryAttribute::Type::UInt:
+        return "uint";
+    case BinaryAttribute::Type::Float:
+        return "float";
+    case BinaryAttribute::Type::Double:
+        return "double";
+    default:
+        assert(false); // bad attribute type
+        return "unknown";
+    };
+}
+
+Ply::Ply() : vertexCount(0), vertexSize(0)
+{
+    ;
+}
+
 bool Ply::Parse(std::ifstream& plyFile)
 {
+    if (!ParseHeader(plyFile))
+    {
+        return false;
+    }
+
+    // read rest of file into data ptr
+    {
+        ZoneScopedNC("Ply::Parse() read data", tracy::Color::Yellow);
+        AllocData(vertexCount);
+        plyFile.read((char*)data.get(), vertexSize * vertexCount);
+    }
+
+    return true;
+}
+
+void Ply::Dump(std::ofstream& plyFile) const
+{
+    DumpHeader(plyFile);
+    plyFile.write((char*)data.get(), vertexSize * vertexCount);
+}
+
+bool Ply::GetProperty(const std::string& key, BinaryAttribute& binaryAttributeOut) const
+{
+    auto iter = propertyMap.find(key);
+    if (iter != propertyMap.end())
+    {
+        binaryAttributeOut = iter->second;
+        return true;
+    }
+    return false;
+}
+
+void Ply::AddProperty(const std::string& key, BinaryAttribute::Type type)
+{
+    using PropInfoPair = std::pair<std::string, BinaryAttribute>;
+    BinaryAttribute attrib(type, vertexSize);
+    propertyMap.emplace(PropInfoPair(key, attrib));
+    vertexSize += attrib.size;
+}
+
+void Ply::AllocData(size_t numVertices)
+{
+    vertexCount = numVertices;
+    data.reset(new uint8_t[vertexSize * numVertices]);
+}
+
+void Ply::ForEachVertex(const VertexCallback& cb) const
+{
+    const uint8_t* ptr = data.get();
+    for (size_t i = 0; i < vertexCount; i++)
+    {
+        cb(ptr, vertexSize);
+        ptr += vertexSize;
+    }
+}
+
+void Ply::ForEachVertexMut(const VertexCallbackMut& cb)
+{
+    uint8_t* ptr = data.get();
+    for (size_t i = 0; i < vertexCount; i++)
+    {
+        cb(ptr, vertexSize);
+        ptr += vertexSize;
+    }
+}
+
+bool Ply::ParseHeader(std::ifstream& plyFile)
+{
+    ZoneScopedNC("Ply::ParseHeader", tracy::Color::Green);
+
     // validate start of header
     std::string token1, token2, token3;
 
@@ -81,7 +190,6 @@ bool Ply::Parse(std::ifstream& plyFile)
     // TODO: support other "element" types faces, edges etc?
     // at the moment I only care about ply files with vertex elements.
 
-    size_t offset = 0;
     while (true)
     {
         if (!GetNextPlyLine(plyFile, line))
@@ -105,43 +213,35 @@ bool Ply::Parse(std::ifstream& plyFile)
         }
         if (token2 == "char" || token2 == "int8")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::Char}));
-            offset += 1;
+            AddProperty(token3, BinaryAttribute::Type::Char);
         }
         else if (token2 == "uchar" || token2 == "uint8")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 1, Ply::Type::UChar}));
-            offset += 1;
+            AddProperty(token3, BinaryAttribute::Type::UChar);
         }
         else if (token2 == "short" || token2 == "int16")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::Short}));
-            offset += 2;
+            AddProperty(token3, BinaryAttribute::Type::Short);
         }
         else if (token2 == "ushort" || token2 == "uint16")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 2, Ply::Type::UShort}));
-            offset += 2;
+            AddProperty(token3, BinaryAttribute::Type::UShort);
         }
         else if (token2 == "int" || token2 == "int32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Int}));
-            offset += 4;
+            AddProperty(token3, BinaryAttribute::Type::Int);
         }
         else if (token2 == "uint" || token2 == "uint32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::UInt}));
-            offset += 4;
+            AddProperty(token3, BinaryAttribute::Type::UInt);
         }
         else if (token2 == "float" || token2 == "float32")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 4, Ply::Type::Float}));
-            offset += 4;
+            AddProperty(token3, BinaryAttribute::Type::Float);
         }
         else if (token2 == "double" || token2 == "float64")
         {
-            propertyMap.emplace(std::pair<std::string, Property>(token3, {offset, 8, Ply::Type::Double}));
-            offset += 8;
+            AddProperty(token3, BinaryAttribute::Type::Double);
         }
         else
         {
@@ -150,32 +250,32 @@ bool Ply::Parse(std::ifstream& plyFile)
         }
     }
 
-    vertexSize = offset;
-
-    // read rest of file into dataVec
-    dataVec.resize(vertexSize * vertexCount);
-    plyFile.read((char*)dataVec.data(), vertexSize * vertexCount);
-
     return true;
 }
 
-bool Ply::GetProperty(const std::string& key, Ply::Property& propertyOut) const
+void Ply::DumpHeader(std::ofstream& plyFile) const
 {
-    auto iter = propertyMap.find(key);
-    if (iter != propertyMap.end())
-    {
-        propertyOut = iter->second;
-        return true;
-    }
-    return false;
-}
+    // ply files have unix line endings.
+    plyFile << "ply\n";
+    plyFile << "format binary_little_endian 1.0\n";
+    plyFile << "element vertex " << vertexCount << "\n";
 
-void Ply::ForEachVertex(const VertexCallback& cb)
-{
-    const uint8_t* vertexPtr = dataVec.data();
-    for (size_t i = 0; i < vertexCount; i++)
+    // sort properties by offset
+    using PropInfoPair = std::pair<std::string, BinaryAttribute>;
+    std::vector<PropInfoPair> propVec;
+    propVec.reserve(propertyMap.size());
+    for (auto& pair : propertyMap)
     {
-        cb(vertexPtr, vertexSize);
-        vertexPtr += vertexSize;
+        propVec.push_back(pair);
     }
+    std::sort(propVec.begin(), propVec.end(), [](const PropInfoPair& a, const PropInfoPair& b)
+    {
+        return a.second.offset < b.second.offset;
+    });
+
+    for (auto& pair : propVec)
+    {
+        plyFile << "property " << BinaryAttributeTypeToString(pair.second.type) << " " << pair.first << "\n";
+    }
+    plyFile << "end_header\n";
 }

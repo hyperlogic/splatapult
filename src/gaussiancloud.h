@@ -5,15 +5,25 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
+
+#include <glm/glm.hpp>
+
+#include "core/binaryattribute.h"
 
 class GaussianCloud
 {
 public:
-    GaussianCloud();
+    struct Options
+    {
+        bool importFullSH;
+        bool exportFullSH;
+    };
+
+    GaussianCloud(const Options& options);
 
     bool ImportPly(const std::string& plyFilename);
     bool ExportPly(const std::string& plyFilename) const;
@@ -21,36 +31,61 @@ public:
     void InitDebugCloud();
 
     // only keep the nearest splats
-    void PruneSplats(const glm::vec3& origin, uint32_t numSplats);
+    void PruneSplats(const glm::vec3& origin, uint32_t numGaussians);
 
-    struct Gaussian
-    {
-        float position[3];  // in world space
-        float normal[3];  // unused
-        float f_dc[3];  // first order spherical harmonics coeff (sRGB color space)
-        float f_rest[45];  // more spherical harminics coeff
-        float opacity;  // alpha = 1 / (1 + exp(-opacity));
-        float scale[3];
-        float rot[4];  // local rotation of guassian (real, i, j, k)
+    size_t GetNumGaussians() const { return numGaussians; }
+    size_t GetStride() const { return gaussianSize; }
+    size_t GetTotalSize() const { return GetNumGaussians() * gaussianSize; }
+    void* GetRawDataPtr() { return data.get(); }
+    const void* GetRawDataPtr() const { return data.get(); }
 
-        // convert from (scale, rot) into the gaussian covariance matrix in world space
-        // See 3d Gaussian Splat paper for more info
-        glm::mat3 ComputeCovMat() const
-        {
-            glm::quat q(rot[0], rot[1], rot[2], rot[3]);
-            glm::mat3 R(glm::normalize(q));
-            glm::mat3 S(glm::vec3(expf(scale[0]), 0.0f, 0.0f),
-                        glm::vec3(0.0f, expf(scale[1]), 0.0f),
-                        glm::vec3(0.0f, 0.0f, expf(scale[2])));
-            return R * S * glm::transpose(S) * glm::transpose(R);
-        }
-    };
+    const BinaryAttribute& GetPosWithAlphaAttrib() const { return posWithAlphaAttrib; }
+    const BinaryAttribute& GetR_SH0Attrib() const { return r_sh0Attrib; }
+    const BinaryAttribute& GetR_SH1Attrib() const { return r_sh1Attrib; }
+    const BinaryAttribute& GetR_SH2Attrib() const { return r_sh2Attrib; }
+    const BinaryAttribute& GetR_SH3Attrib() const { return r_sh3Attrib; }
+    const BinaryAttribute& GetG_SH0Attrib() const { return g_sh0Attrib; }
+    const BinaryAttribute& GetG_SH1Attrib() const { return g_sh1Attrib; }
+    const BinaryAttribute& GetG_SH2Attrib() const { return g_sh2Attrib; }
+    const BinaryAttribute& GetG_SH3Attrib() const { return g_sh3Attrib; }
+    const BinaryAttribute& GetB_SH0Attrib() const { return b_sh0Attrib; }
+    const BinaryAttribute& GetB_SH1Attrib() const { return b_sh1Attrib; }
+    const BinaryAttribute& GetB_SH2Attrib() const { return b_sh2Attrib; }
+    const BinaryAttribute& GetB_SH3Attrib() const { return b_sh3Attrib; }
+    const BinaryAttribute& GetCov3_Col0Attrib() const { return cov3_col0Attrib; }
+    const BinaryAttribute& GetCov3_Col1Attrib() const { return cov3_col1Attrib; }
+    const BinaryAttribute& GetCov3_Col2Attrib() const { return cov3_col2Attrib; }
 
-    const std::vector<Gaussian>& GetGaussianVec() const { return gaussianVec; }
-    std::vector<Gaussian>& GetGaussianVec() { return gaussianVec; }
-    size_t size() const { return gaussianVec.size(); }
+    using ForEachPosWithAlphaCallback = std::function<void(const float*)>;
+    void ForEachPosWithAlpha(const ForEachPosWithAlphaCallback& cb) const;
+
+    bool HasFullSH() const { return hasFullSH; }
 
 protected:
+    void InitAttribs();
 
-    std::vector<Gaussian> gaussianVec;
+    std::shared_ptr<void> data;
+
+    BinaryAttribute posWithAlphaAttrib;
+    BinaryAttribute r_sh0Attrib;
+    BinaryAttribute r_sh1Attrib;
+    BinaryAttribute r_sh2Attrib;
+    BinaryAttribute r_sh3Attrib;
+    BinaryAttribute g_sh0Attrib;
+    BinaryAttribute g_sh1Attrib;
+    BinaryAttribute g_sh2Attrib;
+    BinaryAttribute g_sh3Attrib;
+    BinaryAttribute b_sh0Attrib;
+    BinaryAttribute b_sh1Attrib;
+    BinaryAttribute b_sh2Attrib;
+    BinaryAttribute b_sh3Attrib;
+    BinaryAttribute cov3_col0Attrib;
+    BinaryAttribute cov3_col1Attrib;
+    BinaryAttribute cov3_col2Attrib;
+
+    size_t numGaussians;
+    size_t gaussianSize;
+
+    Options opt;
+    bool hasFullSH;
 };

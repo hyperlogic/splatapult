@@ -17,6 +17,13 @@
 #include <filesystem>
 #include <thread>
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#else
+#define ZoneScoped
+#define ZoneScopedNC(NAME, COLOR)
+#endif
+
 #include "core/framebuffer.h"
 #include "core/log.h"
 #include "core/debugrenderer.h"
@@ -45,7 +52,8 @@ enum optionIndex
     DEBUG,
     HELP,
     FP16,
-    FP32
+    FP32,
+    NOSH,
 };
 
 const option::Descriptor usage[] =
@@ -57,6 +65,7 @@ const option::Descriptor usage[] =
     { DEBUG, 0, "d", "debug", option::Arg::None,          "  -d, --debug       Enable verbose debug logging." },
     { FP16, 0, "", "fp16", option::Arg::None,             "  --fp16            Use 16-bit half-precision floating frame buffer, to reduce color banding artifacts" },
     { FP32, 0, "", "fp32", option::Arg::None,             "  --fp32            Use 32-bit floating point frame buffer, to reduce color banding even more" },
+    { NOSH, 0, "", "nosh", option::Arg::None,             "  --nosh            Don't load/render full sh, this will reduce memory usage and higher performance" },
     { UNKNOWN, 0, "", "", option::Arg::None,              "\nExamples:\n  splataplut data/test.ply\n  splatapult -v data/test.ply" },
     { 0, 0, 0, 0, 0, 0}
 };
@@ -152,13 +161,6 @@ static void Clear(glm::ivec2 windowSize, bool setViewport = true)
 
     // NOTE: if depth buffer has less then 24 bits, it can mess up splat rendering.
     glEnable(GL_DEPTH_TEST);
-
-#ifndef __ANDROID__
-    // AJT: ANDROID: TODO: implement this in fragment shader, for OpenGLES I guess.
-    // enable alpha test
-    //glEnable(GL_ALPHA_TEST);
-    //glAlphaFunc(GL_GREATER, 1.0f / 256.0f);
-#endif
 }
 
 // Draw a textured quad over the entire screen.
@@ -209,10 +211,9 @@ static void RenderDesktop(glm::ivec2 windowSize, std::shared_ptr<Program> deskto
     }
 }
 
-// AJT: TODO this wrapper func is not needed anymore
-static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename)
+static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename, bool useLinearColors)
 {
-    auto pointCloud = std::make_shared<PointCloud>();
+    auto pointCloud = std::make_shared<PointCloud>(useLinearColors);
 
     if (!pointCloud->ImportPly(plyFilename))
     {
@@ -222,11 +223,17 @@ static std::shared_ptr<PointCloud> LoadPointCloud(const std::string& plyFilename
     return pointCloud;
 }
 
-// AJT: TODO this wrapper func is not needed anymore
-static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename)
+static std::shared_ptr<GaussianCloud> LoadGaussianCloud(const std::string& plyFilename, const App::Options& opt)
 {
-    auto gaussianCloud = std::make_shared<GaussianCloud>();
-
+    GaussianCloud::Options options = {0};
+#ifdef __ANDROID__
+    options.importFullSH = false;
+    options.exportFullSH = false;
+#else
+    options.importFullSH = opt.importFullSH;
+    options.exportFullSH = true;
+#endif
+    auto gaussianCloud = std::make_shared<GaussianCloud>(options);
     if (!gaussianCloud->ImportPly(plyFilename))
     {
         Log::E("Error loading GaussianCloud!\n");
@@ -324,6 +331,8 @@ App::ParseResult App::ParseArguments(int argc, const char* argv[])
     {
         opt.frameBuffer = Options::FrameBuffer::HalfFloat;
     }
+
+    opt.importFullSH = options[NOSH] ? false : true;
 
     bool unknownOptionFound = false;
     for (option::Option* opt = options[UNKNOWN]; opt; opt = opt->next())
@@ -504,7 +513,7 @@ bool App::Init()
     std::string pointCloudFilename = FindConfigFile(plyFilename, "input.ply");
     if (!pointCloudFilename.empty())
     {
-        pointCloud = LoadPointCloud(pointCloudFilename);
+        pointCloud = LoadPointCloud(pointCloudFilename, isFramebufferSRGBEnabled);
         if (!pointCloud)
         {
             Log::E("Error loading PointCloud\n");
@@ -523,7 +532,7 @@ bool App::Init()
         Log::D("Could not find input.ply\n");
     }
 
-    gaussianCloud = LoadGaussianCloud(plyFilename);
+    gaussianCloud = LoadGaussianCloud(plyFilename, opt);
     if (!gaussianCloud)
     {
         Log::E("Error loading GaussianCloud\n");
@@ -539,13 +548,11 @@ bool App::Init()
 
     splatRenderer = std::make_shared<SplatRenderer>();
 #if __ANDROID__
-    bool useFullSH = false;
     bool useRgcSortOverride = true;
 #else
-    bool useFullSH = true;
     bool useRgcSortOverride = false;
 #endif
-    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useFullSH, useRgcSortOverride))
+    if (!splatRenderer->Init(gaussianCloud, isFramebufferSRGBEnabled, useRgcSortOverride))
     {
         Log::E("Error initializing splat renderer!\n");
         return false;
