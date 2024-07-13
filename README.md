@@ -92,5 +92,7 @@ dir/
     mycapture.ply
     mycapture_vr.json
 ```
-
+Build Info
+--------------------
+See [BUILD.md](BUILD.md) for information on building Splatapult from source.
 
