@@ -74,7 +74,7 @@ Which is as follows:
 dir/
     point_cloud/
         iteration_30000/
-            point_cloud.py
+            point_cloud.ply
             point_cloud_vr.json
     input.ply
     cameras.json
